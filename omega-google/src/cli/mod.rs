@@ -32,6 +32,15 @@ fn to_json_pretty(val: &impl serde::Serialize) -> String {
         .unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e))
 }
 
+/// Map an anyhow error to the correct exit code using OmegaError downcasting.
+fn map_error_to_exit_code(e: &anyhow::Error) -> i32 {
+    if let Some(omega_err) = e.downcast_ref::<crate::error::exit::OmegaError>() {
+        crate::error::exit::exit_code_for(omega_err)
+    } else {
+        codes::GENERIC_ERROR
+    }
+}
+
 /// Execute the CLI with the given arguments. Returns the exit code.
 pub async fn execute(args: Vec<OsString>) -> i32 {
     // Convert OsString args to String for desire path rewriting
@@ -129,9 +138,9 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
         root::Command::Config(args) => handle_config(args, flags),
         root::Command::Auth(args) => handle_auth(args, flags).await,
         root::Command::Time(args) => handle_time(args, flags),
-        root::Command::Gmail(args) => handle_gmail(args, flags),
-        root::Command::Calendar(args) => handle_calendar(args, flags),
-        root::Command::Drive(args) => handle_drive(args, flags),
+        root::Command::Gmail(args) => handle_gmail(args, flags).await,
+        root::Command::Calendar(args) => handle_calendar(args, flags).await,
+        root::Command::Drive(args) => handle_drive(args, flags).await,
         root::Command::Docs(args) => handle_docs(args, flags),
         root::Command::Sheets(args) => handle_sheets(args, flags),
         root::Command::Slides(args) => handle_slides(args, flags),
@@ -967,7 +976,7 @@ fn handle_time_now(flags: &root::RootFlags) -> i32 {
 }
 
 /// Handle the `gmail` command and its subcommands.
-fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
+async fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
     use gmail::GmailCommand;
 
     // Commands that can work without authentication
@@ -992,18 +1001,541 @@ fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
         return codes::SUCCESS;
     }
 
-    // All other Gmail commands require authentication
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    // Bootstrap auth for all other commands
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    // Dispatch to subcommand handlers
+    match args.command {
+        GmailCommand::Search(ref search_args) => {
+            handle_gmail_search(&ctx, search_args).await
+        }
+        GmailCommand::Messages(ref msg_args) => {
+            handle_gmail_messages(&ctx, msg_args).await
+        }
+        GmailCommand::Thread(ref thread_args) => {
+            handle_gmail_thread(&ctx, thread_args).await
+        }
+        GmailCommand::Get(ref get_args) => {
+            handle_gmail_message_get(&ctx, get_args).await
+        }
+        GmailCommand::Send(ref send_args) => {
+            handle_gmail_send(&ctx, send_args).await
+        }
+        GmailCommand::Labels(ref labels_args) => {
+            handle_gmail_labels(&ctx, labels_args).await
+        }
+        _ => {
+            eprintln!("Command not yet implemented");
+            codes::GENERIC_ERROR
+        }
+    }
+}
+
+/// Handle Gmail thread search.
+async fn handle_gmail_search(
+    ctx: &crate::services::ServiceContext,
+    args: &gmail::GmailSearchArgs,
+) -> i32 {
+    let query = args.query.join(" ");
+    let params = crate::services::common::PaginationParams {
+        max_results: Some(args.max),
+        page_token: args.page.clone(),
+        all_pages: args.all,
+        fail_empty: args.fail_empty,
+    };
+
+    let base_query = query.clone();
+    let max = args.max;
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| crate::services::gmail::search::build_thread_search_url(&base_query, Some(max), pt),
+        |value| {
+            let threads = value
+                .get("threads")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((threads, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if crate::services::pagination::check_fail_empty(&items, args.fail_empty).is_err() {
+        return codes::EMPTY_RESULTS;
+    }
+
+    let response = serde_json::json!({
+        "threads": items,
+        "resultSizeEstimate": items.len(),
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
 }
 
+/// Handle Gmail messages subcommand (search, etc.).
+async fn handle_gmail_messages(
+    ctx: &crate::services::ServiceContext,
+    args: &gmail::GmailMessagesArgs,
+) -> i32 {
+    match &args.command {
+        gmail::GmailMessagesCommand::Search(search_args) => {
+            let query = search_args.query.join(" ");
+            let params = crate::services::common::PaginationParams {
+                max_results: Some(search_args.max),
+                page_token: search_args.page.clone(),
+                all_pages: false,
+                fail_empty: false,
+            };
+
+            let base_query = query.clone();
+            let max = search_args.max;
+            let include_body = search_args.include_body;
+            let (items, next_token) = match crate::services::pagination::paginate(
+                &ctx.client,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+                &params,
+                |pt| {
+                    crate::services::gmail::search::build_message_search_url(
+                        &base_query,
+                        Some(max),
+                        pt,
+                        include_body,
+                    )
+                },
+                |value| {
+                    let messages = value
+                        .get("messages")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| arr.to_vec())
+                        .unwrap_or_default();
+                    let next = value
+                        .get("nextPageToken")
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
+                    Ok((messages, next))
+                },
+            )
+            .await
+            {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return map_error_to_exit_code(&e);
+                }
+            };
+
+            let response = serde_json::json!({
+                "messages": items,
+                "resultSizeEstimate": items.len(),
+            });
+
+            if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+    }
+}
+
+/// Handle Gmail thread subcommand (get, modify, attachments).
+async fn handle_gmail_thread(
+    ctx: &crate::services::ServiceContext,
+    args: &gmail::GmailThreadArgs,
+) -> i32 {
+    match &args.command {
+        gmail::GmailThreadCommand::Get(get_args) => {
+            let url = crate::services::gmail::thread::build_thread_get_url(&get_args.thread_id);
+            let thread: crate::services::gmail::types::Thread = match crate::http::api::api_get(
+                &ctx.client,
+                &url,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+            )
+            .await
+            {
+                Ok(t) => t,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return map_error_to_exit_code(&e);
+                }
+            };
+
+            if let Err(e) = ctx.write_output(&thread) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        gmail::GmailThreadCommand::Modify(modify_args) => {
+            let (url, body) = crate::services::gmail::thread::build_thread_modify_request(
+                &modify_args.thread_id,
+                &modify_args.add,
+                &modify_args.remove,
+            );
+
+            match crate::http::api::api_post::<crate::services::gmail::types::Thread>(
+                &ctx.client,
+                &url,
+                &body,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+                ctx.is_dry_run(),
+            )
+            .await
+            {
+                Ok(Some(thread)) => {
+                    if let Err(e) = ctx.write_output(&thread) {
+                        eprintln!("Error: {}", e);
+                        return map_error_to_exit_code(&e);
+                    }
+                    codes::SUCCESS
+                }
+                Ok(None) => {
+                    eprintln!("[dry-run] would modify thread '{}'", modify_args.thread_id);
+                    codes::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    map_error_to_exit_code(&e)
+                }
+            }
+        }
+        gmail::GmailThreadCommand::Attachments(_) => {
+            eprintln!("Command not yet implemented");
+            codes::GENERIC_ERROR
+        }
+    }
+}
+
+/// Handle Gmail message get.
+async fn handle_gmail_message_get(
+    ctx: &crate::services::ServiceContext,
+    args: &gmail::GmailGetArgs,
+) -> i32 {
+    let format_str = if args.format.is_empty() {
+        None
+    } else {
+        Some(args.format.as_str())
+    };
+    let url = crate::services::gmail::message::build_message_get_url(
+        &args.message_id,
+        format_str,
+    );
+    let message: crate::services::gmail::types::Message = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&message) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Gmail send.
+async fn handle_gmail_send(
+    ctx: &crate::services::ServiceContext,
+    args: &gmail::GmailSendArgs,
+) -> i32 {
+    // M-4: Validate at least one recipient
+    if args.to.is_empty() && args.cc.is_empty() && args.bcc.is_empty() {
+        eprintln!("Error: at least one recipient (--to, --cc, or --bcc) is required");
+        return codes::USAGE_ERROR;
+    }
+
+    // M-2: Read file attachments from --attach paths
+    let mut attachments = Vec::new();
+    for path in &args.attach {
+        let filename = std::path::Path::new(path)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.clone());
+        let data = match std::fs::read(path) {
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("Error reading attachment '{}': {}", path, e);
+                return codes::GENERIC_ERROR;
+            }
+        };
+        let content_type = crate::services::gmail::mime::guess_content_type(&filename);
+        attachments.push(crate::services::gmail::mime::MimeAttachment {
+            filename,
+            data,
+            content_type,
+        });
+    }
+
+    let mime_params = crate::services::gmail::mime::MimeMessageParams {
+        from: ctx.email.clone(),
+        to: args.to.clone(),
+        cc: args.cc.clone(),
+        bcc: args.bcc.clone(),
+        subject: args.subject.clone().unwrap_or_default(),
+        body_text: args.body.clone(),
+        body_html: args.body_html.clone(),
+        reply_to: args.reply_to.clone(),
+        in_reply_to: args.reply_to_message_id.clone(),
+        references: None,
+        attachments,
+    };
+    let mime = crate::services::gmail::mime::build_mime_message(&mime_params);
+    let encoded = base64_url_encode(&mime);
+    let body = crate::services::gmail::send::build_send_body(&encoded);
+    let url = crate::services::gmail::send::build_send_url();
+
+    match crate::http::api::api_post::<crate::services::gmail::types::Message>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(msg)) => {
+            if let Err(e) = ctx.write_output(&msg) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!("[dry-run] would send message");
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Gmail labels subcommands.
+async fn handle_gmail_labels(
+    ctx: &crate::services::ServiceContext,
+    args: &gmail::GmailLabelsArgs,
+) -> i32 {
+    match &args.command {
+        gmail::GmailLabelsCommand::List => {
+            let url = crate::services::gmail::labels::build_labels_list_url();
+            let response: crate::services::gmail::types::LabelListResponse =
+                match crate::http::api::api_get(
+                    &ctx.client,
+                    &url,
+                    &ctx.circuit_breaker,
+                    &ctx.retry_config,
+                    ctx.is_verbose(),
+                )
+                .await
+                {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        return map_error_to_exit_code(&e);
+                    }
+                };
+
+            if let Err(e) = ctx.write_output(&response) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        gmail::GmailLabelsCommand::Create(create_args) => {
+            let (url, body) =
+                crate::services::gmail::labels::build_label_create_request(&create_args.name);
+
+            match crate::http::api::api_post::<crate::services::gmail::types::Label>(
+                &ctx.client,
+                &url,
+                &body,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+                ctx.is_dry_run(),
+            )
+            .await
+            {
+                Ok(Some(label)) => {
+                    if let Err(e) = ctx.write_output(&label) {
+                        eprintln!("Error: {}", e);
+                        return map_error_to_exit_code(&e);
+                    }
+                    codes::SUCCESS
+                }
+                Ok(None) => {
+                    eprintln!("[dry-run] would create label '{}'", create_args.name);
+                    codes::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    map_error_to_exit_code(&e)
+                }
+            }
+        }
+        gmail::GmailLabelsCommand::Delete(delete_args) => {
+            // Confirmation for destructive operation
+            if !ctx.is_force() && !ctx.flags.no_input {
+                eprint!(
+                    "Are you sure you want to delete label '{}'? [y/N] ",
+                    delete_args.label_id
+                );
+                let mut input = String::new();
+                if std::io::stdin().read_line(&mut input).is_err() || input.trim().to_lowercase() != "y" {
+                    eprintln!("Cancelled.");
+                    return codes::CANCELLED;
+                }
+            } else if !ctx.is_force() && ctx.flags.no_input {
+                eprintln!("Error: destructive operation requires --force when --no-input is set");
+                return codes::USAGE_ERROR;
+            }
+
+            let url =
+                crate::services::gmail::labels::build_label_delete_url(&delete_args.label_id);
+
+            match crate::http::api::api_delete(
+                &ctx.client,
+                &url,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+                ctx.is_dry_run(),
+            )
+            .await
+            {
+                Ok(()) => {
+                    eprintln!("Label '{}' deleted.", delete_args.label_id);
+                    codes::SUCCESS
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    map_error_to_exit_code(&e)
+                }
+            }
+        }
+        gmail::GmailLabelsCommand::Get(get_args) => {
+            let url = crate::services::gmail::labels::build_label_get_url(&get_args.label);
+
+            let label: crate::services::gmail::types::Label =
+                match crate::http::api::api_get(
+                    &ctx.client,
+                    &url,
+                    &ctx.circuit_breaker,
+                    &ctx.retry_config,
+                    ctx.is_verbose(),
+                )
+                .await
+                {
+                    Ok(l) => l,
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        return map_error_to_exit_code(&e);
+                    }
+                };
+
+            if let Err(e) = ctx.write_output(&label) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        gmail::GmailLabelsCommand::Modify(modify_args) => {
+            // Batch modify: apply label changes to each thread
+            let mut failed = false;
+            for thread_id in &modify_args.thread_ids {
+                let (url, body) = crate::services::gmail::thread::build_thread_modify_request(
+                    thread_id,
+                    &modify_args.add,
+                    &modify_args.remove,
+                );
+
+                match crate::http::api::api_post::<crate::services::gmail::types::Thread>(
+                    &ctx.client,
+                    &url,
+                    &body,
+                    &ctx.circuit_breaker,
+                    &ctx.retry_config,
+                    ctx.is_verbose(),
+                    ctx.is_dry_run(),
+                )
+                .await
+                {
+                    Ok(Some(_)) => {}
+                    Ok(None) => {
+                        eprintln!("[dry-run] would modify thread '{}'", thread_id);
+                    }
+                    Err(e) => {
+                        eprintln!("Error modifying thread '{}': {}", thread_id, e);
+                        failed = true;
+                    }
+                }
+            }
+            if failed {
+                codes::GENERIC_ERROR
+            } else {
+                codes::SUCCESS
+            }
+        }
+    }
+}
+
+/// Base64url encode a string (no padding, URL-safe alphabet).
+fn base64_url_encode(input: &str) -> String {
+    use base64::Engine;
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(input.as_bytes())
+}
+
 /// Handle the `calendar` command and its subcommands.
-fn handle_calendar(args: calendar::CalendarArgs, flags: &root::RootFlags) -> i32 {
+async fn handle_calendar(args: calendar::CalendarArgs, flags: &root::RootFlags) -> i32 {
     use calendar::CalendarCommand;
 
+    // Commands that can work without authentication
     match &args.command {
         CalendarCommand::Time => {
-            // Calendar time: show server time (same as time now for stub)
             let now_utc = chrono::Utc::now();
             let now_local = chrono::Local::now();
             if flags.json {
@@ -1021,20 +1553,467 @@ fn handle_calendar(args: calendar::CalendarArgs, flags: &root::RootFlags) -> i32
             return codes::SUCCESS;
         }
         CalendarCommand::Colors => {
-            // Colors can work without auth (static data)
             eprintln!("Command registered. API call requires: omega-google auth add <email>");
             return codes::SUCCESS;
         }
         _ => {}
     }
 
-    // All other Calendar commands require authentication
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    // Bootstrap auth for all other commands
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    // Dispatch to subcommand handlers
+    match args.command {
+        CalendarCommand::Events(ref events_args) => {
+            handle_calendar_events_list(&ctx, events_args).await
+        }
+        CalendarCommand::Event(ref get_args) => {
+            handle_calendar_event_get(&ctx, get_args).await
+        }
+        CalendarCommand::Create(ref create_args) => {
+            handle_calendar_event_create(&ctx, create_args).await
+        }
+        CalendarCommand::Update(ref update_args) => {
+            handle_calendar_event_update(&ctx, update_args).await
+        }
+        CalendarCommand::Delete(ref delete_args) => {
+            handle_calendar_event_delete(&ctx, delete_args).await
+        }
+        CalendarCommand::Calendars(ref cal_args) => {
+            handle_calendar_calendars_list(&ctx, cal_args).await
+        }
+        CalendarCommand::Freebusy(ref fb_args) => {
+            handle_calendar_freebusy(&ctx, fb_args).await
+        }
+        _ => {
+            eprintln!("Command not yet implemented");
+            codes::GENERIC_ERROR
+        }
+    }
+}
+
+/// Handle Calendar events list.
+async fn handle_calendar_events_list(
+    ctx: &crate::services::ServiceContext,
+    args: &calendar::CalendarEventsArgs,
+) -> i32 {
+    let calendar_id = args.cal.as_deref().unwrap_or("primary");
+    let max = args.max.unwrap_or(250);
+    let params = crate::services::common::PaginationParams {
+        max_results: Some(max),
+        page_token: args.page.clone(),
+        all_pages: args.all,
+        fail_empty: false,
+    };
+
+    let cal_id = calendar_id.to_string();
+    // Parse --from/--to through the time module (supports relative keywords, dates, etc.)
+    let time_min = match &args.from {
+        Some(val) => match crate::time::parse::parse_datetime(val) {
+            Ok(dt) => Some(dt.to_rfc3339()),
+            Err(_) => Some(val.clone()), // Pass through if already RFC 3339 or unrecognized
+        },
+        None => None,
+    };
+    let time_max = match &args.to {
+        Some(val) => match crate::time::parse::parse_datetime(val) {
+            Ok(dt) => Some(dt.to_rfc3339()),
+            Err(_) => Some(val.clone()),
+        },
+        None => None,
+    };
+    let query = args.query.clone();
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| {
+            crate::services::calendar::events::build_events_list_url(
+                &cal_id,
+                time_min.as_deref(),
+                time_max.as_deref(),
+                Some(max),
+                pt,
+                query.as_deref(),
+            )
+        },
+        |value| {
+            let events = value
+                .get("items")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((events, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let response = serde_json::json!({
+        "items": items,
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
 }
 
+/// Handle Calendar event get.
+async fn handle_calendar_event_get(
+    ctx: &crate::services::ServiceContext,
+    args: &calendar::CalendarEventArgs,
+) -> i32 {
+    let url =
+        crate::services::calendar::events::build_event_get_url(&args.calendar_id, &args.event_id);
+
+    let event: crate::services::calendar::types::Event = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&event) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Calendar event create.
+async fn handle_calendar_event_create(
+    ctx: &crate::services::ServiceContext,
+    args: &calendar::CalendarCreateArgs,
+) -> i32 {
+    let calendar_id = &args.cal;
+    // Parse --from/--to through time module for non-all-day events
+    let start = if args.all_day {
+        crate::services::calendar::types::EventDateTime {
+            date_time: None,
+            date: Some(args.from.clone()),
+            time_zone: None,
+        }
+    } else {
+        let parsed_from = match crate::time::parse::parse_datetime(&args.from) {
+            Ok(dt) => dt.to_rfc3339(),
+            Err(_) => args.from.clone(),
+        };
+        crate::services::calendar::types::EventDateTime {
+            date_time: Some(parsed_from),
+            date: None,
+            time_zone: None,
+        }
+    };
+    let end = if args.all_day {
+        crate::services::calendar::types::EventDateTime {
+            date_time: None,
+            date: Some(args.to.clone()),
+            time_zone: None,
+        }
+    } else {
+        let parsed_to = match crate::time::parse::parse_datetime(&args.to) {
+            Ok(dt) => dt.to_rfc3339(),
+            Err(_) => args.to.clone(),
+        };
+        crate::services::calendar::types::EventDateTime {
+            date_time: Some(parsed_to),
+            date: None,
+            time_zone: None,
+        }
+    };
+    let attendees: Vec<String> = args
+        .attendees
+        .as_ref()
+        .map(|a| a.split(',').map(|s| s.trim().to_string()).collect())
+        .unwrap_or_default();
+    let body = crate::services::calendar::events::build_event_create_body(
+        &args.summary,
+        &start,
+        &end,
+        args.description.as_deref(),
+        args.location.as_deref(),
+        &attendees,
+        None,
+    );
+    let url = crate::services::calendar::events::build_event_create_url(calendar_id);
+
+    match crate::http::api::api_post::<crate::services::calendar::types::Event>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(event)) => {
+            if let Err(e) = ctx.write_output(&event) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!("[dry-run] would create event '{}'", args.summary);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Calendar event update.
+async fn handle_calendar_event_update(
+    ctx: &crate::services::ServiceContext,
+    args: &calendar::CalendarUpdateArgs,
+) -> i32 {
+    let url = crate::services::calendar::events::build_event_update_url(
+        &args.calendar_id,
+        &args.event_id,
+    );
+
+    let mut body = serde_json::Map::new();
+    if let Some(ref summary) = args.summary {
+        body.insert("summary".to_string(), serde_json::json!(summary));
+    }
+    if let Some(ref description) = args.description {
+        body.insert("description".to_string(), serde_json::json!(description));
+    }
+    if let Some(ref location) = args.location {
+        body.insert("location".to_string(), serde_json::json!(location));
+    }
+    if let Some(ref from) = args.from {
+        body.insert("start".to_string(), serde_json::json!({"dateTime": from}));
+    }
+    if let Some(ref to) = args.to {
+        body.insert("end".to_string(), serde_json::json!({"dateTime": to}));
+    }
+    if !args.add_attendee.is_empty() {
+        let attendees: Vec<serde_json::Value> = args.add_attendee.iter()
+            .map(|email| serde_json::json!({"email": email}))
+            .collect();
+        body.insert("attendees".to_string(), serde_json::json!(attendees));
+    }
+    let body_val = serde_json::Value::Object(body);
+
+    match crate::http::api::api_patch::<crate::services::calendar::types::Event>(
+        &ctx.client,
+        &url,
+        &body_val,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(event)) => {
+            if let Err(e) = ctx.write_output(&event) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!("[dry-run] would update event '{}'", args.event_id);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Calendar event delete.
+async fn handle_calendar_event_delete(
+    ctx: &crate::services::ServiceContext,
+    args: &calendar::CalendarDeleteArgs,
+) -> i32 {
+    // Confirmation for destructive operation
+    if !ctx.is_force() && !ctx.flags.no_input {
+        eprint!(
+            "Are you sure you want to delete event '{}'? [y/N] ",
+            args.event_id
+        );
+        let mut input = String::new();
+        if std::io::stdin().read_line(&mut input).is_err() || input.trim().to_lowercase() != "y" {
+            eprintln!("Cancelled.");
+            return codes::CANCELLED;
+        }
+    } else if !ctx.is_force() && ctx.flags.no_input {
+        eprintln!("Error: destructive operation requires --force when --no-input is set");
+        return codes::USAGE_ERROR;
+    }
+
+    let url = crate::services::calendar::events::build_event_delete_url(
+        &args.calendar_id,
+        &args.event_id,
+    );
+
+    match crate::http::api::api_delete(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(()) => {
+            eprintln!("Event '{}' deleted.", args.event_id);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Calendar calendars list.
+async fn handle_calendar_calendars_list(
+    ctx: &crate::services::ServiceContext,
+    args: &calendar::CalendarCalendarsArgs,
+) -> i32 {
+    let params = crate::services::common::PaginationParams {
+        max_results: Some(args.max),
+        page_token: args.page.clone(),
+        all_pages: args.all,
+        fail_empty: args.fail_empty,
+    };
+
+    let max = args.max;
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| crate::services::calendar::calendars::build_calendars_list_url(Some(max), pt),
+        |value| {
+            let calendars = value
+                .get("items")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((calendars, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let response = serde_json::json!({
+        "items": items,
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Calendar freebusy.
+async fn handle_calendar_freebusy(
+    ctx: &crate::services::ServiceContext,
+    args: &calendar::CalendarFreeBusyArgs,
+) -> i32 {
+    let calendars: Vec<String> = args.calendar_ids
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let req = crate::services::calendar::freebusy::build_freebusy_request(
+        &calendars,
+        &args.from,
+        &args.to,
+    );
+    let url = crate::services::calendar::freebusy::build_freebusy_url();
+    let body = match serde_json::to_value(&req) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    // Freebusy is read-only, never skip on dry-run
+    match crate::http::api::api_post::<serde_json::Value>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        false,
+    )
+    .await
+    {
+        Ok(Some(resp)) => {
+            if let Err(e) = ctx.write_output(&resp) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            // Should not happen since dry_run=false, but handle gracefully
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
 /// Handle the `drive` command and its subcommands.
-fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
+async fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
     use drive::DriveCommand;
 
     // Commands that can work without authentication
@@ -1059,9 +2038,557 @@ fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
         return codes::SUCCESS;
     }
 
-    // All other Drive commands require authentication
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    // Bootstrap auth for all other commands
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    // Dispatch to subcommand handlers
+    match args.command {
+        DriveCommand::Ls(ref list_args) => handle_drive_list(&ctx, list_args).await,
+        DriveCommand::Search(ref search_args) => handle_drive_search(&ctx, search_args).await,
+        DriveCommand::Get(ref get_args) => handle_drive_get(&ctx, get_args).await,
+        DriveCommand::Download(ref _dl_args) => {
+            eprintln!("download requires RT-M5");
+            codes::GENERIC_ERROR
+        }
+        DriveCommand::Upload(ref _ul_args) => {
+            eprintln!("upload requires RT-M5");
+            codes::GENERIC_ERROR
+        }
+        DriveCommand::Mkdir(ref mkdir_args) => handle_drive_mkdir(&ctx, mkdir_args).await,
+        DriveCommand::Delete(ref delete_args) => handle_drive_delete(&ctx, delete_args).await,
+        DriveCommand::Move(ref move_args) => handle_drive_move(&ctx, move_args).await,
+        DriveCommand::Rename(ref rename_args) => handle_drive_rename(&ctx, rename_args).await,
+        DriveCommand::Share(ref share_args) => handle_drive_share(&ctx, share_args).await,
+        DriveCommand::Permissions(ref perm_args) => {
+            handle_drive_permissions_list(&ctx, perm_args).await
+        }
+        DriveCommand::Copy(ref copy_args) => handle_drive_copy(&ctx, copy_args).await,
+        _ => {
+            eprintln!("Command not yet implemented");
+            codes::GENERIC_ERROR
+        }
+    }
+}
+
+/// Handle Drive list.
+async fn handle_drive_list(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveLsArgs,
+) -> i32 {
+    let folder_id = args.parent.as_deref().unwrap_or("root");
+    let query = crate::services::drive::list::build_list_query(folder_id, args.query.as_deref());
+    let params = crate::services::common::PaginationParams {
+        max_results: Some(args.max),
+        page_token: args.page.clone(),
+        all_pages: false,
+        fail_empty: false,
+    };
+
+    let max = args.max;
+    let all_drives = args.all_drives;
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| build_drive_list_url(&query, max, pt, all_drives),
+        |value| {
+            let files = value
+                .get("files")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((files, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let response = serde_json::json!({
+        "files": items,
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
+}
+
+/// Handle Drive search.
+async fn handle_drive_search(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveSearchArgs,
+) -> i32 {
+    let search_text = args.query.join(" ");
+    let query = crate::services::drive::list::build_search_query(&search_text, args.raw_query);
+    let params = crate::services::common::PaginationParams {
+        max_results: Some(args.max),
+        page_token: args.page.clone(),
+        all_pages: false,
+        fail_empty: false,
+    };
+
+    let max = args.max;
+    let all_drives = args.all_drives;
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| build_drive_list_url(&query, max, pt, all_drives),
+        |value| {
+            let files = value
+                .get("files")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((files, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let response = serde_json::json!({
+        "files": items,
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Drive get.
+async fn handle_drive_get(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveGetArgs,
+) -> i32 {
+    let url = crate::services::drive::files::build_file_get_url(&args.file_id);
+    let file: crate::services::drive::types::DriveFile = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&file) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Drive mkdir.
+async fn handle_drive_mkdir(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveMkdirArgs,
+) -> i32 {
+    let body =
+        crate::services::drive::folders::build_mkdir_body(&args.name, args.parent.as_deref());
+    let url = format!("{}/files", crate::services::drive::types::DRIVE_BASE_URL);
+
+    match crate::http::api::api_post::<crate::services::drive::types::DriveFile>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(file)) => {
+            if let Err(e) = ctx.write_output(&file) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!("[dry-run] would create folder '{}'", args.name);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Drive delete.
+async fn handle_drive_delete(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveDeleteArgs,
+) -> i32 {
+    // Confirmation for destructive operation
+    if !ctx.is_force() && !ctx.flags.no_input {
+        eprint!(
+            "Are you sure you want to delete '{}'? [y/N] ",
+            args.file_id
+        );
+        let mut input = String::new();
+        if std::io::stdin().read_line(&mut input).is_err() || input.trim().to_lowercase() != "y" {
+            eprintln!("Cancelled.");
+            return codes::CANCELLED;
+        }
+    } else if !ctx.is_force() && ctx.flags.no_input {
+        eprintln!("Error: destructive operation requires --force when --no-input is set");
+        return codes::USAGE_ERROR;
+    }
+
+    if args.permanent {
+        let url = crate::services::drive::folders::build_permanent_delete_url(&args.file_id);
+        match crate::http::api::api_delete(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+            ctx.is_dry_run(),
+        )
+        .await
+        {
+            Ok(()) => {
+                eprintln!("File '{}' permanently deleted.", args.file_id);
+                codes::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                map_error_to_exit_code(&e)
+            }
+        }
+    } else {
+        let url = crate::services::drive::folders::build_trash_url(&args.file_id);
+        let body = serde_json::json!({"trashed": true});
+        match crate::http::api::api_patch::<serde_json::Value>(
+            &ctx.client,
+            &url,
+            &body,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+            ctx.is_dry_run(),
+        )
+        .await
+        {
+            Ok(Some(_)) => {
+                eprintln!("File '{}' trashed.", args.file_id);
+                codes::SUCCESS
+            }
+            Ok(None) => {
+                eprintln!("[dry-run] would trash file '{}'", args.file_id);
+                codes::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                map_error_to_exit_code(&e)
+            }
+        }
+    }
+}
+
+/// Handle Drive move.
+async fn handle_drive_move(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveMoveArgs,
+) -> i32 {
+    // First, get the file to find current parents (request parents field)
+    let get_url = format!("{}?fields=parents",
+        crate::services::drive::files::build_file_get_url(&args.file_id));
+    let file: crate::services::drive::types::DriveFile = match crate::http::api::api_get(
+        &ctx.client,
+        &get_url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let old_parents = file.parents.join(",");
+
+    let url = format!(
+        "{}/files/{}?addParents={}&removeParents={}",
+        crate::services::drive::types::DRIVE_BASE_URL,
+        args.file_id, args.parent, old_parents
+    );
+    let body = serde_json::json!({});
+
+    match crate::http::api::api_patch::<crate::services::drive::types::DriveFile>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(moved_file)) => {
+            if let Err(e) = ctx.write_output(&moved_file) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!(
+                "[dry-run] would move '{}' to '{}'",
+                args.file_id, args.parent
+            );
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Drive rename.
+async fn handle_drive_rename(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveRenameArgs,
+) -> i32 {
+    let url = format!(
+        "{}/files/{}",
+        crate::services::drive::types::DRIVE_BASE_URL,
+        args.file_id
+    );
+    let body = crate::services::drive::folders::build_rename_body(&args.new_name);
+
+    match crate::http::api::api_patch::<crate::services::drive::types::DriveFile>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(file)) => {
+            if let Err(e) = ctx.write_output(&file) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!(
+                "[dry-run] would rename '{}' to '{}'",
+                args.file_id, args.new_name
+            );
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Drive share.
+async fn handle_drive_share(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveShareArgs,
+) -> i32 {
+    let body = match crate::services::drive::permissions::build_share_permission(
+        &args.to,
+        &args.role,
+        args.email.as_deref(),
+        args.domain.as_deref(),
+    ) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::USAGE_ERROR;
+        }
+    };
+
+    let url =
+        crate::services::drive::permissions::build_create_permission_url(&args.file_id);
+
+    match crate::http::api::api_post::<crate::services::drive::types::Permission>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(perm)) => {
+            if let Err(e) = ctx.write_output(&perm) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!(
+                "[dry-run] would share '{}' as {} with {}",
+                args.file_id, args.role, args.to
+            );
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Drive permissions list.
+async fn handle_drive_permissions_list(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DrivePermissionsArgs,
+) -> i32 {
+    let url =
+        crate::services::drive::permissions::build_list_permissions_url(&args.file_id);
+
+    let response: crate::services::drive::types::PermissionListResponse =
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+        };
+
+    if let Err(e) = ctx.write_output(&response) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Drive copy.
+async fn handle_drive_copy(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveCopyArgs,
+) -> i32 {
+    let url = crate::services::drive::files::build_file_copy_url(&args.file_id);
+
+    let mut body_map = serde_json::Map::new();
+    if let Some(ref name) = args.name {
+        body_map.insert("name".to_string(), serde_json::json!(name));
+    }
+    if let Some(ref parent) = args.parent {
+        body_map.insert("parents".to_string(), serde_json::json!([parent]));
+    }
+    let body = serde_json::Value::Object(body_map);
+
+    match crate::http::api::api_post::<crate::services::drive::types::DriveFile>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(file)) => {
+            if let Err(e) = ctx.write_output(&file) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!("[dry-run] would copy '{}'", args.file_id);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Build a Drive file list URL with query, pageSize, and optional pageToken.
+fn build_drive_list_url(
+    query: &str,
+    max: u32,
+    page_token: Option<&str>,
+    all_drives: bool,
+) -> String {
+    let base = &format!("{}/files", crate::services::drive::types::DRIVE_BASE_URL);
+    let encoded_query: String =
+        url::form_urlencoded::byte_serialize(query.as_bytes()).collect();
+    let mut params = vec![
+        format!("q={}", encoded_query),
+        format!("pageSize={}", max),
+        "fields=files(id,name,mimeType,size,modifiedTime,parents),nextPageToken".to_string(),
+    ];
+    if all_drives {
+        params.push("supportsAllDrives=true".to_string());
+        params.push("includeItemsFromAllDrives=true".to_string());
+    }
+    if let Some(token) = page_token {
+        params.push(format!("pageToken={}", token));
+    }
+    format!("{}?{}", base, params.join("&"))
 }
 
 /// Handle the `docs` command and its subcommands.

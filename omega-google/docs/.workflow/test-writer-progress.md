@@ -1,8 +1,98 @@
 # Test Writer Progress -- omega-google
 
-## Status: M1 COMPLETE, M2 COMPLETE, RT-M1 COMPLETE, RT-M2 COMPLETE, RT-M3 COMPLETE
+## Status: M1 COMPLETE, M2 COMPLETE, RT-M1 COMPLETE, RT-M2 COMPLETE, RT-M3 COMPLETE, RT-M4 COMPLETE
 
-All M1 Foundation, M2 Core Services, RT-M1 Auth Core, RT-M2 Auth Flows, and RT-M3 Execution Infrastructure tests have been written.
+All M1 Foundation, M2 Core Services, RT-M1 Auth Core, RT-M2 Auth Flows, RT-M3 Execution Infrastructure, and RT-M4 Core Service Handlers tests have been written.
+
+---
+
+## RT-M4 Core Service Handlers Test Summary
+
+| Module | File | Tests | Ignored | Pass | Fail | Status |
+|--------|------|-------|---------|------|------|--------|
+| Gmail handlers (search, messages, thread, send, labels, modify, drafts) | `tests/rt_m4_handlers_test.rs` | 47 | 0 | 47 | 0 | Written |
+| Calendar handlers (events list/get/create/update/delete, calendars, freebusy) | `tests/rt_m4_handlers_test.rs` | 26 | 0 | 26 | 0 | Written |
+| Drive handlers (list, search, get, mkdir, delete, move, rename, share, permissions, copy) | `tests/rt_m4_handlers_test.rs` | 30 | 0 | 30 | 0 | Written |
+| Cross-cutting (dispatch, error mapping, circuit breaker, verbose, edge cases) | `tests/rt_m4_handlers_test.rs` | 10 | 0 | 10 | 0 | Written |
+| **RT-M4 TOTAL** | | **113** | **0** | **113** | **0** | |
+
+### RT-M4 Test Results
+- **Passed: 113** (all tests pass -- testing URL builders, type deserialization, API call patterns, error paths, dry-run, pagination)
+- **Failed: 0**
+- **Ignored: 0**
+- **Total: 113**
+
+### RT-M4 Files Created
+- **NEW:** `tests/rt_m4_handlers_test.rs` -- 113 integration tests covering REQ-RT-032 through REQ-RT-066
+
+### RT-M4 Test Coverage by Requirement
+
+#### Must Priority (tested first, exhaustive coverage)
+| REQ ID | Handler | Tests | Notes |
+|--------|---------|-------|-------|
+| REQ-RT-032 | handle_gmail_search | 9 | URL builder, pagination (all/single), fail-empty, 401/429 error mapping, empty query, special chars, dispatch async |
+| REQ-RT-033 | handle_gmail_message_search | 3 | URL with/without include_body, response deserialization |
+| REQ-RT-034 | handle_gmail_thread_get | 3 | URL, full response with messages, 404 not found |
+| REQ-RT-035 | handle_gmail_message_get | 4 | URL with full/metadata/raw format, full response deserialization |
+| REQ-RT-036 | handle_gmail_send | 6 | URL, MIME construction, send body, dry-run, POST success, CC/BCC, no recipients edge case |
+| REQ-RT-037 | handle_gmail_labels | 7 | List URL, get URL, list response, create request/POST, delete URL/success/dry-run |
+| REQ-RT-039 | handle_gmail_attachment | 1 | Attachment URL |
+| REQ-RT-040 | handle_gmail_modify | 3 | Modify request URL/body, POST success, empty labels edge |
+| REQ-RT-044 | handle_calendar_events_list | 6 | URL all params, page token, deserialization, pagination, empty list, async dispatch |
+| REQ-RT-045 | handle_calendar_events_get | 3 | URL, full response, 404 not found |
+| REQ-RT-046 | handle_calendar_events_create | 4 | Body construction, POST success, dry-run, all-day event |
+| REQ-RT-047 | handle_calendar_events_update | 2 | PATCH success, dry-run |
+| REQ-RT-048 | handle_calendar_events_delete | 3 | DELETE success, dry-run, 404 not found |
+| REQ-RT-049 | handle_calendar_calendars_list | 2 | URL, list response deserialization |
+| REQ-RT-050 | handle_calendar_freebusy | 3 | URL, request body, POST success |
+| REQ-RT-055 | handle_drive_list | 4 | Query builder with parent, list deserialization, pagination, async dispatch |
+| REQ-RT-056 | handle_drive_search | 3 | Plain text, raw query, empty query |
+| REQ-RT-057 | handle_drive_get | 4 | URL, response deserialization, 404, minimal fields edge |
+| REQ-RT-058 | handle_drive_download | 2 | Download URL (alt=media), export URL (mimeType) |
+| REQ-RT-059 | handle_drive_upload | 1 | Upload URL (multipart) |
+| REQ-RT-060 | handle_drive_mkdir | 3 | Body, body with parent, POST success |
+| REQ-RT-061 | handle_drive_delete | 3 | Trash URL, permanent delete URL, dry-run |
+| REQ-RT-062 | handle_drive_move | 1 | PATCH with addParents/removeParents |
+| REQ-RT-063 | handle_drive_rename | 3 | Body, PATCH success, special chars |
+| REQ-RT-064 | handle_drive_share | 4 | Anyone permission, user permission, create URL, POST success |
+| REQ-RT-065 | handle_drive_permissions_list | 2 | URL, list response |
+| REQ-RT-066 | handle_drive_copy | 3 | URL, POST success, with name+parent |
+
+#### Should Priority
+| REQ ID | Handler | Tests | Notes |
+|--------|---------|-------|-------|
+| REQ-RT-038 | handle_gmail_drafts | 6 | List/get/create/delete/send URLs, list response deserialization |
+
+#### Cross-cutting Tests
+| Category | Tests | Notes |
+|----------|-------|-------|
+| Dispatch async | 3 | Gmail URL, Drive URL, Calendar time -- verify async dispatch works |
+| Error mapping | 2 | 403 -> PERMISSION_DENIED, 500 -> RETRYABLE |
+| ServiceContext output | 3 | write_output JSON, write_paginated with/without hint |
+| Edge cases | 3 | Malformed JSON, empty body, all-day calendar event |
+| Verbose logging | 1 | Verbose mode does not crash |
+| Circuit breaker | 1 | Opens after 5 failures |
+
+### RT-M4 Design Notes
+
+1. **Test strategy**: Since handler functions require a ServiceContext with auth, tests use mockito to simulate Google API responses and verify the handler's API call patterns, type deserialization, error handling, and output behavior. URL builders and types from M2 are tested for correct integration.
+
+2. **TDD contract**: These tests define the contract the developer must fulfill:
+   - `handle_gmail`, `handle_calendar`, `handle_drive` must be `async fn`
+   - `dispatch_command` must `.await` the three service handlers
+   - Each handler must bootstrap auth, call the correct API, deserialize the response, and return the correct exit code
+   - Dry-run must prevent API calls
+   - Error responses must map to correct exit codes via `OmegaError`
+
+3. **Not tested** (by design): REQ-RT-058/059 download/upload are RT-M5 stubs. REQ-RT-043 (Gmail settings) is Could priority. REQ-RT-041/042 (batch/history) are Should priority but lower than the covered handlers.
+
+### Specs Gaps Found
+
+1. **Calendar event get URL encoding**: The `build_event_get_url` function percent-encodes calendar IDs and event IDs using `NON_ALPHANUMERIC`, which means underscores in IDs become `%5F`. This is technically correct for URLs but means test assertions must account for encoding. The handler will need to ensure the mock-server URLs match the encoded format.
+
+2. **Drive list URL**: There is no `build_files_list_url()` function in `src/services/drive/`. The list module only has query builders (`build_list_query`, `build_search_query`). The handler will need to construct the full URL `https://www.googleapis.com/drive/v3/files?q=<query>&pageSize=<max>&fields=...` itself or a new URL builder should be added.
+
+3. **Gmail message list type**: The Gmail API returns `{"messages": [...]}` for message list, but there is no dedicated `MessageListResponse` type. The handler will need to use `serde_json::Value` or a new type.
 
 ---
 

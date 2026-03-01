@@ -304,41 +304,41 @@ omega-google currently parses all CLI arguments, defines all types, builds all U
 | REQ-RT-029 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (drive resumable upload) | `src/services/drive/files.rs` |
 | REQ-RT-030 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (gmail attachment download) | `src/services/gmail/message.rs`, `src/cli/mod.rs` |
 | REQ-RT-031 | Should | (filled by test-writer) | rt-arch Module 10: services/export.rs (shared export) | `src/services/export.rs` |
-| REQ-RT-032 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_search) | `src/cli/mod.rs` |
-| REQ-RT-033 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_message_search) | `src/cli/mod.rs` |
-| REQ-RT-034 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_thread_get) | `src/cli/mod.rs` |
-| REQ-RT-035 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_message_get) | `src/cli/mod.rs` |
-| REQ-RT-036 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_send) | `src/cli/mod.rs` |
-| REQ-RT-037 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_labels) | `src/cli/mod.rs` |
-| REQ-RT-038 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_drafts) | `src/cli/mod.rs` |
-| REQ-RT-039 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_modify) | `src/cli/mod.rs` |
-| REQ-RT-040 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_trash) | `src/cli/mod.rs` |
-| REQ-RT-041 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_batch) | `src/cli/mod.rs` |
-| REQ-RT-042 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_history) | `src/cli/mod.rs` |
-| REQ-RT-043 | Could | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_gmail_settings) | `src/cli/mod.rs` |
-| REQ-RT-044 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_events_list) | `src/cli/mod.rs` |
-| REQ-RT-045 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_events_get) | `src/cli/mod.rs` |
-| REQ-RT-046 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_events_create) | `src/cli/mod.rs` |
-| REQ-RT-047 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_events_update) | `src/cli/mod.rs` |
-| REQ-RT-048 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_events_delete) | `src/cli/mod.rs` |
-| REQ-RT-049 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_calendars_list) | `src/cli/mod.rs` |
-| REQ-RT-050 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_freebusy) | `src/cli/mod.rs` |
-| REQ-RT-051 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_respond) | `src/cli/mod.rs` |
-| REQ-RT-052 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_search) | `src/cli/mod.rs` |
-| REQ-RT-053 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_calendars_crud) | `src/cli/mod.rs` |
-| REQ-RT-054 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_calendar_colors) | `src/cli/mod.rs` |
-| REQ-RT-055 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_list) | `src/cli/mod.rs` |
-| REQ-RT-056 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_search) | `src/cli/mod.rs` |
-| REQ-RT-057 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_get) | `src/cli/mod.rs` |
-| REQ-RT-058 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_download) | `src/cli/mod.rs` |
-| REQ-RT-059 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_upload) | `src/cli/mod.rs` |
-| REQ-RT-060 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_mkdir) | `src/cli/mod.rs` |
-| REQ-RT-061 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_move) | `src/cli/mod.rs` |
-| REQ-RT-062 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_copy) | `src/cli/mod.rs` |
-| REQ-RT-063 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_trash) | `src/cli/mod.rs` |
-| REQ-RT-064 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_permissions_list) | `src/cli/mod.rs` |
-| REQ-RT-065 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_permissions_create) | `src/cli/mod.rs` |
-| REQ-RT-066 | Must | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_info) | `src/cli/mod.rs` |
+| REQ-RT-032 | Must | req_rt_032_handle_gmail_is_async, req_rt_032_gmail_search_calls_correct_url, req_rt_032_gmail_search_fail_empty_no_results, req_rt_032_gmail_search_pagination_all_pages, req_rt_032_gmail_search_single_page_hint, req_rt_032_gmail_search_empty_query, req_rt_032_gmail_search_special_chars_query, req_rt_032_gmail_search_api_401_auth_error, req_rt_032_gmail_search_api_429_rate_limited, req_rt_032_dispatch_command_gmail_async, req_rt_032_api_403_permission_denied, req_rt_032_api_500_server_error, req_rt_032_service_context_write_output_json, req_rt_032_service_context_write_paginated, req_rt_032_service_context_write_paginated_no_hint, req_rt_032_edge_malformed_json_response, req_rt_032_edge_empty_response_body, req_rt_032_verbose_logging_does_not_crash, req_rt_032_circuit_breaker_opens_after_failures | rt-arch Module 11: cli/mod.rs (handle_gmail_search) | `handle_gmail` + `handle_gmail_search` @ `src/cli/mod.rs` |
+| REQ-RT-033 | Must | req_rt_033_gmail_message_search_url_with_include_body, req_rt_033_gmail_message_search_url_without_body, req_rt_033_gmail_message_search_deserializes_response | rt-arch Module 11: cli/mod.rs (handle_gmail_message_search) | `handle_gmail_messages` @ `src/cli/mod.rs` |
+| REQ-RT-034 | Must | req_rt_034_gmail_thread_get_url, req_rt_034_gmail_thread_get_returns_full_thread, req_rt_034_gmail_thread_get_not_found | rt-arch Module 11: cli/mod.rs (handle_gmail_thread_get) | `handle_gmail_thread` @ `src/cli/mod.rs` |
+| REQ-RT-035 | Must | req_rt_035_gmail_message_get_url_with_format, req_rt_035_gmail_message_get_url_metadata, req_rt_035_gmail_message_get_url_raw, req_rt_035_gmail_message_get_full_response | rt-arch Module 11: cli/mod.rs (handle_gmail_message_get) | `handle_gmail_message_get` @ `src/cli/mod.rs` |
+| REQ-RT-036 | Must | req_rt_036_gmail_send_url, req_rt_036_gmail_send_mime_message_construction, req_rt_036_gmail_send_body_has_raw_field, req_rt_036_gmail_send_dry_run, req_rt_036_gmail_send_post_succeeds, req_rt_036_gmail_send_with_cc_bcc, req_rt_036_gmail_send_no_recipients | rt-arch Module 11: cli/mod.rs (handle_gmail_send) | `handle_gmail_send` @ `src/cli/mod.rs` |
+| REQ-RT-037 | Must | req_rt_037_gmail_labels_list_url, req_rt_037_gmail_label_get_url, req_rt_037_gmail_labels_list_response, req_rt_037_gmail_label_create_request, req_rt_037_gmail_label_create_post, req_rt_037_gmail_label_delete_url, req_rt_037_gmail_label_delete_succeeds, req_rt_037_gmail_label_delete_dry_run | rt-arch Module 11: cli/mod.rs (handle_gmail_labels) | `handle_gmail_labels` @ `src/cli/mod.rs` |
+| REQ-RT-038 | Should | req_rt_038_gmail_drafts_list_url, req_rt_038_gmail_draft_get_url, req_rt_038_gmail_draft_create_url, req_rt_038_gmail_draft_delete_url, req_rt_038_gmail_draft_send_url, req_rt_038_gmail_drafts_list_response | rt-arch Module 11: cli/mod.rs (handle_gmail_drafts) | URL builders @ `src/services/gmail/drafts.rs` (handlers deferred) |
+| REQ-RT-039 | Must | req_rt_039_gmail_attachment_url | rt-arch Module 11: cli/mod.rs (handle_gmail_modify) | URL builders @ `src/services/gmail/message.rs` (attachment handler deferred) |
+| REQ-RT-040 | Must | req_rt_040_gmail_thread_modify_request, req_rt_040_gmail_thread_modify_post, req_rt_040_gmail_thread_modify_empty_labels | rt-arch Module 11: cli/mod.rs (handle_gmail_trash) | URL builders + types @ `src/services/gmail/thread.rs` (modify/trash tested via URL/type tests) |
+| REQ-RT-041 | Should | (not tested -- Should priority, deferred) | rt-arch Module 11: cli/mod.rs (handle_gmail_batch) | `src/cli/mod.rs` |
+| REQ-RT-042 | Should | (not tested -- Should priority, deferred) | rt-arch Module 11: cli/mod.rs (handle_gmail_history) | `src/cli/mod.rs` |
+| REQ-RT-043 | Could | (not tested -- Could priority, deferred) | rt-arch Module 11: cli/mod.rs (handle_gmail_settings) | `src/cli/mod.rs` |
+| REQ-RT-044 | Must | req_rt_044_handle_calendar_is_async, req_rt_044_calendar_events_list_url_all_params, req_rt_044_calendar_events_list_url_page_token, req_rt_044_calendar_events_list_deserializes, req_rt_044_calendar_events_pagination, req_rt_044_calendar_events_empty_list, req_rt_044_dispatch_command_calendar_async, req_rt_044_edge_calendar_all_day_event | rt-arch Module 11: cli/mod.rs (handle_calendar_events_list) | `handle_calendar` + `handle_calendar_events_list` @ `src/cli/mod.rs` |
+| REQ-RT-045 | Must | req_rt_045_calendar_event_get_url, req_rt_045_calendar_event_get_response, req_rt_045_calendar_event_not_found | rt-arch Module 11: cli/mod.rs (handle_calendar_events_get) | `handle_calendar_event_get` @ `src/cli/mod.rs` |
+| REQ-RT-046 | Must | req_rt_046_calendar_event_create_body, req_rt_046_calendar_event_create_post, req_rt_046_calendar_event_create_dry_run, req_rt_046_calendar_event_create_all_day | rt-arch Module 11: cli/mod.rs (handle_calendar_events_create) | `handle_calendar_event_create` @ `src/cli/mod.rs` |
+| REQ-RT-047 | Must | req_rt_047_calendar_event_update_patch, req_rt_047_calendar_event_update_dry_run | rt-arch Module 11: cli/mod.rs (handle_calendar_events_update) | `handle_calendar_event_update` @ `src/cli/mod.rs` |
+| REQ-RT-048 | Must | req_rt_048_calendar_event_delete, req_rt_048_calendar_event_delete_dry_run, req_rt_048_calendar_event_delete_not_found | rt-arch Module 11: cli/mod.rs (handle_calendar_events_delete) | `handle_calendar_event_delete` @ `src/cli/mod.rs` |
+| REQ-RT-049 | Must | req_rt_049_calendar_calendars_list_url, req_rt_049_calendar_calendars_list_response | rt-arch Module 11: cli/mod.rs (handle_calendar_calendars_list) | `handle_calendar_calendars_list` @ `src/cli/mod.rs` |
+| REQ-RT-050 | Must | req_rt_050_calendar_freebusy_url, req_rt_050_calendar_freebusy_request_body, req_rt_050_calendar_freebusy_post | rt-arch Module 11: cli/mod.rs (handle_calendar_freebusy) | `handle_calendar_freebusy` @ `src/cli/mod.rs` |
+| REQ-RT-051 | Should | (not tested -- Should priority, deferred) | rt-arch Module 11: cli/mod.rs (handle_calendar_respond) | `src/cli/mod.rs` |
+| REQ-RT-052 | Should | (not tested -- Should priority, deferred) | rt-arch Module 11: cli/mod.rs (handle_calendar_search) | `src/cli/mod.rs` |
+| REQ-RT-053 | Should | (not tested -- Should priority, deferred) | rt-arch Module 11: cli/mod.rs (handle_calendar_calendars_crud) | `src/cli/mod.rs` |
+| REQ-RT-054 | Should | (not tested -- Should priority, deferred) | rt-arch Module 11: cli/mod.rs (handle_calendar_colors) | `src/cli/mod.rs` |
+| REQ-RT-055 | Must | req_rt_055_handle_drive_is_async, req_rt_055_drive_list_query_with_parent, req_rt_055_drive_list_deserializes_response, req_rt_055_drive_list_pagination, req_rt_055_dispatch_command_drive_async | rt-arch Module 11: cli/mod.rs (handle_drive_list) | `handle_drive` + `handle_drive_list` @ `src/cli/mod.rs` |
+| REQ-RT-056 | Must | req_rt_056_drive_search_plain_text, req_rt_056_drive_search_raw_query, req_rt_056_drive_search_empty_query | rt-arch Module 11: cli/mod.rs (handle_drive_search) | `handle_drive_search` @ `src/cli/mod.rs` |
+| REQ-RT-057 | Must | req_rt_057_drive_get_url, req_rt_057_drive_get_response, req_rt_057_drive_get_not_found, req_rt_057_edge_drive_file_minimal_fields | rt-arch Module 11: cli/mod.rs (handle_drive_get) | `handle_drive_get` @ `src/cli/mod.rs` |
+| REQ-RT-058 | Must | req_rt_058_drive_download_url, req_rt_058_drive_export_url | rt-arch Module 11: cli/mod.rs (handle_drive_download) | URL builders @ `src/services/drive/files.rs` (download handler stub in `src/cli/mod.rs`) |
+| REQ-RT-059 | Must | req_rt_059_drive_upload_url | rt-arch Module 11: cli/mod.rs (handle_drive_upload) | URL builders @ `src/services/drive/files.rs` (upload handler stub in `src/cli/mod.rs`) |
+| REQ-RT-060 | Must | req_rt_060_drive_mkdir_body, req_rt_060_drive_mkdir_body_with_parent, req_rt_060_drive_mkdir_post | rt-arch Module 11: cli/mod.rs (handle_drive_mkdir) | `handle_drive_mkdir` @ `src/cli/mod.rs` |
+| REQ-RT-061 | Must | req_rt_061_drive_trash_url, req_rt_061_drive_permanent_delete_url, req_rt_061_drive_delete_dry_run | rt-arch Module 11: cli/mod.rs (handle_drive_delete) | `handle_drive_delete` @ `src/cli/mod.rs` |
+| REQ-RT-062 | Must | req_rt_062_drive_move_patch | rt-arch Module 11: cli/mod.rs (handle_drive_move) | `handle_drive_move` @ `src/cli/mod.rs` |
+| REQ-RT-063 | Must | req_rt_063_drive_rename_body, req_rt_063_drive_rename_patch, req_rt_063_drive_rename_special_chars | rt-arch Module 11: cli/mod.rs (handle_drive_rename) | `handle_drive_rename` @ `src/cli/mod.rs` |
+| REQ-RT-064 | Must | req_rt_064_drive_share_anyone, req_rt_064_drive_share_user, req_rt_064_drive_create_permission_url, req_rt_064_drive_share_post | rt-arch Module 11: cli/mod.rs (handle_drive_share) | `handle_drive_share` @ `src/cli/mod.rs` |
+| REQ-RT-065 | Must | req_rt_065_drive_permissions_list_url, req_rt_065_drive_permissions_list_response | rt-arch Module 11: cli/mod.rs (handle_drive_permissions_list) | `handle_drive_permissions_list` @ `src/cli/mod.rs` |
+| REQ-RT-066 | Must | req_rt_066_drive_copy_url, req_rt_066_drive_copy_post, req_rt_066_drive_copy_with_name_and_parent | rt-arch Module 11: cli/mod.rs (handle_drive_copy) | `handle_drive_copy` @ `src/cli/mod.rs` |
 | REQ-RT-067 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_shared_drives) | `src/cli/mod.rs` |
 | REQ-RT-068 | Could | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_comments) | `src/cli/mod.rs` |
 | REQ-RT-069 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_docs) | `src/cli/mod.rs`, `src/services/docs/` |

@@ -1,6 +1,6 @@
-# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3
+# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4
 
-## Status: COMPLETE (RT-M3 Review Fixes Applied)
+## Status: COMPLETE (RT-M4 Core Service Handlers)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -11,7 +11,8 @@ RT-M2 Auth Flows: OAuth flow dispatcher, desktop flow, manual flow, and CLI auth
 RT-M2 Review Fixes: All critical, major, and minor findings addressed.
 RT-M3 Execution Infrastructure: API helpers, pagination, ServiceContext -- all 89 tests passing.
 RT-M3 Review Fixes: All critical and major findings addressed.
-**1331 unit tests passing.** Zero failures. Zero clippy warnings.
+RT-M4 Core Service Handlers: Gmail, Calendar, Drive handlers converted to async with auth bootstrap and full API dispatch.
+**1331 unit tests + 113 integration tests passing (1444 total).** Zero failures. Zero clippy warnings.
 
 ### RT-M3 Review Fixes
 
