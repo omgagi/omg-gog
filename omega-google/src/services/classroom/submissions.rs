@@ -134,6 +134,15 @@ pub fn build_submission_return_url(
     )
 }
 
+/// Build URL for patching a student submission (same path as GET).
+pub fn build_submission_patch_url(
+    course_id: &str,
+    coursework_id: &str,
+    submission_id: &str,
+) -> String {
+    build_submission_get_url(course_id, coursework_id, submission_id)
+}
+
 /// Build request body for grading a submission.
 pub fn build_submission_grade_body(
     assigned_grade: Option<f64>,

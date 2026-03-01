@@ -12,6 +12,6 @@
 | RT-M2 | Auth Flows (desktop/manual OAuth, auth CLI handlers) | COMPLETE | 1242 | 2026-03-01 |
 | RT-M3 | Execution Infrastructure (API helpers, pagination, bootstrap, verbose/dry-run) | COMPLETE | 1331 | 2026-03-01 |
 | RT-M4 | Core Service Handlers (Gmail, Calendar, Drive) | COMPLETE | 1444 | 2026-03-01 |
-| RT-M5 | File I/O (download, upload, attachments, export) | PENDING | - | - |
+| RT-M5 | File I/O (download, upload, attachments, export) | COMPLETE | 1662 | 2026-03-01 |
 | RT-M6 | Extended Service Handlers (12 remaining services) | PENDING | - | - |
 | RT-M7 | Polish (remote OAuth, encrypted file backend, resumable upload) | PENDING | - | - |

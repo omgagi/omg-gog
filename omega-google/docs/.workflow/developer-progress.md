@@ -1,6 +1,6 @@
-# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4 + RT-M5 + RT-M6-Batch1
+# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4 + RT-M5 + RT-M6-Batch1 + RT-M6-Batch2 + RT-M6-Docs + RT-M6-Slides + RT-M6-Review-Fixes
 
-## Status: COMPLETE (RT-M6 Batch 1 -- Small Service Handlers)
+## Status: COMPLETE (RT-M6 Code Review Fixes)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -14,7 +14,150 @@ RT-M3 Review Fixes: All critical and major findings addressed.
 RT-M4 Core Service Handlers: Gmail, Calendar, Drive handlers converted to async with auth bootstrap and full API dispatch.
 RT-M5 File I/O: Drive download/upload, Gmail attachment download, shared export module implemented.
 RT-M6 Batch 1: Forms, People, Groups, Keep, AppScript handlers converted from sync stubs to async with auth bootstrap and full API dispatch.
-**1385 unit tests + 142 integration tests passing (1527 total).** Zero failures. Zero clippy warnings.
+RT-M6 Batch 2: Chat, Tasks, Contacts handlers converted from sync stubs to async with auth bootstrap and full API dispatch.
+RT-M6 Docs: Docs handler converted from sync stub to async with auth bootstrap and full API dispatch (15 subcommands + 6 nested comment subcommands).
+RT-M6 Slides: Slides handler converted from sync stub to async with auth bootstrap and full API dispatch (11 subcommands).
+**1791 total tests passing (1385 unit + 6 ignored + integration tests).** Zero failures. Zero clippy warnings.
+
+### RT-M6 Code Review Fixes
+
+Fixed Critical and Major findings from the RT-M6 code review.
+
+#### Findings Fixed
+
+- **C-1 & C-2**: Wrong URL builder in Classroom student/teacher GET handlers. Added `build_student_get_url` and `build_teacher_get_url` to `roster.rs` and updated handlers in `cli/mod.rs` to use them instead of the remove URL builders.
+- **C-3**: Fake confirmation prompts in `handle_tasks_delete` and `handle_contacts_delete`. Added proper `stdin().read_line()` logic so the prompt actually reads user input before proceeding.
+- **C-4**: Hardcoded `AUTH_REQUIRED` in 5 service bootstraps (`handle_forms`, `handle_people`, `handle_groups`, `handle_keep`, `handle_appscript`). Changed to `map_error_to_exit_code(&e)` for correct error mapping.
+- **M-1**: Missing confirmation guards on 6 DELETE operations (`handle_docs_comments_delete`, `handle_slides_delete_slide`, `handle_classroom_students_remove`, `handle_classroom_teachers_remove`, `handle_classroom_courses_leave`, `handle_classroom_invitations_delete`). Added `no_input` guard to each.
+- **M-2 & M-3**: Missing guards on `handle_docs_delete` and `handle_docs_clear`. Added `no_input` guard to `handle_docs_delete` and full confirmation prompt with stdin read to `handle_docs_clear`.
+- **M-5**: `build_submission_get_url` used for PATCH in `handle_classroom_submissions_grade`. Added `build_submission_patch_url` to `submissions.rs` and updated the handler to use it.
+
+#### Modified Files
+
+- `src/services/classroom/roster.rs` -- added `build_student_get_url`, `build_teacher_get_url`
+- `src/services/classroom/submissions.rs` -- added `build_submission_patch_url`
+- `src/cli/mod.rs` -- all handler fixes (C-1 through M-5)
+
+### RT-M6 Slides Handler
+
+Converted the Slides service handler from sync stub to async with auth bootstrap and full API dispatch. 11 subcommands, all using the established pattern of ServiceContext bootstrap, API helpers, and error mapping.
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/cli/mod.rs` | Replaced sync stub `handle_slides` with async implementation dispatching to 11 sub-handler functions. Updated dispatch table entry to `.await`. |
+
+#### Handler Details
+
+| Sub-handler | Command | API Pattern | Notes |
+|-------------|---------|-------------|-------|
+| `handle_slides_export` | Export | Drive metadata `api_get` + `download_to_file` | Gets file metadata, resolves export MIME via slides export module, streams to file |
+| `handle_slides_info` | Info | `api_get` -> Presentation | GET presentation metadata via Slides API |
+| `handle_slides_create` | Create | `api_post` -> Presentation or Value | Creates blank via Slides API, or copies from template via Drive API |
+| `handle_slides_create_from_markdown` | CreateFromMarkdown | `api_post` (create) + `api_post` (batchUpdate) | Parses markdown, creates preso, then batchUpdate with slide requests |
+| `handle_slides_copy` | Copy | `api_post` -> Value | POST to Drive copy endpoint |
+| `handle_slides_list_slides` | ListSlides | `api_get` -> Presentation | GET full presentation, build slide list with IDs and extracted titles |
+| `handle_slides_add_slide` | AddSlide | `api_post` -> BatchUpdateResponse | batchUpdate with createSlide request |
+| `handle_slides_delete_slide` | DeleteSlide | `api_post` -> BatchUpdateResponse | batchUpdate with deleteObject request |
+| `handle_slides_read_slide` | ReadSlide | `api_get` -> Presentation | GET full presentation, find slide by ID, extract text and notes |
+| `handle_slides_update_notes` | UpdateNotes | `api_get` (find notes ID) + `api_post` (batchUpdate) | Gets presentation to find notes object ID, then deleteText + insertText |
+| `handle_slides_replace_slide` | ReplaceSlide | `api_get` (page size) + `api_post` (batchUpdate) | Gets presentation for page size, creates full-bleed image request |
+
+#### Features
+
+- All mutating operations support dry-run mode
+- CreateFromMarkdown reads from --content or --content-file
+- Create supports --template for copying from existing presentation
+- UpdateNotes reads from positional args or --file
+- ReplaceSlide uses page size for full-bleed image placement
+- ReadSlide extracts both text content and speaker notes
+
+#### Test Results
+
+| Check | Result |
+|-------|--------|
+| `cargo build` | PASS |
+| `cargo clippy -- -D warnings` | PASS (zero warnings) |
+| `cargo test --jobs 1` | **1791 total tests, 0 failures** |
+
+### RT-M6 Docs Handler
+
+Converted the Docs service handler from sync stub to async with auth bootstrap and full API dispatch. This is the most complex service handler with 15 subcommands and 6 nested comment subcommands (21 total sub-handler functions).
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/cli/mod.rs` | Replaced sync stub `handle_docs` with async implementation dispatching to 21 sub-handler functions. Updated dispatch table entry to `.await`. |
+
+#### Handler Details
+
+| Sub-handler | Command | API Pattern | Notes |
+|-------------|---------|-------------|-------|
+| `handle_docs_export` | Export | Drive export via `api_get_raw` + `download_to_file` | Gets file metadata first, resolves export MIME, streams to file |
+| `handle_docs_info` | Info | `api_get` -> Document | GET doc metadata via Docs API |
+| `handle_docs_create` | Create | `api_post` -> Value | POST to Drive files endpoint with Google Doc MIME type |
+| `handle_docs_copy` | Copy | `api_post` -> Value | POST to Drive copy endpoint |
+| `handle_docs_cat` | Cat | `api_get` -> Document | Extracts plain text from body/tabs, supports --tab, --all-tabs, --raw |
+| `handle_docs_list_tabs` | ListTabs | `api_get` -> Document | Lists tab properties (JSON or tab-separated text) |
+| `handle_docs_comments_list` | Comments List | `api_get` -> Value | Drive comments API |
+| `handle_docs_comments_get` | Comments Get | `api_get` -> Value | Drive comments API |
+| `handle_docs_comments_add` | Comments Add | `api_post` -> Value | Drive comments API |
+| `handle_docs_comments_reply` | Comments Reply | `api_post` -> Value | Drive comments replies API |
+| `handle_docs_comments_resolve` | Comments Resolve | `api_patch` -> Value | Drive comments API, sets resolved=true |
+| `handle_docs_comments_delete` | Comments Delete | `api_delete` | Drive comments API |
+| `handle_docs_write` | Write | `api_post` -> Value (batchUpdate) | --replace clears+inserts, default appends at end |
+| `handle_docs_insert` | Insert | `api_post` -> Value (batchUpdate) | Insert at specified index |
+| `handle_docs_delete` | Delete | `api_post` -> Value (batchUpdate) | Delete content range |
+| `handle_docs_find_replace` | FindReplace | `api_post` -> Value (batchUpdate) | replaceAllText request |
+| `handle_docs_update` | Update | `api_post` -> Value (batchUpdate) | Raw JSON batchUpdate requests |
+| `handle_docs_edit` | Edit | `api_post` -> Value (batchUpdate) | Find/replace via --find/--replace flags |
+| `handle_docs_sed` | Sed | `api_post` -> Value (batchUpdate) | Parses sed expressions, batches multiple replaceAllText |
+| `handle_docs_clear` | Clear | `api_post` -> Value (batchUpdate) | Gets doc end index, clears 1..end-1 |
+
+#### Features
+
+- All mutating operations support dry-run mode
+- File content input via --file flag for write/insert/sed
+- Sed supports positional args, -e flag, and -f file input
+- Cat supports --tab (specific tab), --all-tabs, --raw (JSON output)
+- Comments use Drive API (not Docs API) via builders in comments.rs
+- BatchUpdate operations (write, insert, delete, find-replace, update, edit, sed, clear) all POST to Docs batchUpdate endpoint
+
+#### Test Results
+
+| Check | Result |
+|-------|--------|
+| `cargo build` | PASS |
+| `cargo clippy -- -D warnings` | PASS (zero warnings) |
+| `cargo test --jobs 1` | **1385 unit + 142 integration = 1527 total, 0 failures** |
+
+### RT-M6 Batch 2: Chat, Tasks, Contacts Handlers
+
+Converted 3 service handlers from sync stubs to async handlers that bootstrap auth and dispatch subcommands, following the exact pattern established by handle_gmail/handle_calendar/handle_drive.
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/cli/mod.rs` | Replaced 3 sync stub handlers with async implementations: `handle_chat` (8 sub-handlers), `handle_tasks` (11 sub-handlers), `handle_contacts` (10 sub-handlers). Updated dispatch table entries to `.await`. Total: 29 new async sub-handler functions. |
+
+#### Handler Details
+
+| Service | Handler | Sub-handlers | Features |
+|---------|---------|-------------|----------|
+| Chat | `handle_chat` | `handle_chat_spaces_list`, `handle_chat_spaces_find`, `handle_chat_spaces_create`, `handle_chat_messages_list`, `handle_chat_messages_send`, `handle_chat_threads_list`, `handle_chat_dm_space`, `handle_chat_dm_send` | Nested spaces/messages/threads/dm dispatch, DM send first resolves DM space then sends, dry-run for create/send, pagination for list commands |
+| Tasks | `handle_tasks` | `handle_tasks_lists_list`, `handle_tasks_lists_create`, `handle_tasks_list`, `handle_tasks_get`, `handle_tasks_add`, `handle_tasks_update`, `handle_tasks_done`, `handle_tasks_undo`, `handle_tasks_delete`, `handle_tasks_clear` | Nested lists subcommand, done/undo via PATCH with status field, clear via POST with empty body, delete with force confirmation, dry-run for mutating operations |
+| Contacts | `handle_contacts` | `handle_contacts_search`, `handle_contacts_list`, `handle_contacts_get`, `handle_contacts_create`, `handle_contacts_update`, `handle_contacts_delete`, `handle_contacts_directory_list`, `handle_contacts_directory_search`, `handle_contacts_other_list`, `handle_contacts_other_search` | Nested directory/other subcommands, update body with birthday parsing (returns USAGE_ERROR on invalid format), delete with force confirmation, search query join, pagination for list commands |
+
+#### Test Results
+
+| Check | Result |
+|-------|--------|
+| `cargo build` | PASS |
+| `cargo clippy -- -D warnings` | PASS (zero warnings) |
+| `cargo test --jobs 1` | **1385 unit + 142 integration = 1527 total, 0 failures** |
 
 ### RT-M6 Batch 1: Small Service Handlers (Forms, People, Groups, Keep, AppScript)
 

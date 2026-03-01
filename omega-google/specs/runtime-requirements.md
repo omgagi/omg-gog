@@ -343,7 +343,7 @@ omega-google currently parses all CLI arguments, defines all types, builds all U
 | REQ-RT-068 | Could | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_drive_comments) | `src/cli/mod.rs` |
 | REQ-RT-069 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_docs) | `src/cli/mod.rs`, `src/services/docs/` |
 | REQ-RT-070 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_sheets) | `src/cli/mod.rs`, `src/services/sheets/` |
-| REQ-RT-071 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_slides) | `src/cli/mod.rs`, `src/services/slides/` |
+| REQ-RT-071 | Should | req_slides_002_*, req_slides_004_*, req_slides_009_* | rt-arch Module 11: cli/mod.rs (handle_slides) | `handle_slides` + 11 sub-handlers @ `src/cli/mod.rs`, `src/services/slides/` |
 | REQ-RT-072 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_forms) | `src/cli/mod.rs`, `src/services/forms/` |
 | REQ-RT-073 | Should | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_chat) | `src/cli/mod.rs`, `src/services/chat/` |
 | REQ-RT-074 | Could | (filled by test-writer) | rt-arch Module 11: cli/mod.rs (handle_classroom) | `src/cli/mod.rs`, `src/services/classroom/` |

@@ -63,6 +63,11 @@ pub fn build_student_add_body(
     body
 }
 
+/// Build URL for getting a student in a course.
+pub fn build_student_get_url(course_id: &str, user_id: &str) -> String {
+    build_student_remove_url(course_id, user_id) // Same URL pattern
+}
+
 /// Build URL for removing a student from a course.
 pub fn build_student_remove_url(course_id: &str, user_id: &str) -> String {
     format!(
@@ -131,6 +136,11 @@ pub fn build_teacher_add_body(user_id: &str) -> serde_json::Value {
     serde_json::json!({
         "userId": user_id,
     })
+}
+
+/// Build URL for getting a teacher in a course.
+pub fn build_teacher_get_url(course_id: &str, user_id: &str) -> String {
+    build_teacher_remove_url(course_id, user_id) // Same URL pattern
 }
 
 /// Build URL for removing a teacher from a course.
