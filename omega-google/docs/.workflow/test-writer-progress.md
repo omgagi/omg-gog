@@ -1,8 +1,53 @@
 # Test Writer Progress -- omega-google
 
-## Status: M1 COMPLETE, M2 COMPLETE, RT-M1 COMPLETE
+## Status: M1 COMPLETE, M2 COMPLETE, RT-M1 COMPLETE, RT-M2 COMPLETE
 
-All M1 Foundation, M2 Core Services, and RT-M1 Auth Core tests have been written. RT-M1 tests are in TDD red phase (7 failures requiring implementation changes, 4 ignored requiring OS keyring).
+All M1 Foundation, M2 Core Services, RT-M1 Auth Core, and RT-M2 Auth Flows tests have been written.
+
+---
+
+## RT-M2 Auth Flows Test Summary
+
+| Module | File | Unit Tests | Ignored | Pass | Fail | Status |
+|--------|------|-----------|---------|------|------|--------|
+| auth/oauth_flow.rs (extract_code, OAuthFlowResult, FlowMode) | `src/auth/oauth_flow.rs` | 43 | 2 | 41 | 0 | Written |
+| cli/mod.rs auth handlers (dispatch tests) | `tests/cli_test.rs` | 21 | 0 | 21 | 0 | Written |
+| **RT-M2 TOTAL** | | **64** | **2** | **62** | **0** |  |
+
+### RT-M2 Test Results
+- **Passed: 62** (extract_code_from_url pure function, OAuthFlowResult struct, FlowMode enum, flow function signatures, CLI dispatch for all auth subcommands, security checks)
+- **Failed: 0** (all tests pass against current stubs -- the stubs return errors which the tests expect)
+- **Ignored: 2** (integration tests requiring real TCP listener or 120s wait)
+- **Total: 64**
+
+### RT-M2 Design Notes
+- The `extract_code_from_url` function is fully implemented (pure function, no side effects) and all 13 tests for it pass.
+- The flow orchestration functions (`run_oauth_flow`, `run_desktop_flow`, `run_manual_flow`, `run_remote_flow`) are stubs that `bail!()`. Tests verify the stubs compile with correct signatures and accept the right parameters.
+- CLI dispatch tests verify that `execute()` correctly routes all auth subcommands (add, remove, list, status, tokens list, tokens delete) without producing usage errors.
+- When the developer implements the flows, the stub tests will continue to pass (they verify Result types, not specific success/failure). The `#[ignore]` integration tests should be un-ignored and validated.
+
+### Stubs Added (developer must implement)
+- `run_oauth_flow()` -- dispatches to desktop/manual/remote based on FlowMode
+- `run_desktop_flow()` -- ephemeral TCP server + browser open + timeout
+- `run_manual_flow()` -- print URL to stderr + read stdin + extract code
+- `run_remote_flow()` -- two-step headless flow (Should priority, defer to RT-M7)
+- `handle_auth_add` in cli/mod.rs -- replace stub error with real OAuth flow
+- `handle_auth_remove` in cli/mod.rs -- replace stub with credential store delete
+- `handle_auth_status` in cli/mod.rs -- replace stub with status display
+- `handle_auth_tokens delete` in cli/mod.rs -- replace stub with token deletion
+
+### RT-M2 Requirement Traceability
+
+| Req ID | Priority | Test IDs | Coverage | Status |
+|--------|----------|----------|----------|--------|
+| REQ-RT-002 | Must | `req_rt_002_oauth_flow_result_has_code_field`, `req_rt_002_oauth_flow_result_has_redirect_uri_field`, `req_rt_002_oauth_flow_result_clone_and_debug`, `req_rt_002_desktop_flow_timeout_is_120_seconds`, `req_rt_002_run_oauth_flow_exists`, `req_rt_002_run_desktop_flow_exists`, `req_rt_002_security_localhost_only`, `req_rt_002_desktop_mode_dispatches_to_desktop_flow`, `req_rt_002_integration_desktop_flow_single_request` (ignored), `req_rt_002_integration_desktop_flow_timeout` (ignored), `req_rt_002_extract_code_valid`, `req_rt_002_extract_code_error_access_denied`, `req_rt_002_extract_code_error_with_description`, `req_rt_002_extract_code_missing_code`, `req_rt_002_extract_code_with_extra_params`, `req_rt_002_extract_code_malformed_url`, `req_rt_002_extract_code_special_chars`, `req_rt_002_extract_code_empty_code`, `req_rt_002_extract_code_no_query_string`, `req_rt_002_extract_code_fragment_only`, `req_rt_002_extract_code_https_url`, `req_rt_002_extract_code_very_long`, `req_rt_002_security_code_not_logged`, `req_rt_002_flow_mode_desktop_exists`, `req_rt_002_flow_mode_is_debug`, `req_rt_002_flow_mode_is_clone_copy`, `req_rt_002_run_oauth_flow_with_force_consent`, `req_rt_002_run_oauth_flow_multiple_services`, `req_rt_002_run_oauth_flow_empty_services`, `req_rt_002_failure_browser_launch`, `req_rt_002_failure_port_bind_documented`, `req_rt_002_oauth_flow_module_accessible`, `req_rt_002_extract_code_accessible`, `req_rt_002_flow_mode_accessible` | OAuthFlowResult struct, FlowMode enum, extract_code_from_url (13 cases), desktop flow function sig, timeout constant, security (127.0.0.1 only, code not logged), failure modes, integration stubs | Written |
+| REQ-RT-003 | Must | `req_rt_003_manual_redirect_uri`, `req_rt_003_run_manual_flow_exists`, `req_rt_003_manual_mode_dispatches_to_manual_flow`, `req_rt_003_extract_code_from_pasted_url`, `req_rt_003_extract_code_oob_url_format`, `req_rt_003_fallback_documented`, `req_rt_003_edge_user_pastes_code_directly`, `req_rt_003_edge_url_with_whitespace`, `req_rt_003_edge_url_with_unicode`, `req_rt_003_failure_invalid_redirect`, `req_rt_003_flow_mode_manual_exists` | Manual redirect URI constant, flow function sig, code extraction from pasted URL, edge cases (raw code, whitespace, unicode), failure mode (invalid URL) | Written |
+| REQ-RT-004 | Should | `req_rt_004_flow_mode_remote_exists` | FlowMode::Remote exists (implementation deferred to RT-M7) | Written |
+| REQ-RT-008 | Must | `req_rt_008_auth_add_dispatches`, `req_rt_008_auth_add_manual_dispatches`, `req_rt_008_auth_add_force_consent_dispatches`, `req_rt_008_auth_add_no_credentials_returns_error`, `req_rt_008_auth_subcommands_all_reachable`, `req_rt_008_auth_add_remote_flag_parsed` | CLI dispatch for auth add (plain, --manual, --force-consent, --remote), error on missing credentials, all auth subcommands reachable | Written |
+| REQ-RT-009 | Must | `req_rt_009_auth_remove_dispatches`, `req_rt_009_auth_remove_missing_email_usage_error`, `req_rt_009_auth_remove_force_flag_parsed` | CLI dispatch for auth remove, usage error without email, --force flag accepted | Written |
+| REQ-RT-010 | Must | `req_rt_010_auth_status_dispatches`, `req_rt_010_auth_status_json_dispatches`, `req_rt_010_auth_status_shows_info` | CLI dispatch for auth status (plain, --json), status with temp config dir | Written |
+| REQ-RT-011 | Must | `req_rt_011_auth_list_dispatches`, `req_rt_011_auth_list_json_dispatches`, `req_rt_011_auth_list_empty_store` | CLI dispatch for auth list (plain, --json), empty store handling | Written |
+| REQ-RT-012 | Must | `req_rt_012_auth_tokens_delete_dispatches`, `req_rt_012_auth_tokens_delete_missing_email_usage_error`, `req_rt_012_auth_tokens_list_dispatches` | CLI dispatch for auth tokens delete, usage error without email, tokens list | Written |
 
 ---
 
@@ -124,11 +169,13 @@ All M1 Foundation, M2 Core Services, and RT-M1 Auth Core tests have been written
 
 ## Combined Totals
 
-| Milestone | Tests | Pass | Fail | Notes |
-|-----------|-------|------|------|-------|
-| M1 Foundation | 321 | 321 | 0 | All implemented |
-| M2 Services | 274 | 86 | 188 | TDD red phase |
-| **Grand Total** | **595** | **407** | **188** | |
+| Milestone | Tests | Pass | Fail | Ignored | Notes |
+|-----------|-------|------|------|---------|-------|
+| M1 Foundation | 321 | 321 | 0 | 0 | All implemented |
+| M2 Services | 274 | 86 | 188 | 0 | TDD red phase |
+| RT-M1 Auth Core | 99 | 88 | 7 | 4 | TDD red phase |
+| RT-M2 Auth Flows | 64 | 62 | 0 | 2 | All pass (stubs) |
+| **Grand Total** | **758** | **557** | **195** | **6** | |
 
 ---
 

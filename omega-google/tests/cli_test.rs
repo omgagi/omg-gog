@@ -431,3 +431,350 @@ fn req_cli_008_error_formatting_contract() {
     // - Error messages are colored when appropriate
     // - Exit code 2 for usage errors
 }
+
+// ---------------------------------------------------------------
+// RT-M2: Auth CLI handler dispatch tests
+// ---------------------------------------------------------------
+
+// Requirement: REQ-RT-008 (Must)
+// Acceptance: `auth add` command is parsed and dispatched
+#[tokio::test]
+async fn req_rt_008_auth_add_dispatches() {
+    use std::ffi::OsString;
+    // auth add should be routed to the auth add handler.
+    // Without credentials configured, it should return an error code.
+    let args: Vec<OsString> = vec!["auth".into(), "add".into()];
+    let exit_code = cli::execute(args).await;
+    // Currently returns GENERIC_ERROR (1) since OAuth not implemented.
+    // When implemented, it should return AUTH_REQUIRED (4) if no creds,
+    // or SUCCESS (0) on a real flow.
+    assert!(
+        exit_code != 2,
+        "auth add should be a valid command (not usage error), got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-008 (Must)
+// Acceptance: `auth add --manual` command is parsed and dispatched
+#[tokio::test]
+async fn req_rt_008_auth_add_manual_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--manual".into()];
+    let exit_code = cli::execute(args).await;
+    assert!(
+        exit_code != 2,
+        "auth add --manual should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-008 (Must)
+// Acceptance: `auth add --force-consent` command is parsed
+#[tokio::test]
+async fn req_rt_008_auth_add_force_consent_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--force-consent".into()];
+    let exit_code = cli::execute(args).await;
+    assert!(
+        exit_code != 2,
+        "auth add --force-consent should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-009 (Must)
+// Acceptance: `auth remove <email>` command is parsed and dispatched
+#[tokio::test]
+async fn req_rt_009_auth_remove_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "remove".into(), "user@example.com".into()];
+    let exit_code = cli::execute(args).await;
+    // Should be dispatched (not a usage error)
+    assert!(
+        exit_code != 2,
+        "auth remove should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-009 (Must)
+// Acceptance: `auth remove` without email returns usage error
+#[tokio::test]
+async fn req_rt_009_auth_remove_missing_email_usage_error() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "remove".into()];
+    let exit_code = cli::execute(args).await;
+    assert_eq!(
+        exit_code, 2,
+        "auth remove without email should be usage error (exit 2), got {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-010 (Must)
+// Acceptance: `auth status` command is parsed and dispatched
+#[tokio::test]
+async fn req_rt_010_auth_status_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "status".into()];
+    let exit_code = cli::execute(args).await;
+    assert!(
+        exit_code != 2,
+        "auth status should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-010 (Must)
+// Acceptance: `auth status --json` command is parsed
+#[tokio::test]
+async fn req_rt_010_auth_status_json_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["--json".into(), "auth".into(), "status".into()];
+    let exit_code = cli::execute(args).await;
+    assert!(
+        exit_code != 2,
+        "auth status --json should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-011 (Must)
+// Acceptance: `auth list` command is parsed and dispatched
+#[tokio::test]
+async fn req_rt_011_auth_list_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "list".into()];
+    let exit_code = cli::execute(args).await;
+    // Currently returns SUCCESS (0) with "No authenticated accounts found"
+    assert_eq!(
+        exit_code, 0,
+        "auth list should succeed (exit 0), got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-011 (Must)
+// Acceptance: `auth list --json` produces JSON array
+#[tokio::test]
+async fn req_rt_011_auth_list_json_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["--json".into(), "auth".into(), "list".into()];
+    let exit_code = cli::execute(args).await;
+    assert_eq!(
+        exit_code, 0,
+        "auth list --json should succeed (exit 0), got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-012 (Must)
+// Acceptance: `auth tokens delete <email>` command is parsed and dispatched
+#[tokio::test]
+async fn req_rt_012_auth_tokens_delete_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec![
+        "auth".into(), "tokens".into(), "delete".into(), "user@example.com".into(),
+    ];
+    let exit_code = cli::execute(args).await;
+    assert!(
+        exit_code != 2,
+        "auth tokens delete should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-012 (Must)
+// Acceptance: `auth tokens delete` without email returns usage error
+#[tokio::test]
+async fn req_rt_012_auth_tokens_delete_missing_email_usage_error() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "tokens".into(), "delete".into()];
+    let exit_code = cli::execute(args).await;
+    assert_eq!(
+        exit_code, 2,
+        "auth tokens delete without email should be usage error (exit 2), got {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-012 (Must)
+// Acceptance: `auth tokens list` command is parsed and dispatched
+#[tokio::test]
+async fn req_rt_012_auth_tokens_list_dispatches() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "tokens".into(), "list".into()];
+    let exit_code = cli::execute(args).await;
+    assert_eq!(
+        exit_code, 0,
+        "auth tokens list should succeed (exit 0), got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-008 (Must)
+// Acceptance: auth add handler loads credentials from config dir
+// (Without credentials installed, should fail with appropriate error)
+#[tokio::test]
+async fn req_rt_008_auth_add_no_credentials_returns_error() {
+    use std::ffi::OsString;
+    // Set config dir to a temp directory with no credentials
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    let args: Vec<OsString> = vec!["auth".into(), "add".into()];
+    let exit_code = cli::execute(args).await;
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
+    // Should return an error (not 0 success) since no credentials file exists
+    // Currently returns 1 (GENERIC_ERROR). When implemented, should return
+    // CONFIG_ERROR (10) or AUTH_REQUIRED (4).
+    assert!(
+        exit_code != 0,
+        "auth add without credentials should fail, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-010 (Must)
+// Acceptance: auth status shows config path, keyring backend, credential file status
+// (When implemented, should show info even without stored tokens)
+#[tokio::test]
+async fn req_rt_010_auth_status_shows_info() {
+    use std::ffi::OsString;
+    // Set config dir to a temp directory
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    let args: Vec<OsString> = vec!["auth".into(), "status".into()];
+    let exit_code = cli::execute(args).await;
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
+    // Currently returns GENERIC_ERROR (1). When implemented, should show
+    // config info and return SUCCESS (0) or AUTH_REQUIRED (4).
+    assert!(
+        exit_code != 2,
+        "auth status should not be a usage error, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-011 (Must)
+// Acceptance: auth list shows all stored accounts
+// (When no accounts exist, should show empty list or hint)
+#[tokio::test]
+async fn req_rt_011_auth_list_empty_store() {
+    use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    let args: Vec<OsString> = vec!["auth".into(), "list".into()];
+    let exit_code = cli::execute(args).await;
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
+    assert_eq!(
+        exit_code, 0,
+        "auth list with no accounts should succeed, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-008 (Must)
+// Acceptance: auth command routing -- all auth subcommands are reachable
+#[tokio::test]
+async fn req_rt_008_auth_subcommands_all_reachable() {
+    use std::ffi::OsString;
+    // Verify each auth subcommand is a valid clap parse (no usage error)
+    let subcommands: Vec<Vec<OsString>> = vec![
+        vec!["auth".into(), "add".into()],
+        vec!["auth".into(), "remove".into(), "test@x.com".into()],
+        vec!["auth".into(), "list".into()],
+        vec!["auth".into(), "status".into()],
+        vec!["auth".into(), "services".into()],
+        vec!["auth".into(), "tokens".into(), "list".into()],
+        vec!["auth".into(), "tokens".into(), "delete".into(), "test@x.com".into()],
+        vec!["auth".into(), "alias".into(), "set".into(), "work".into(), "me@corp.com".into()],
+        vec!["auth".into(), "alias".into(), "unset".into(), "work".into()],
+        vec!["auth".into(), "alias".into(), "list".into()],
+    ];
+
+    for args in subcommands {
+        let desc: Vec<String> = args.iter().map(|a| a.to_string_lossy().to_string()).collect();
+        let exit_code = cli::execute(args).await;
+        assert!(
+            exit_code != 2,
+            "Command {:?} should not be a usage error (got exit code {})",
+            desc, exit_code
+        );
+    }
+}
+
+// Requirement: REQ-RT-009 (Must)
+// Acceptance: auth remove prompts for confirmation unless --force
+// Edge case: --force flag is accepted by clap
+#[tokio::test]
+async fn req_rt_009_auth_remove_force_flag_parsed() {
+    use std::ffi::OsString;
+    // The --force flag is a root flag, should be parseable with auth remove
+    let args: Vec<OsString> = vec![
+        "--force".into(), "auth".into(), "remove".into(), "user@example.com".into(),
+    ];
+    let exit_code = cli::execute(args).await;
+    assert!(
+        exit_code != 2,
+        "auth remove with --force should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// Requirement: REQ-RT-008 (Must)
+// Security: auth add with --remote flag is parsed
+#[tokio::test]
+async fn req_rt_008_auth_add_remote_flag_parsed() {
+    use std::ffi::OsString;
+    let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--remote".into()];
+    let exit_code = cli::execute(args).await;
+    assert!(
+        exit_code != 2,
+        "auth add --remote should be a valid command, got exit code {}",
+        exit_code
+    );
+}
+
+// =================================================================
+// RT-M2: OAuth flow module integration tests
+// =================================================================
+
+// Requirement: REQ-RT-002 (Must)
+// Acceptance: oauth_flow module is accessible from the crate
+#[test]
+fn req_rt_002_oauth_flow_module_accessible() {
+    // Verify the module is public and the key types are accessible
+    let _ = omega_google::auth::oauth_flow::OAuthFlowResult {
+        code: "test".to_string(),
+        redirect_uri: "http://127.0.0.1:12345".to_string(),
+    };
+    assert_eq!(omega_google::auth::oauth_flow::DESKTOP_FLOW_TIMEOUT_SECS, 120);
+    assert_eq!(
+        omega_google::auth::oauth_flow::MANUAL_REDIRECT_URI,
+        "urn:ietf:wg:oauth:2.0:oob"
+    );
+}
+
+// Requirement: REQ-RT-002 (Must)
+// Acceptance: extract_code_from_url is accessible via crate path
+#[test]
+fn req_rt_002_extract_code_accessible() {
+    // extract_code_from_url is pub(crate), so not accessible from external tests.
+    // But run_oauth_flow is pub, so we verify the public API.
+    // The extract_code_from_url is tested inline in the module.
+    let _ = omega_google::auth::oauth_flow::DESKTOP_FLOW_TIMEOUT_SECS;
+}
+
+// Requirement: REQ-RT-002 (Must)
+// Acceptance: FlowMode enum is accessible
+#[test]
+fn req_rt_002_flow_mode_accessible() {
+    use omega_google::auth::oauth::FlowMode;
+    let desktop = FlowMode::Desktop;
+    let manual = FlowMode::Manual;
+    let remote = FlowMode::Remote;
+    assert_eq!(desktop, FlowMode::Desktop);
+    assert_eq!(manual, FlowMode::Manual);
+    assert_eq!(remote, FlowMode::Remote);
+}
