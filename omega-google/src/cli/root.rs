@@ -8,6 +8,11 @@ use super::docs::DocsArgs;
 use super::sheets::SheetsArgs;
 use super::slides::SlidesArgs;
 use super::forms::FormsArgs;
+use super::chat::ChatArgs;
+use super::tasks::TasksArgs;
+use super::classroom::ClassroomArgs;
+use super::contacts::ContactsArgs;
+use super::people::PeopleArgs;
 
 /// omega-google: Google Workspace CLI
 #[derive(Parser, Debug)]
@@ -118,6 +123,26 @@ pub enum Command {
     /// Google Forms operations
     #[command(alias = "form")]
     Forms(FormsArgs),
+
+    // M4 services
+    /// Google Chat operations (spaces, messages, threads, DMs)
+    Chat(ChatArgs),
+
+    /// Google Classroom operations (courses, roster, coursework)
+    #[command(alias = "class")]
+    Classroom(ClassroomArgs),
+
+    /// Google Tasks operations (task lists, tasks)
+    #[command(alias = "task")]
+    Tasks(TasksArgs),
+
+    /// Google Contacts operations (search, create, update, delete)
+    #[command(alias = "contact")]
+    Contacts(ContactsArgs),
+
+    /// Google People operations (profiles, search, relations)
+    #[command(alias = "person")]
+    People(PeopleArgs),
 }
 
 // --- Auth subcommands ---

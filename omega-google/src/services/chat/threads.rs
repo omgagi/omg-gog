@@ -19,7 +19,7 @@ pub fn build_threads_list_url(
         params.push(format!("pageSize={}", m));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", token));
+        params.push(format!("pageToken={}", url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()));
     }
     if params.is_empty() {
         base

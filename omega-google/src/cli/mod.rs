@@ -10,6 +10,9 @@ pub mod slides;
 pub mod forms;
 pub mod chat;
 pub mod tasks;
+pub mod classroom;
+pub mod contacts;
+pub mod people;
 
 use std::ffi::OsString;
 
@@ -88,6 +91,11 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
         root::Command::Sheets(args) => handle_sheets(args, flags),
         root::Command::Slides(args) => handle_slides(args, flags),
         root::Command::Forms(args) => handle_forms(args, flags),
+        root::Command::Chat(args) => handle_chat(args, flags),
+        root::Command::Classroom(args) => handle_classroom(args, flags),
+        root::Command::Tasks(args) => handle_tasks(args, flags),
+        root::Command::Contacts(args) => handle_contacts(args, flags),
+        root::Command::People(args) => handle_people(args, flags),
     }
 }
 
@@ -596,6 +604,36 @@ fn handle_slides(_args: slides::SlidesArgs, _flags: &root::RootFlags) -> i32 {
 
 /// Handle the `forms` command and its subcommands.
 fn handle_forms(_args: forms::FormsArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `chat` command and its subcommands.
+fn handle_chat(_args: chat::ChatArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `classroom` command and its subcommands.
+fn handle_classroom(_args: classroom::ClassroomArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `tasks` command and its subcommands.
+fn handle_tasks(_args: tasks::TasksArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `contacts` command and its subcommands.
+fn handle_contacts(_args: contacts::ContactsArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `people` command and its subcommands.
+fn handle_people(_args: people::PeopleArgs, _flags: &root::RootFlags) -> i32 {
     eprintln!("Command registered. API call requires: omega-google auth add <email>");
     codes::SUCCESS
 }

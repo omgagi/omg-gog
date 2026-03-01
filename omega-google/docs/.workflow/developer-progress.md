@@ -1,10 +1,28 @@
-# Developer Progress: omega-google M2 Services + Docs Service + M4 Chat & Tasks
+# Developer Progress: omega-google M2 Services + Docs Service + M4 Services + Integration Tests
 
-## Status: COMPLETE (M4 Chat & Tasks Services Implemented)
+## Status: COMPLETE (M4 Integration Tests Created and Validated)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
-M4 Chat and Tasks services implemented.
-**817 lib tests passing**. Zero failures. Zero warnings.
+M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
+M4 integration tests created for Chat, Classroom, Tasks, Contacts, and People services.
+**1197 total tests passing**. Zero failures. Zero clippy warnings.
+
+### M4 Integration Tests (39 new integration tests)
+
+| File | Tests | Status |
+|------|-------|--------|
+| `tests/chat_test.rs` | 8 | PASS |
+| `tests/classroom_test.rs` | 8 | PASS |
+| `tests/tasks_test.rs` | 6 | PASS |
+| `tests/contacts_test.rs` | 8 | PASS |
+| `tests/people_test.rs` | 9 | PASS |
+
+#### Clippy Fixes Applied
+
+| File | Fix |
+|------|-----|
+| `src/services/contacts/mod.rs` | Added `#[allow(clippy::module_inception)]` for `contacts` submodule |
+| `src/services/people/mod.rs` | Added `#[allow(clippy::module_inception)]` for `people` submodule |
 
 ### M4: Chat & Tasks Services (85 new tests)
 
@@ -32,6 +50,43 @@ Implemented Chat service (5 modules) and Tasks service (3 modules):
 
 Module declarations added to `src/services/mod.rs` and `src/cli/mod.rs`.
 Command wiring (root.rs Command enum, dispatch) deferred to wiring agent.
+
+### M4: Classroom, Contacts & People Services (159 new tests)
+
+Implemented Classroom service (10 modules), Contacts service (3 modules), and People service (2 modules):
+
+#### Classroom Service (113 tests)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/classroom/types.rs` | Course, CourseListResponse, Student, StudentListResponse, Teacher, TeacherListResponse, UserProfile, Name, CourseWork, CourseWorkListResponse, CourseMaterial, CourseMaterialListResponse, StudentSubmission, SubmissionListResponse, Announcement, AnnouncementListResponse, Topic, TopicListResponse, Invitation, InvitationListResponse, Guardian, GuardianListResponse, GuardianInvitation, GuardianInvitationListResponse | 25 |
+| `src/services/classroom/courses.rs` | `build_courses_list_url`, `build_course_get_url`, `build_course_create_url`, `build_course_create_body`, `build_course_update_url`, `build_course_update_body`, `build_course_delete_url`, `build_course_archive_url`, `build_course_url` | 14 |
+| `src/services/classroom/roster.rs` | `build_students_list_url`, `build_student_add_url`, `build_student_add_body`, `build_student_remove_url`, `build_teachers_list_url`, `build_teacher_add_url`, `build_teacher_add_body`, `build_teacher_remove_url` | 11 |
+| `src/services/classroom/coursework.rs` | `build_coursework_list_url`, `build_coursework_get_url`, `build_coursework_create_url`, `build_coursework_create_body`, `build_coursework_update_url`, `build_coursework_delete_url` | 9 |
+| `src/services/classroom/materials.rs` | `build_materials_list_url`, `build_material_get_url`, `build_material_create_url`, `build_material_create_body`, `build_material_update_url`, `build_material_delete_url` | 8 |
+| `src/services/classroom/submissions.rs` | `build_submissions_list_url`, `build_submission_get_url`, `build_submission_turn_in_url`, `build_submission_reclaim_url`, `build_submission_return_url`, `build_submission_grade_body` | 8 |
+| `src/services/classroom/announcements.rs` | `build_announcements_list_url`, `build_announcement_get_url`, `build_announcement_create_url`, `build_announcement_create_body`, `build_announcement_update_url`, `build_announcement_delete_url` | 8 |
+| `src/services/classroom/topics.rs` | `build_topics_list_url`, `build_topic_get_url`, `build_topic_create_url`, `build_topic_create_body`, `build_topic_update_url`, `build_topic_update_body`, `build_topic_delete_url` | 8 |
+| `src/services/classroom/invitations.rs` | `build_invitations_list_url`, `build_invitation_get_url`, `build_invitation_create_url`, `build_invitation_create_body`, `build_invitation_accept_url`, `build_invitation_delete_url` | 8 |
+| `src/services/classroom/guardians.rs` | `build_guardians_list_url`, `build_guardian_get_url`, `build_guardian_delete_url`, `build_guardian_invitations_list_url`, `build_guardian_invitation_get_url`, `build_guardian_invitation_create_url`, `build_guardian_invitation_create_body` | 10 |
+| `src/cli/classroom.rs` | ClassroomArgs, ClassroomCommand (13 variants), ClassroomCoursesCommand (10 variants), ClassroomStudentsCommand, ClassroomTeachersCommand, ClassroomCourseworkCommand, ClassroomMaterialsCommand, ClassroomSubmissionsCommand, ClassroomAnnouncementsCommand, ClassroomTopicsCommand, ClassroomInvitationsCommand, ClassroomGuardiansCommand, ClassroomGuardianInvitationsCommand, ClassroomProfileArgs + all arg structs | 0 (compile-verified) |
+
+#### Contacts Service (30 tests)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/contacts/types.rs` | Person, PersonName, EmailAddress, PhoneNumber, Birthday, DateValue, Biography, Photo, PersonListResponse, DirectoryListResponse | 10 |
+| `src/services/contacts/contacts.rs` | `build_contacts_search_url`, `build_contacts_list_url`, `build_contact_get_url`, `build_contact_create_url`, `build_contact_create_body`, `build_contact_update_url`, `build_contact_update_body`, `build_contact_delete_url` | 12 |
+| `src/services/contacts/directory.rs` | `build_directory_list_url`, `build_directory_search_url`, `build_other_contacts_list_url`, `build_other_contacts_search_url` | 8 |
+| `src/cli/contacts.rs` | ContactsArgs, ContactsCommand, ContactsContactsCommand, ContactsDirectoryCommand, ContactsOtherCommand + all arg structs | 0 (compile-verified) |
+
+#### People Service (16 tests)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/people/types.rs` | PersonResponse, PersonName, EmailAddress, Photo, Locale, SearchResponse, SearchResult, Relation | 8 |
+| `src/services/people/people.rs` | `build_people_me_url`, `build_people_get_url`, `build_people_search_url`, `build_people_relations_url` | 8 |
+| `src/cli/people.rs` | PeopleArgs, PeopleCommand (Me, Get, Search, Relations) + all arg structs | 0 (compile-verified) |
 
 ### M3: Google Docs Service (97 new tests)
 

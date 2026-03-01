@@ -11,7 +11,7 @@ pub fn build_tasklists_list_url(max: Option<u32>, page_token: Option<&str>) -> S
         params.push(format!("maxResults={}", m));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", token));
+        params.push(format!("pageToken={}", url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()));
     }
     if params.is_empty() {
         base

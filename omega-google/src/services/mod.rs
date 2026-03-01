@@ -8,6 +8,9 @@ pub mod sheets;
 pub mod forms;
 pub mod chat;
 pub mod tasks;
+pub mod classroom;
+pub mod contacts;
+pub mod people;
 
 use crate::output::{OutputMode, JsonTransform};
 use crate::ui::Ui;

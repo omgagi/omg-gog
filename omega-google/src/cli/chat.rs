@@ -103,6 +103,9 @@ pub struct ChatMessagesListArgs {
     /// Filter by thread name
     #[arg(long)]
     pub thread: Option<String>,
+    /// Show only unread messages
+    #[arg(long)]
+    pub unread: bool,
 }
 
 #[derive(Args, Debug)]
@@ -171,8 +174,8 @@ pub struct ChatDmSpaceArgs {
 
 #[derive(Args, Debug)]
 pub struct ChatDmSendArgs {
-    /// Space name for the DM (e.g., spaces/AAAA)
-    pub space: String,
+    /// Recipient email address
+    pub email: String,
     /// Message text
     #[arg(long)]
     pub text: String,

@@ -19,10 +19,10 @@ pub fn build_messages_list_url(
         params.push(format!("pageSize={}", m));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", token));
+        params.push(format!("pageToken={}", url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()));
     }
     if let Some(ord) = order {
-        params.push(format!("orderBy={}", ord));
+        params.push(format!("orderBy={}", url::form_urlencoded::byte_serialize(ord.as_bytes()).collect::<String>()));
     }
     if let Some(t) = thread {
         let encoded_filter = url::form_urlencoded::byte_serialize(
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn req_chat_004_messages_list_url_order() {
         let url = build_messages_list_url("AAAA", None, None, Some("createTime desc"), None);
-        assert!(url.contains("orderBy=createTime desc"));
+        assert!(url.contains("orderBy=createTime+desc"));
     }
 
     // Requirement: REQ-CHAT-004 (Must)

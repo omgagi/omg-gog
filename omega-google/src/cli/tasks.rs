@@ -108,6 +108,15 @@ pub struct TasksAddArgs {
     /// Previous sibling task ID (for ordering)
     #[arg(long)]
     pub previous: Option<String>,
+    /// Repeat schedule: daily, weekly, monthly, yearly
+    #[arg(long)]
+    pub repeat: Option<String>,
+    /// Number of repeat occurrences
+    #[arg(long)]
+    pub repeat_count: Option<u32>,
+    /// Repeat until date (RFC3339 or YYYY-MM-DD)
+    #[arg(long)]
+    pub repeat_until: Option<String>,
 }
 
 #[derive(Args, Debug)]
