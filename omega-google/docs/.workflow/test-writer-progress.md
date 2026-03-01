@@ -1,0 +1,314 @@
+# Test Writer Progress -- omega-google
+
+## Status: M1 COMPLETE, M2 COMPLETE
+
+All M1 Foundation and M2 Core Services tests have been written. Tests are in TDD red phase (fail with `todo!()` panics for unimplemented functions, pass for pure type/serde tests).
+
+---
+
+## M1 Foundation Test Summary
+
+| Module | File | Unit Tests | Integration Tests | Total | Status |
+|--------|------|-----------|-------------------|-------|--------|
+| config | `src/config/mod.rs` | 13 | `tests/config_test.rs`: 16 | 29 | Written |
+| auth/scopes | `src/auth/scopes.rs` | 33 | `tests/auth_test.rs`: 18 | 51 | Written |
+| http/retry | `src/http/retry.rs` | 14 | `tests/http_test.rs`: 25 | 39 | Written |
+| http/circuit_breaker | `src/http/circuit_breaker.rs` | 10 | (in http_test.rs) | 10 | Written |
+| output/transform | `src/output/transform.rs` | 16 | `tests/output_test.rs`: 28 | 44 | Written |
+| error/exit | `src/error/exit.rs` | 16 | (in cli_test.rs) | 16 | Written |
+| error/api_error | `src/error/api_error.rs` | 7 | - | 7 | Written |
+| ui | `src/ui/mod.rs` | 8 | - | 8 | Written |
+| time/parse | `src/time/parse.rs` | 21 | - | 21 | Written |
+| cli | `src/cli/mod.rs` | 14 | `tests/cli_test.rs`: 29 | 43 | Written |
+| **M1 TOTAL** | | **152** | **116** | **321** (some multi-counted) | |
+
+### M1 Test Results
+- **Passed: 321** (all M1 tests pass -- implementation complete)
+- **Failed: 0**
+
+---
+
+## M2 Core Services Test Summary
+
+| Module | File | Unit Tests | Integration Tests | Total | Pass | Fail |
+|--------|------|-----------|-------------------|-------|------|------|
+| services/common | `src/services/common.rs` | 13 | - | 13 | 13 | 0 |
+| gmail/types | `src/services/gmail/types.rs` | 27 | - | 27 | 27 | 0 |
+| gmail/search | `src/services/gmail/search.rs` | 8 | - | 8 | 0 | 8 |
+| gmail/thread | `src/services/gmail/thread.rs` | 10 | - | 10 | 0 | 10 |
+| gmail/message | `src/services/gmail/message.rs` | 5 | - | 5 | 0 | 5 |
+| gmail/mime | `src/services/gmail/mime.rs` | 15 | - | 15 | 0 | 15 |
+| gmail/send | `src/services/gmail/send.rs` | 2 | - | 2 | 0 | 2 |
+| gmail/labels | `src/services/gmail/labels.rs` | 10 | - | 10 | 0 | 10 |
+| gmail/drafts | `src/services/gmail/drafts.rs` | 6 | - | 6 | 0 | 6 |
+| gmail/watch | `src/services/gmail/watch.rs` | 2 | - | 2 | 0 | 2 |
+| gmail/history | `src/services/gmail/history.rs` | 2 | - | 2 | 0 | 2 |
+| gmail/batch | `src/services/gmail/batch.rs` | 2 | - | 2 | 0 | 2 |
+| gmail/settings | `src/services/gmail/settings.rs` | 7 | - | 7 | 0 | 7 |
+| gmail integration | `tests/gmail_test.rs` | - | 7 | 7 | 7 | 0 |
+| calendar/types | `src/services/calendar/types.rs` | 17 | - | 17 | 13 | 4 |
+| calendar/events | `src/services/calendar/events.rs` | 11 | - | 11 | 0 | 11 |
+| calendar/calendars | `src/services/calendar/calendars.rs` | 5 | - | 5 | 0 | 5 |
+| calendar/freebusy | `src/services/calendar/freebusy.rs` | 2 | - | 2 | 0 | 2 |
+| calendar/respond | `src/services/calendar/respond.rs` | 3 | - | 3 | 0 | 3 |
+| calendar/search | `src/services/calendar/search.rs` | 2 | - | 2 | 0 | 2 |
+| calendar/special | `src/services/calendar/special.rs` | 4 | - | 4 | 0 | 4 |
+| calendar/colors | `src/services/calendar/colors.rs` | 1 | - | 1 | 0 | 1 |
+| calendar integration | `tests/calendar_test.rs` | - | 7 | 7 | 7 | 0 |
+| drive/types | `src/services/drive/types.rs` | 35 | - | 35 | 10 | 25 |
+| drive/list | `src/services/drive/list.rs` | 20 | - | 20 | 0 | 20 |
+| drive/files | `src/services/drive/files.rs` | 8 | - | 8 | 0 | 8 |
+| drive/folders | `src/services/drive/folders.rs` | 6 | - | 6 | 0 | 6 |
+| drive/permissions | `src/services/drive/permissions.rs` | 9 | - | 9 | 0 | 9 |
+| drive/comments | `src/services/drive/comments.rs` | 3 | - | 3 | 0 | 3 |
+| drive/drives | `src/services/drive/drives.rs` | 2 | - | 2 | 0 | 2 |
+| drive integration | `tests/drive_test.rs` | - | 9 | 9 | 9 | 0 |
+| **M2 TOTAL** | | **237** | **23** | **274** (incl. integration) | **86** | **188** |
+
+### M2 Test Results (TDD Red Phase)
+- **Passed: 86** (type serde roundtrips, constant validation, URL helpers with implementations)
+- **Failed: 188** (expected -- `todo!()` panics in unimplemented functions)
+- **Total: 274**
+
+### All failures are `not yet implemented` panics from `todo!()` macros.
+
+---
+
+## Combined Totals
+
+| Milestone | Tests | Pass | Fail | Notes |
+|-----------|-------|------|------|-------|
+| M1 Foundation | 321 | 321 | 0 | All implemented |
+| M2 Services | 274 | 86 | 188 | TDD red phase |
+| **Grand Total** | **595** | **407** | **188** | |
+
+---
+
+## M2 Requirement Traceability
+
+### REQ-GMAIL (Must) -- Gmail Service
+
+| Req ID | Test IDs | Coverage | Status |
+|--------|----------|----------|--------|
+| REQ-GMAIL-001 | `req_gmail_001_search_builds_url_with_query`, `req_gmail_001_search_with_max_results`, `req_gmail_001_search_with_page_token`, `req_gmail_001_search_default_max`, `req_gmail_001_search_empty_query`, `req_gmail_001_search_special_chars`, `req_gmail_001_thread_deserialize`, `req_gmail_001_thread_list_response_deserialize`, `req_gmail_001_thread_list_response_empty`, `req_gmail_001_thread_list_response_roundtrip`, `req_gmail_001_thread_unknown_fields_preserved`, `req_gmail_001_pick_newest_message`, `req_gmail_001_pick_oldest_message`, `req_gmail_001_pick_message_empty_thread`, `req_gmail_001_pick_message_single`, `req_gmail_001_integration_thread_list_from_api` | URL building, serde, message selection, integration | Written |
+| REQ-GMAIL-002 | `req_gmail_002_message_search_url`, `req_gmail_002_message_search_include_body` | Message search URLs | Written |
+| REQ-GMAIL-003 | `req_gmail_003_thread_get_url`, `req_gmail_003_thread_get_url_empty`, `req_gmail_003_message_date_millis`, `req_gmail_003_message_date_millis_missing` | Thread get, date parsing | Written |
+| REQ-GMAIL-004 | `req_gmail_004_thread_modify_request`, `req_gmail_004_thread_modify_empty_labels` | Thread label modification | Written |
+| REQ-GMAIL-006 | `req_gmail_006_message_get_url_full`, `req_gmail_006_message_get_url_metadata`, `req_gmail_006_message_get_url_no_format`, `req_gmail_006_message_deserialize`, `req_gmail_006_message_roundtrip`, `req_gmail_006_header_value_case_insensitive`, `req_gmail_006_header_value_missing`, `req_gmail_006_has_header_name`, `req_gmail_006_integration_nested_mime_message`, `req_gmail_006_integration_header_extraction` | Message get, headers, MIME, integration | Written |
+| REQ-GMAIL-007 | `req_gmail_007_attachment_url`, `req_gmail_007_attachment_url_empty_ids` | Attachment download URLs | Written |
+| REQ-GMAIL-008 | `req_gmail_008_thread_url`, `req_gmail_008_thread_url_empty`, `req_gmail_008_integration_multiple_urls` | URL generation, integration | Written |
+| REQ-GMAIL-009 | `req_gmail_009_labels_list_url`, `req_gmail_009_label_get_url`, `req_gmail_009_label_create_request`, `req_gmail_009_label_delete_url`, `req_gmail_009_resolve_system_label`, `req_gmail_009_resolve_user_label_by_name`, `req_gmail_009_resolve_label_by_id`, `req_gmail_009_resolve_label_case_insensitive`, `req_gmail_009_resolve_label_not_found`, `req_gmail_009_system_labels_complete`, `req_gmail_009_label_deserialize`, `req_gmail_009_label_list_response_deserialize`, `req_gmail_009_integration_mixed_labels` | CRUD URLs, resolution, serde, integration | Written |
+| REQ-GMAIL-010 | `req_gmail_010_send_url`, `req_gmail_010_send_body`, `req_gmail_010_simple_plain_text`, `req_gmail_010_html_body`, `req_gmail_010_cc_bcc`, `req_gmail_010_reply_to`, `req_gmail_010_threading_headers`, `req_gmail_010_with_attachment`, `req_gmail_010_multiple_recipients`, `req_gmail_010_special_chars_subject`, `req_gmail_010_empty_body`, `req_gmail_010_base64url_encode`, `req_gmail_010_base64url_empty`, `req_gmail_010_guess_content_type_pdf`, `req_gmail_010_guess_content_type_png`, `req_gmail_010_guess_content_type_txt`, `req_gmail_010_guess_content_type_no_ext`, `req_gmail_010_guess_content_type_unknown` | Send URLs, MIME construction, encoding, content types | Written |
+| REQ-GMAIL-011 | `req_gmail_011_drafts_list_url`, `req_gmail_011_draft_get_url`, `req_gmail_011_draft_create_url`, `req_gmail_011_draft_update_url`, `req_gmail_011_draft_send_url`, `req_gmail_011_draft_delete_url`, `req_gmail_011_draft_deserialize` | Full CRUD URLs, serde | Written |
+| REQ-GMAIL-012 | `req_gmail_012_watch_start_url`, `req_gmail_012_watch_stop_url`, `req_gmail_012_watch_request_serialize`, `req_gmail_012_watch_response_deserialize` | Watch start/stop URLs, serde | Written |
+| REQ-GMAIL-013 | `req_gmail_013_history_list_url`, `req_gmail_013_history_list_url_with_page`, `req_gmail_013_history_list_response_deserialize` | History URL, serde | Written |
+| REQ-GMAIL-014 | `req_gmail_014_batch_modify_url`, `req_gmail_014_batch_delete_url`, `req_gmail_014_batch_modify_request_serialize`, `req_gmail_014_batch_delete_request_serialize`, `req_gmail_014_integration_large_batch` | Batch URLs, serde, integration | Written |
+| REQ-GMAIL-015 | `req_gmail_015_filters_list_url`, `req_gmail_015_filter_get_url`, `req_gmail_015_filter_deserialize`, `req_gmail_015_integration_complex_filter` | Filter URLs, serde, integration | Written |
+| REQ-GMAIL-016 | `req_gmail_016_forwarding_list_url`, `req_gmail_016_forwarding_address_roundtrip` | Forwarding URLs, serde | Written |
+| REQ-GMAIL-017 | `req_gmail_017_sendas_list_url`, `req_gmail_017_sendas_roundtrip` | Send-as URLs, serde | Written |
+| REQ-GMAIL-018 | `req_gmail_018_delegates_list_url`, `req_gmail_018_delegate_roundtrip` | Delegate URLs, serde | Written |
+| REQ-GMAIL-019 | `req_gmail_019_vacation_get_url`, `req_gmail_019_vacation_settings_roundtrip` | Vacation URLs, serde | Written |
+| REQ-GMAIL-020 | `req_gmail_020_autoforward_get_url`, `req_gmail_020_auto_forwarding_roundtrip` | Autoforward URLs, serde | Written |
+
+### REQ-CAL (Must/Should) -- Calendar Service
+
+| Req ID | Priority | Test IDs | Coverage | Status |
+|--------|----------|----------|----------|--------|
+| REQ-CAL-001 | Must | `req_cal_001_calendars_list_url`, `req_cal_001_calendar_list_entry_deserialize`, `req_cal_001_calendar_list_response_roundtrip`, `req_cal_001_integration_calendar_list_from_api` | List URL, serde, integration | Written |
+| REQ-CAL-002 | Must | `req_cal_002_acl_list_url`, `req_cal_002_acl_list_response_deserialize`, `req_cal_002_integration_acl_list` | ACL URL, serde, integration | Written |
+| REQ-CAL-003 | Must | `req_cal_003_events_list_url`, `req_cal_003_events_list_url_max`, `req_cal_003_events_list_url_query`, `req_cal_003_events_list_url_time_range`, `req_cal_003_events_list_url_special_cal_id`, `req_cal_003_resolve_calendar_by_name`, `req_cal_003_resolve_calendar_by_id`, `req_cal_003_resolve_calendar_not_found`, `req_cal_003_event_deserialize`, `req_cal_003_event_list_response`, `req_cal_003_all_day_event`, `req_cal_003_event_no_attendees`, `req_cal_003_event_unknown_fields`, `req_cal_003_integration_event_list_from_api` | Event list URLs, calendar resolution, serde, integration | Written |
+| REQ-CAL-004 | Must | `req_cal_004_event_get_url` | Event get URL | Written |
+| REQ-CAL-005 | Must | `req_cal_005_event_create_body`, `req_cal_005_all_day_event_create`, `req_cal_005_event_with_attendees`, `req_cal_005_integration_event_create_roundtrip` | Create body, all-day, attendees, integration | Written |
+| REQ-CAL-006 | Must | `req_cal_006_event_update_url` | Event update URL | Written |
+| REQ-CAL-007 | Must | `req_cal_007_event_delete_url` | Event delete URL | Written |
+| REQ-CAL-008 | Must | `req_cal_008_freebusy_url`, `req_cal_008_freebusy_request_builder`, `req_cal_008_freebusy_request_serialize`, `req_cal_008_freebusy_response_deserialize`, `req_cal_008_integration_freebusy_response` | URL, request builder, serde, integration | Written |
+| REQ-CAL-009 | Must | `req_cal_009_valid_rsvp_statuses`, `req_cal_009_invalid_rsvp_status`, `req_cal_009_rsvp_body_with_send_updates`, `req_cal_009_attendee_deserialize`, `req_cal_009_integration_attendee_statuses` | RSVP validation, serde, integration | Written |
+| REQ-CAL-010 | Must | `req_cal_010_cross_calendar_search`, `req_cal_010_cross_calendar_search_empty` | Cross-calendar search | Written |
+| REQ-CAL-014 | Must | `req_cal_014_colors_url`, `req_cal_014_colors_response_deserialize` | Colors URL, serde | Written |
+| REQ-CAL-015 | Must | `req_cal_015_find_conflicts_empty`, `req_cal_015_find_conflicts_overlapping`, `req_cal_015_find_conflicts_no_overlap` | Conflict detection | Written |
+| REQ-CAL-016 | Should | `req_cal_016_propose_time_url` | Propose time URL | Written |
+| REQ-CAL-017 | Should | `req_cal_017_focus_time_event_type` | Focus time event builder | Written |
+| REQ-CAL-018 | Should | `req_cal_018_ooo_event_type` | OOO event builder | Written |
+| REQ-CAL-019 | Should | `req_cal_019_working_location_home`, `req_cal_019_validate_location_types` | Working location builder, validation | Written |
+| REQ-CAL-020 | Must | `req_cal_020_time_range_defaults_today`, `req_cal_020_time_range_from_to` | Time range parsing | Written |
+| REQ-CAL-021 | Should | `req_cal_021_recurrence_in_event`, `req_cal_021_integration_recurring_event` | Recurrence handling, integration | Written |
+| REQ-CAL-022 | Should | `req_cal_022_day_of_week`, `req_cal_022_day_of_week_rfc3339`, `req_cal_022_day_of_week_invalid` | Day-of-week enrichment | Written |
+
+### REQ-DRIVE (Must/Should) -- Drive Service
+
+| Req ID | Priority | Test IDs | Coverage | Status |
+|--------|----------|----------|----------|--------|
+| REQ-DRIVE-001 | Must | `req_drive_001_list_query_root`, `req_drive_001_list_query_specific_folder`, `req_drive_001_list_query_with_user_query`, `req_drive_001_list_query_no_double_trashed`, `req_drive_001_has_trashed_predicate`, `req_drive_001_no_trashed_predicate`, `req_drive_001_no_false_positive_trashed`, `req_drive_001_file_deserialize`, `req_drive_001_file_list_response_roundtrip`, `req_drive_001_file_list_response_empty`, `req_drive_001_file_unknown_fields`, `req_drive_001_drive_type_folder`, `req_drive_001_drive_type_file`, `req_drive_001_integration_file_list_from_api`, `req_drive_001_integration_minimal_file`, `req_drive_001_integration_size_formatting`, `req_drive_001_integration_datetime_formatting` | Query building, serde, types, integration | Written |
+| REQ-DRIVE-002 | Must | `req_drive_002_search_query_plain_text`, `req_drive_002_search_query_raw`, `req_drive_002_search_query_drive_language`, `req_drive_002_search_query_empty`, `req_drive_002_search_query_shared_with_me`, `req_drive_002_detects_field_comparison`, `req_drive_002_detects_contains`, `req_drive_002_detects_membership`, `req_drive_002_detects_shared_with_me`, `req_drive_002_plain_text_not_detected`, `req_drive_002_escape_single_quotes`, `req_drive_002_escape_backslashes`, `req_drive_002_escape_no_special`, `req_drive_002_escape_empty`, `req_drive_002_escape_combined` | Search query, language detection, escaping | Written |
+| REQ-DRIVE-003 | Must | `req_drive_003_file_get_url` | File get URL | Written |
+| REQ-DRIVE-004 | Must | `req_drive_004_file_download_url`, `req_drive_004_file_export_url`, `req_drive_004_resolve_path_out_flag`, `req_drive_004_resolve_path_default`, `req_drive_004_resolve_path_export_extension`, `req_drive_004_default_export_doc`, `req_drive_004_default_export_sheet`, `req_drive_004_default_export_slides`, `req_drive_004_default_export_drawing`, `req_drive_004_export_doc_to_docx`, `req_drive_004_export_doc_to_txt`, `req_drive_004_export_sheet_to_xlsx`, `req_drive_004_export_slides_to_pptx`, `req_drive_004_export_invalid_format`, `req_drive_004_extension_for_mime`, `req_drive_004_is_google_workspace_type` | Download/export URLs, path resolution, MIME mapping | Written |
+| REQ-DRIVE-005 | Must | `req_drive_005_file_upload_url`, `req_drive_005_guess_mime_pdf`, `req_drive_005_guess_mime_docx`, `req_drive_005_guess_mime_xlsx`, `req_drive_005_guess_mime_csv`, `req_drive_005_guess_mime_txt`, `req_drive_005_guess_mime_png`, `req_drive_005_guess_mime_jpeg`, `req_drive_005_guess_mime_json`, `req_drive_005_guess_mime_no_extension`, `req_drive_005_guess_mime_unknown`, `req_drive_005_convert_to_doc`, `req_drive_005_convert_to_sheet`, `req_drive_005_convert_to_slides`, `req_drive_005_convert_to_invalid`, `req_drive_005_strip_docx_extension`, `req_drive_005_strip_xlsx_extension`, `req_drive_005_strip_pptx_extension`, `req_drive_005_strip_no_extension`, `req_drive_005_strip_non_office_extension` | Upload URL, MIME guessing, convert-to mapping, extension stripping | Written |
+| REQ-DRIVE-006 | Must | `req_drive_006_mkdir_body`, `req_drive_006_mkdir_body_with_parent` | Mkdir body | Written |
+| REQ-DRIVE-007 | Must | `req_drive_007_trash_url`, `req_drive_007_permanent_delete_url` | Trash/delete URLs | Written |
+| REQ-DRIVE-008 | Must | `req_drive_008_move_params` | Move params | Written |
+| REQ-DRIVE-009 | Must | `req_drive_009_rename_body` | Rename body | Written |
+| REQ-DRIVE-010 | Must | `req_drive_010_share_user_writer`, `req_drive_010_share_anyone_reader`, `req_drive_010_share_domain`, `req_drive_010_valid_roles`, `req_drive_010_invalid_role`, `req_drive_010_valid_share_targets`, `req_drive_010_invalid_share_target`, `req_drive_010_permission_deserialize` | Share builder, validation, serde | Written |
+| REQ-DRIVE-011 | Must | `req_drive_011_list_permissions_url`, `req_drive_011_permission_list_response` | Permissions list URL, serde | Written |
+| REQ-DRIVE-012 | Must | `req_drive_012_delete_permission_url` | Unshare URL | Written |
+| REQ-DRIVE-013 | Must | `req_drive_013_file_url`, `req_drive_013_file_url_empty`, `req_drive_013_integration_multiple_urls` | URL generation, integration | Written |
+| REQ-DRIVE-014 | Must | `req_drive_014_drives_list_url`, `req_drive_014_drives_list_url_with_page`, `req_drive_014_shared_drive_deserialize`, `req_drive_014_integration_shared_drives` | Shared drives URL, serde, integration | Written |
+| REQ-DRIVE-015 | Must | `req_drive_015_file_copy_url` | Copy URL | Written |
+| REQ-DRIVE-016 | Should | `req_drive_016_comments_list_url`, `req_drive_016_comment_create_url`, `req_drive_016_comment_reply_url`, `req_drive_016_comment_deserialize`, `req_drive_016_integration_comments_with_replies` | Comment CRUD URLs, serde, integration | Written |
+| REQ-DRIVE-017 | Must | `req_drive_017_integration_shared_drive_files` | All-drives default, integration | Written |
+
+---
+
+## M1 Requirement Traceability
+
+### REQ-SCAFFOLD (Must)
+| Req ID | Test IDs | Status |
+|--------|----------|--------|
+| REQ-SCAFFOLD-001 | (Cargo.toml, binary build) | Structure created |
+| REQ-SCAFFOLD-002 | (flake.nix with devShell) | Structure created |
+| REQ-SCAFFOLD-003 | (flake.nix with package) | Structure created |
+| REQ-SCAFFOLD-004 | (Cargo.toml dependencies) | Dependencies listed |
+| REQ-SCAFFOLD-005 | req_scaffold_005_module_structure | Written |
+
+### REQ-CLI (Must)
+| Req ID | Test IDs | Status |
+|--------|----------|--------|
+| REQ-CLI-001 | req_cli_001_split_comma_list_*, req_cli_001_flag_takes_value, req_cli_001_enable_commands_* | Written |
+| REQ-CLI-002 | req_cli_002_env_bool_* | Written |
+| REQ-CLI-003 | (version flag -- needs binary test) | Documented |
+| REQ-CLI-004 | req_cli_004_version_structure | Written |
+| REQ-CLI-005 | req_cli_005_parse_* (21 tests in time/parse.rs) | Written |
+| REQ-CLI-006 | req_cli_006_output_separation_contract | Documented |
+| REQ-CLI-007 | req_cli_007_* (16 tests in error/exit.rs) | Written |
+| REQ-CLI-008 | req_cli_008_error_formatting_contract | Documented |
+| REQ-CLI-009 | req_cli_009_* (12 tests in cli/mod.rs + cli_test.rs) | Written |
+
+### REQ-CONFIG (Must)
+| Req ID | Test IDs | Status |
+|--------|----------|--------|
+| REQ-CONFIG-001 | req_config_001_* (13 tests) | Written |
+| REQ-CONFIG-002 | req_config_002_* (6 tests) | Written |
+| REQ-CONFIG-003 | req_config_003_get_existing_key | Written |
+| REQ-CONFIG-004 | req_config_004_set_* (2 tests) | Written |
+| REQ-CONFIG-005 | req_config_005_unset_removes_key | Written |
+| REQ-CONFIG-006 | req_config_006_list_all_keys | Written |
+| REQ-CONFIG-007 | req_config_007_known_keys_complete | Written |
+| REQ-CONFIG-008 | req_config_008_path_is_absolute | Written |
+| REQ-CONFIG-009 | req_config_009_* (5 tests) | Written |
+
+### REQ-AUTH (Must)
+| Req ID | Test IDs | Status |
+|--------|----------|--------|
+| REQ-AUTH-013 | req_auth_013_* (7 tests) | Written |
+| REQ-AUTH-015 | req_auth_015_valid_backend_values | Written |
+| REQ-AUTH-016 | req_auth_016_* (33 scope tests + 6 integration) | Written |
+| REQ-AUTH-019 | req_auth_019_account_flag_priority | Written |
+
+### REQ-HTTP (Must)
+| Req ID | Test IDs | Status |
+|--------|----------|--------|
+| REQ-HTTP-001 | req_http_001_tls_enforcement | Written |
+| REQ-HTTP-002 | req_http_002_* (15 tests) | Written |
+| REQ-HTTP-003 | req_http_003_* (6 tests) | Written |
+| REQ-HTTP-004 | req_http_004_* (14 tests) | Written |
+| REQ-HTTP-005 | req_http_005_body_replay_concept | Written |
+| REQ-HTTP-006 | (cancellation -- needs async test) | Documented |
+
+### REQ-OUTPUT (Must)
+| Req ID | Test IDs | Status |
+|--------|----------|--------|
+| REQ-OUTPUT-001 | req_output_001_* (10 tests) | Written |
+| REQ-OUTPUT-002 | req_output_002_* (14 tests) | Written |
+| REQ-OUTPUT-003 | req_output_003_* (14 tests) | Written |
+| REQ-OUTPUT-004 | (GOG_AUTO_JSON -- needs env + TTY mock) | Documented |
+| REQ-OUTPUT-005 | req_output_005_json_no_ansi | Written |
+
+### REQ-UI (Must)
+| Req ID | Test IDs | Status |
+|--------|----------|--------|
+| REQ-UI-001 | req_ui_001_* (6 tests) | Written |
+| REQ-UI-002 | (stderr output -- needs binary test) | Documented |
+| REQ-UI-003 | req_ui_003_* (5 tests in api_error + ui) | Written |
+
+---
+
+## Specs Gaps Found
+
+### From M1
+1. **REQ-HTTP-006 (cancellation in retry sleep)**: The architecture defines `tokio::select!` for cancellation, but there is no specific requirement ID for how cancellation propagates through the retry loop. The Go implementation uses `context.Context` cancellation. The Rust equivalent should use `tokio::CancellationToken` or `tokio::select!`. Tests would need async runtime.
+
+2. **REQ-OUTPUT-004 (GOG_AUTO_JSON)**: Testing requires both environment variable manipulation and TTY detection mocking. These are difficult to test in unit tests. Recommend integration tests using `assert_cmd` with piped stdout.
+
+3. **REQ-AUTH-001 through REQ-AUTH-012**: These are command-level requirements (CLI subcommands) that need the CLI dispatch layer implemented before they can be tested. The underlying data operations (scope mapping, token key parsing) are tested, but the command handlers are M1 scope that depends on full CLI setup.
+
+4. **REQ-AUTH-017 (Service account JWT)**: The architecture defines JWT token generation but no tests for the JWT construction itself. This requires the `jsonwebtoken` crate and RS256 signing, which needs a test key pair.
+
+5. **REQ-AUTH-020 (Keyring timeout)**: The Go implementation uses goroutine + channel with timeout. The Rust equivalent would use `tokio::time::timeout`. Testing this requires mocking the keyring open operation. Marked as Should priority.
+
+### From M2
+6. **REQ-GMAIL-005 (Thread attachments download)**: The requirements specify a `gmail thread attachments` command but the architecture does not define specific types or URL builders for bulk attachment download from a thread. Tests for this would need to compose `build_attachment_url` across multiple messages. Currently covered indirectly through `req_gmail_007_attachment_url`.
+
+7. **REQ-CAL-011 through REQ-CAL-013 (time, users, team)**: These commands (`calendar time`, `calendar users`, `calendar team`) are listed in requirements but not in the architecture's service module breakdown. They may need additional service functions. `calendar time` is partially covered by M1's time module. `calendar users` and `calendar team` require People/Groups API integration that crosses service boundaries.
+
+8. **REQ-CAL-020 (Flexible date/time parsing)**: The requirements specify extensive date parsing (RFC3339, YYYY-MM-DD, relative, weekday names, duration). The M1 `time/parse.rs` module covers this but the calendar service types call `resolve_time_range()` which is a new function. Tests written for `resolve_time_range` but the full integration with all date format variants is in M1's time module.
+
+9. **REQ-DRIVE-004 (download format conversion)**: The architecture mentions `driveExportMimeType` and `driveExportMimeTypeForFormat` functions from the Go reference but does not specify all supported format strings. Tests are based on the Go reference patterns: pdf, docx, xlsx, pptx, csv, txt, png, svg. The requirements say "pdf, docx, xlsx, pptx, csv, txt" which is a subset.
+
+10. **CLI Desire Path Aliases (REQ-CLI-010 through REQ-CLI-019)**: These M2 CLI aliases (`send`, `ls`, `search`, etc.) are defined in requirements but their integration with the M2 service dispatch layer is not yet testable. The CLI subcommand structs have been created (`cli/gmail.rs`, `cli/calendar.rs`, `cli/drive.rs`) but the dispatch from root Command enum to service handlers requires developer implementation first.
+
+---
+
+## Files Created for M2
+
+### Service Infrastructure
+- `src/services/mod.rs` -- ServiceContext struct
+- `src/services/common.rs` -- PaginationParams, ListResponse, format_size, format_datetime
+
+### Gmail Service (12 files)
+- `src/services/gmail/mod.rs`
+- `src/services/gmail/types.rs` -- 27 unit tests
+- `src/services/gmail/search.rs` -- 8 unit tests
+- `src/services/gmail/thread.rs` -- 10 unit tests
+- `src/services/gmail/message.rs` -- 5 unit tests
+- `src/services/gmail/mime.rs` -- 15 unit tests
+- `src/services/gmail/send.rs` -- 2 unit tests
+- `src/services/gmail/labels.rs` -- 10 unit tests
+- `src/services/gmail/drafts.rs` -- 6 unit tests
+- `src/services/gmail/watch.rs` -- 2 unit tests
+- `src/services/gmail/history.rs` -- 2 unit tests
+- `src/services/gmail/batch.rs` -- 2 unit tests
+- `src/services/gmail/settings.rs` -- 7 unit tests
+
+### Calendar Service (9 files)
+- `src/services/calendar/mod.rs`
+- `src/services/calendar/types.rs` -- 17 unit tests
+- `src/services/calendar/events.rs` -- 11 unit tests
+- `src/services/calendar/calendars.rs` -- 5 unit tests
+- `src/services/calendar/freebusy.rs` -- 2 unit tests
+- `src/services/calendar/respond.rs` -- 3 unit tests
+- `src/services/calendar/search.rs` -- 2 unit tests
+- `src/services/calendar/special.rs` -- 4 unit tests
+- `src/services/calendar/colors.rs` -- 1 unit test
+
+### Drive Service (8 files)
+- `src/services/drive/mod.rs`
+- `src/services/drive/types.rs` -- 35 unit tests
+- `src/services/drive/list.rs` -- 20 unit tests
+- `src/services/drive/files.rs` -- 8 unit tests
+- `src/services/drive/folders.rs` -- 6 unit tests
+- `src/services/drive/permissions.rs` -- 9 unit tests
+- `src/services/drive/comments.rs` -- 3 unit tests
+- `src/services/drive/drives.rs` -- 2 unit tests
+
+### CLI Subcommands (3 files)
+- `src/cli/gmail.rs` -- Gmail CLI subcommand tree (clap derive)
+- `src/cli/calendar.rs` -- Calendar CLI subcommand tree (clap derive)
+- `src/cli/drive.rs` -- Drive CLI subcommand tree (clap derive)
+
+### Integration Tests (3 files)
+- `tests/gmail_test.rs` -- 7 integration tests
+- `tests/calendar_test.rs` -- 7 integration tests
+- `tests/drive_test.rs` -- 9 integration tests
+
+### Modified Files
+- `src/lib.rs` -- added `pub mod services;`
+- `src/cli/mod.rs` -- added `pub mod gmail; pub mod calendar; pub mod drive;`

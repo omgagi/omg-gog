@@ -75,7 +75,7 @@ pub fn exit_code_for(err: &OmegaError) -> i32 {
             403 => codes::PERMISSION_DENIED,
             404 => codes::NOT_FOUND,
             429 => codes::RATE_LIMITED,
-            s if s >= 500 && s < 600 => codes::RETRYABLE,
+            s if (500..600).contains(&s) => codes::RETRYABLE,
             _ => codes::GENERIC_ERROR,
         },
         _ => codes::GENERIC_ERROR,

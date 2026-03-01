@@ -90,22 +90,22 @@ pub fn has_trashed_predicate(query: &str) -> bool {
             i += 1;
             continue;
         }
-        if !in_quote && i + trashed_bytes.len() <= bytes.len() {
-            if &bytes[i..i + trashed_bytes.len()] == trashed_bytes {
-                // Check character after "trashed" is whitespace or operator
-                let after = i + trashed_bytes.len();
-                if after >= bytes.len() {
-                    return false; // just "trashed" alone isn't a predicate
-                }
-                // Skip whitespace after "trashed"
-                let mut j = after;
-                while j < bytes.len() && bytes[j] == b' ' {
-                    j += 1;
-                }
-                // Check for operator: =, !=, <, >
-                if j < bytes.len() && (bytes[j] == b'=' || bytes[j] == b'!' || bytes[j] == b'<' || bytes[j] == b'>') {
-                    return true;
-                }
+        if !in_quote && i + trashed_bytes.len() <= bytes.len()
+            && &bytes[i..i + trashed_bytes.len()] == trashed_bytes
+        {
+            // Check character after "trashed" is whitespace or operator
+            let after = i + trashed_bytes.len();
+            if after >= bytes.len() {
+                return false; // just "trashed" alone isn't a predicate
+            }
+            // Skip whitespace after "trashed"
+            let mut j = after;
+            while j < bytes.len() && bytes[j] == b' ' {
+                j += 1;
+            }
+            // Check for operator: =, !=, <, >
+            if j < bytes.len() && (bytes[j] == b'=' || bytes[j] == b'!' || bytes[j] == b'<' || bytes[j] == b'>') {
+                return true;
             }
         }
         i += 1;

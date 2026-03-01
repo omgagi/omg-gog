@@ -1,8 +1,25 @@
-# Developer Progress: omega-google M2 Services
+# Developer Progress: omega-google M2 Services + Docs Service
 
-## Status: COMPLETE (Review Fixes Applied)
+## Status: COMPLETE (M3 Docs Service Implemented)
 
-All M2 service modules implemented and review fixes applied. **598/598 tests passing** (436 lib + 162 integration). Zero failures.
+All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
+**679 lib tests + 38 integration tests passing**. Zero failures.
+
+### M3: Google Docs Service (97 new tests)
+
+Implemented 7 modules under `src/services/docs/`:
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/docs/types.rs` | Document, Body, StructuralElement, Paragraph, TextRun, TextStyle, Tab, TabProperties, Comment, Author, Reply, Table, etc. | 24 |
+| `src/services/docs/content.rs` | `build_doc_get_url`, `build_doc_get_url_with_tabs`, `extract_plain_text`, `extract_plain_text_from_elements`, `extract_tab_text` | 16 |
+| `src/services/docs/export.rs` | `build_doc_export_url`, `build_doc_copy_url`, `build_doc_create_body`, `build_doc_copy_body`, `resolve_export_mime` | 15 |
+| `src/services/docs/comments.rs` | `build_comments_list_url`, `build_comment_get_url`, `build_comment_create_url`, `build_comment_create_body`, `build_comment_reply_url`, `build_comment_reply_body`, `build_comment_resolve_body`, `build_comment_resolve_url`, `build_comment_delete_url` | 11 |
+| `src/services/docs/edit.rs` | `build_batch_update_url`, `build_insert_text_body`, `build_delete_content_range_body`, `build_replace_all_text_body`, `build_clear_body`, `build_replace_content_body` | 7 |
+| `src/services/docs/sedmat.rs` | `parse_sed_expression`, `parse_sed_file`, `SedExpression` | 14 |
+| `src/services/docs/markdown.rs` | `body_to_markdown`, `paragraph_to_markdown`, `text_run_to_markdown`, heading/bold/italic conversion | 6 |
+
+---
 
 ### M2 Code Review Fixes
 

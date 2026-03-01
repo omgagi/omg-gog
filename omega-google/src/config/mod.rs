@@ -85,43 +85,47 @@ pub fn read_config_from(path: &std::path::Path) -> anyhow::Result<ConfigFile> {
 pub fn write_config(cfg: &ConfigFile) -> anyhow::Result<()> {
     let path = config_path()?;
     ensure_dir()?;
-    write_config_to(&path, cfg);
-    Ok(())
+    write_config_to(&path, cfg)
 }
 
 /// Writes the config file to a specific path (for testing).
-/// Panics if the parent directory does not exist.
-pub fn write_config_to(path: &std::path::Path, cfg: &ConfigFile) {
+/// Returns an error if the parent directory does not exist or any I/O operation fails.
+pub fn write_config_to(path: &std::path::Path, cfg: &ConfigFile) -> anyhow::Result<()> {
     use std::io::Write;
-    let json_str = serde_json::to_string_pretty(cfg)
-        .expect("failed to serialize config");
+    let json_str = serde_json::to_string_pretty(cfg)?;
     let tmp_path = path.with_extension("json.tmp");
     {
-        let mut f = std::fs::File::create(&tmp_path)
-            .unwrap_or_else(|e| panic!("failed to create temp file {}: {}", tmp_path.display(), e));
-        f.write_all(json_str.as_bytes())
-            .expect("failed to write config");
-        f.write_all(b"\n")
-            .expect("failed to write newline");
-        f.sync_all()
-            .expect("failed to sync config file");
+        let mut f = std::fs::File::create(&tmp_path)?;
+        f.write_all(json_str.as_bytes())?;
+        f.write_all(b"\n")?;
+        f.sync_all()?;
     }
     // Set permissions to 0600 before rename
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600))
-            .expect("failed to set file permissions");
+        std::fs::set_permissions(&tmp_path, std::fs::Permissions::from_mode(0o600))?;
     }
-    std::fs::rename(&tmp_path, path)
-        .unwrap_or_else(|e| panic!("failed to rename {} to {}: {}", tmp_path.display(), path.display(), e));
+    std::fs::rename(&tmp_path, path)?;
+    Ok(())
+}
+
+/// Returns the credential file name for a given client name.
+/// Default client: `credentials.json`
+/// Named client: `credentials-{client}.json`
+pub fn credential_filename(client: &str) -> String {
+    let name = normalize_client_name(client);
+    if name == DEFAULT_CLIENT_NAME {
+        "credentials.json".to_string()
+    } else {
+        format!("credentials-{}.json", name)
+    }
 }
 
 /// Reads OAuth client credentials for the given client name.
 pub fn read_client_credentials(client: &str) -> anyhow::Result<ClientCredentials> {
-    let name = normalize_client_name(client);
     let dir = config_dir()?;
-    let path = dir.join(format!("{}.json", name));
+    let path = dir.join(credential_filename(client));
     if !path.exists() {
         anyhow::bail!("credential file not found: {}", path.display());
     }
@@ -132,9 +136,8 @@ pub fn read_client_credentials(client: &str) -> anyhow::Result<ClientCredentials
 
 /// Writes OAuth client credentials for the given client name.
 pub fn write_client_credentials(client: &str, creds: &ClientCredentials) -> anyhow::Result<()> {
-    let name = normalize_client_name(client);
     let dir = ensure_dir()?;
-    let path = dir.join(format!("{}.json", name));
+    let path = dir.join(credential_filename(client));
     let json_str = serde_json::to_string_pretty(creds)?;
     std::fs::write(&path, json_str)?;
     #[cfg(unix)]
@@ -239,9 +242,8 @@ mod tests {
             ..Default::default()
         };
         // write_config_to should use tmp + rename pattern
-        write_config_to(&path, &cfg);
-        // If we get here without panic from todo!, verify the file exists
-        // and the tmp file does NOT exist
+        write_config_to(&path, &cfg).unwrap();
+        // Verify the file exists and the tmp file does NOT exist
     }
 
     // ---------------------------------------------------------------
@@ -415,10 +417,7 @@ mod tests {
         let path = std::path::Path::new("/nonexistent/deeply/nested/config.json");
         // write_config_to should return an error for nonexistent parent
         let cfg = ConfigFile::default();
-        let result = std::panic::catch_unwind(|| {
-            write_config_to(path, &cfg)
-        });
-        // Will panic with todo!() in stub -- that is expected for TDD red phase
+        let result = write_config_to(path, &cfg);
         assert!(result.is_err());
     }
 }

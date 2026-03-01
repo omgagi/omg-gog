@@ -2,8 +2,6 @@ pub mod color;
 pub mod progress;
 pub mod prompt;
 
-use std::io::Write;
-
 /// Color mode for terminal output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorMode {

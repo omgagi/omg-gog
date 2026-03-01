@@ -158,17 +158,15 @@ pub fn resolve_account(
         let acct = acct.trim();
         if !acct.is_empty() {
             // Check if it's an alias
-            if let Some(aliases) = &config.account_aliases {
-                if let Some(resolved) = aliases.get(acct) {
-                    return Ok(resolved.clone());
-                }
+            if let Some(resolved) = config.account_aliases.as_ref().and_then(|a| a.get(acct)) {
+                return Ok(resolved.clone());
             }
             return Ok(acct.to_string());
         }
     }
 
-    // 2. OMEGA_GOOGLE_ACCOUNT env var
-    if let Ok(env_acct) = std::env::var("OMEGA_GOOGLE_ACCOUNT") {
+    // 2. GOG_ACCOUNT env var
+    if let Ok(env_acct) = std::env::var("GOG_ACCOUNT") {
         let env_acct = env_acct.trim().to_string();
         if !env_acct.is_empty() {
             return Ok(env_acct);
@@ -191,15 +189,12 @@ pub fn resolve_account(
         return Ok(matching[0].1.clone());
     }
 
-    anyhow::bail!("no account specified; use --account, set OMEGA_GOOGLE_ACCOUNT, or run 'omega-google auth login'")
+    anyhow::bail!("no account specified; use --account, set GOG_ACCOUNT, or run 'omega-google auth login'")
 }
 
 /// Parse a keyring token key into (client, email).
 pub fn parse_token_key(key: &str) -> Option<(String, String)> {
-    if !key.starts_with("token:") {
-        return None;
-    }
-    let rest = &key[6..]; // after "token:"
+    let rest = key.strip_prefix("token:")?;
     if rest.is_empty() || rest.trim().is_empty() {
         return None;
     }

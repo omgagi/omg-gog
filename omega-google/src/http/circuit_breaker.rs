@@ -9,10 +9,23 @@ pub struct CircuitBreaker {
     state: Mutex<CircuitState>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum BreakerPhase {
+    Closed,
+    Open,
+    HalfOpen,
+}
+
 struct CircuitState {
     failures: u32,
     last_failure: Option<Instant>,
-    open: bool,
+    phase: BreakerPhase,
+}
+
+impl Default for CircuitBreaker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CircuitBreaker {
@@ -21,54 +34,73 @@ impl CircuitBreaker {
             state: Mutex::new(CircuitState {
                 failures: 0,
                 last_failure: None,
-                open: false,
+                phase: BreakerPhase::Closed,
             }),
         }
     }
 
     /// Record a successful request. Resets failure counter and closes circuit.
     pub fn record_success(&self) {
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
         state.failures = 0;
-        state.open = false;
+        state.phase = BreakerPhase::Closed;
         state.last_failure = None;
     }
 
     /// Record a failed request. Returns true if the circuit just opened.
     pub fn record_failure(&self) -> bool {
-        let mut state = self.state.lock().unwrap();
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
         state.failures += 1;
         state.last_failure = Some(Instant::now());
-        if !state.open && state.failures >= CIRCUIT_BREAKER_THRESHOLD {
-            state.open = true;
+        if state.phase == BreakerPhase::HalfOpen {
+            // Probe failed: re-open with fresh cooldown
+            state.phase = BreakerPhase::Open;
+            return false;
+        }
+        if state.phase == BreakerPhase::Closed && state.failures >= CIRCUIT_BREAKER_THRESHOLD {
+            state.phase = BreakerPhase::Open;
             return true;
         }
         false
     }
 
     /// Check if the circuit is open (requests should be rejected).
+    /// When the cooldown has elapsed, transitions to half-open and returns false
+    /// to allow one probe request through.
     pub fn is_open(&self) -> bool {
-        let state = self.state.lock().unwrap();
-        if !state.open {
-            return false;
-        }
-        // Check if cooldown period has elapsed
-        if let Some(last) = state.last_failure {
-            if last.elapsed() >= CIRCUIT_BREAKER_RESET_TIME {
-                // Would transition to half-open, but for simplicity
-                // we still report open. The next success will close it.
-                return true;
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        match state.phase {
+            BreakerPhase::Closed => false,
+            BreakerPhase::HalfOpen => false,
+            BreakerPhase::Open => {
+                // Check if cooldown period has elapsed
+                if let Some(last) = state.last_failure {
+                    if last.elapsed() >= CIRCUIT_BREAKER_RESET_TIME {
+                        // Transition to half-open: allow one probe request
+                        state.phase = BreakerPhase::HalfOpen;
+                        return false;
+                    }
+                }
+                true
             }
         }
-        true
     }
 
-    /// Get the current state string ("open" or "closed").
+    /// Get the current state string ("open", "closed", or "half-open").
     pub fn state(&self) -> String {
-        if self.is_open() {
-            "open".to_string()
-        } else {
-            "closed".to_string()
+        let state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        match state.phase {
+            BreakerPhase::Closed => "closed".to_string(),
+            BreakerPhase::Open => {
+                // Check cooldown without mutating (for display only)
+                if let Some(last) = state.last_failure {
+                    if last.elapsed() >= CIRCUIT_BREAKER_RESET_TIME {
+                        return "half-open".to_string();
+                    }
+                }
+                "open".to_string()
+            }
+            BreakerPhase::HalfOpen => "half-open".to_string(),
         }
     }
 }

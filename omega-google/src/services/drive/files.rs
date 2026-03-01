@@ -24,7 +24,7 @@ pub fn build_file_export_url(file_id: &str, mime_type: &str) -> String {
 
 /// Build URL for uploading a file.
 pub fn build_file_upload_url() -> String {
-    format!("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart".to_string()
 }
 
 /// Build URL for copying a file.

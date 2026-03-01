@@ -78,7 +78,7 @@ pub fn column_to_index(col: &str) -> u32 {
     let mut index: u32 = 0;
     for b in col.as_bytes() {
         let c = b.to_ascii_uppercase();
-        if !(b'A'..=b'Z').contains(&c) {
+        if !c.is_ascii_uppercase() {
             return 0; // invalid
         }
         index = index * 26 + (c - b'A' + 1) as u32;
@@ -109,13 +109,13 @@ pub fn index_to_column(mut index: u32) -> String {
 /// Split an A1 string into optional sheet name and cell part.
 fn split_sheet_and_range(input: &str) -> Result<(Option<String>, &str), String> {
     // Check for quoted sheet name: 'Sheet Name'!...
-    if input.starts_with('\'') {
+    if let Some(after_open_quote) = input.strip_prefix('\'') {
         // Find the closing quote
-        if let Some(close_quote) = input[1..].find('\'') {
-            let sheet_name = &input[1..close_quote + 1];
-            let rest = &input[close_quote + 2..]; // skip closing quote
-            if rest.starts_with('!') {
-                Ok((Some(sheet_name.to_string()), &rest[1..]))
+        if let Some(close_quote) = after_open_quote.find('\'') {
+            let sheet_name = &after_open_quote[..close_quote];
+            let rest = &after_open_quote[close_quote + 1..]; // skip closing quote
+            if let Some(after_bang) = rest.strip_prefix('!') {
+                Ok((Some(sheet_name.to_string()), after_bang))
             } else if rest.is_empty() {
                 Ok((Some(sheet_name.to_string()), ""))
             } else {

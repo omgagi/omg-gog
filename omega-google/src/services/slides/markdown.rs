@@ -127,12 +127,14 @@ fn split_on_headings(segment: &str) -> Vec<SlideContent> {
             }
 
             // Start a new slide with this heading
-            if trimmed.starts_with("## ") {
-                current_title = trimmed[3..].trim().to_string();
+            if let Some(rest) = trimmed.strip_prefix("## ") {
+                current_title = rest.trim().to_string();
                 current_layout = SlideLayout::TitleAndBody;
-            } else {
-                current_title = trimmed[2..].trim().to_string();
+            } else if let Some(rest) = trimmed.strip_prefix("# ") {
+                current_title = rest.trim().to_string();
                 current_layout = SlideLayout::TitleSlide;
+            } else {
+                unreachable!("outer guard ensures line starts with # or ##");
             }
             current_body_lines = Vec::new();
             has_heading = true;

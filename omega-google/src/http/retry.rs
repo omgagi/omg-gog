@@ -57,7 +57,7 @@ pub fn is_rate_limited(status: u16) -> bool {
 
 /// Determine if a status code is a server error (5xx).
 pub fn is_server_error(status: u16) -> bool {
-    status >= 500 && status < 600
+    (500..600).contains(&status)
 }
 
 #[cfg(test)]

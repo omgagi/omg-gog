@@ -136,7 +136,7 @@ pub fn extract_speaker_notes(page: &Page) -> Option<String> {
         .slide_properties
         .as_ref()
         .and_then(|sp| sp.notes_page.as_ref())
-        .or_else(|| page.notes_page.as_ref());
+        .or(page.notes_page.as_ref());
 
     let notes_page = notes_page?;
 

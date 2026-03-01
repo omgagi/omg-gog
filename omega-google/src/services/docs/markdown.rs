@@ -2,7 +2,7 @@
 //!
 //! Converts a Docs API document body to Markdown format.
 
-use super::types::{Body, StructuralElement, Paragraph, ParagraphElement, TextRun, TextStyle, ParagraphStyle};
+use super::types::{Body, StructuralElement, Paragraph, ParagraphElement, TextRun, ParagraphStyle};
 
 /// Convert a document body to Markdown.
 pub fn body_to_markdown(body: &Body) -> String {
@@ -26,7 +26,7 @@ fn structural_element_to_markdown(elem: &StructuralElement) -> String {
                 let cell_text: String = cell
                     .content
                     .iter()
-                    .map(|e| structural_element_to_markdown(e))
+                    .map(structural_element_to_markdown)
                     .collect::<String>()
                     .trim()
                     .to_string();

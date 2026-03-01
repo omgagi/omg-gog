@@ -480,28 +480,25 @@ fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
     use gmail::GmailCommand;
 
     // Commands that can work without authentication
-    match &args.command {
-        GmailCommand::Url(url_args) => {
-            use crate::services::gmail::types::thread_url;
-            if url_args.thread_ids.is_empty() {
-                eprintln!("Error: at least one thread ID is required");
-                return codes::USAGE_ERROR;
-            }
-            let urls: Vec<String> = url_args.thread_ids.iter().map(|id| thread_url(id)).collect();
-            if flags.json {
-                let json_val = match serde_json::to_value(&urls) {
-                    Ok(v) => v,
-                    Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
-                };
-                println!("{}", to_json_pretty(&json_val));
-            } else {
-                for url in &urls {
-                    println!("{}", url);
-                }
-            }
-            return codes::SUCCESS;
+    if let GmailCommand::Url(url_args) = &args.command {
+        use crate::services::gmail::types::thread_url;
+        if url_args.thread_ids.is_empty() {
+            eprintln!("Error: at least one thread ID is required");
+            return codes::USAGE_ERROR;
         }
-        _ => {}
+        let urls: Vec<String> = url_args.thread_ids.iter().map(|id| thread_url(id)).collect();
+        if flags.json {
+            let json_val = match serde_json::to_value(&urls) {
+                Ok(v) => v,
+                Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+            };
+            println!("{}", to_json_pretty(&json_val));
+        } else {
+            for url in &urls {
+                println!("{}", url);
+            }
+        }
+        return codes::SUCCESS;
     }
 
     // All other Gmail commands require authentication
@@ -550,28 +547,25 @@ fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
     use drive::DriveCommand;
 
     // Commands that can work without authentication
-    match &args.command {
-        DriveCommand::Url(url_args) => {
-            use crate::services::drive::types::file_url;
-            if url_args.file_ids.is_empty() {
-                eprintln!("Error: at least one file ID is required");
-                return codes::USAGE_ERROR;
-            }
-            let urls: Vec<String> = url_args.file_ids.iter().map(|id| file_url(id)).collect();
-            if flags.json {
-                let json_val = match serde_json::to_value(&urls) {
-                    Ok(v) => v,
-                    Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
-                };
-                println!("{}", to_json_pretty(&json_val));
-            } else {
-                for url in &urls {
-                    println!("{}", url);
-                }
-            }
-            return codes::SUCCESS;
+    if let DriveCommand::Url(url_args) = &args.command {
+        use crate::services::drive::types::file_url;
+        if url_args.file_ids.is_empty() {
+            eprintln!("Error: at least one file ID is required");
+            return codes::USAGE_ERROR;
         }
-        _ => {}
+        let urls: Vec<String> = url_args.file_ids.iter().map(|id| file_url(id)).collect();
+        if flags.json {
+            let json_val = match serde_json::to_value(&urls) {
+                Ok(v) => v,
+                Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+            };
+            println!("{}", to_json_pretty(&json_val));
+        } else {
+            for url in &urls {
+                println!("{}", url);
+            }
+        }
+        return codes::SUCCESS;
     }
 
     // All other Drive commands require authentication
@@ -635,8 +629,7 @@ pub fn rewrite_desire_path_args(args: Vec<String>) -> Vec<String> {
         // Rewrite --fields to --select
         if arg == "--fields" {
             result.push("--select".to_string());
-        } else if arg.starts_with("--fields=") {
-            let val = &arg[9..]; // after "--fields="
+        } else if let Some(val) = arg.strip_prefix("--fields=") {
             result.push(format!("--select={}", val));
         } else {
             result.push(arg);

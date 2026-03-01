@@ -303,8 +303,8 @@ pub fn is_google_workspace_type(mime_type: &str) -> bool {
 /// when the file has been converted to Google Workspace format.
 pub fn strip_office_extension(filename: &str) -> &str {
     for ext in &[".docx", ".xlsx", ".pptx"] {
-        if filename.ends_with(ext) {
-            return &filename[..filename.len() - ext.len()];
+        if let Some(stripped) = filename.strip_suffix(ext) {
+            return stripped;
         }
     }
     filename

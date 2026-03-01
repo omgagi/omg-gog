@@ -29,6 +29,7 @@ url = "2"
 percent-encoding = "2"
 dirs = "6"
 rand = "0.8"
+regex = "1"
 
 [dev-dependencies]
 tempfile = "3"

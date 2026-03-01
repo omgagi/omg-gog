@@ -4,7 +4,7 @@ pub mod plain;
 pub mod text;
 pub mod transform;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// Output mode resolved from flags, env vars, and TTY detection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,7 +27,8 @@ pub struct JsonTransform {
 }
 
 /// Resolve the output mode from flags and TTY detection.
-pub fn resolve_mode(json_flag: bool, plain_flag: bool, _is_tty: bool) -> anyhow::Result<OutputMode> {
+/// When GOG_AUTO_JSON is truthy and stdout is not a TTY, defaults to JSON.
+pub fn resolve_mode(json_flag: bool, plain_flag: bool, is_tty: bool) -> anyhow::Result<OutputMode> {
     if json_flag && plain_flag {
         anyhow::bail!("cannot use both --json and --plain");
     }
@@ -36,6 +37,10 @@ pub fn resolve_mode(json_flag: bool, plain_flag: bool, _is_tty: bool) -> anyhow:
     }
     if plain_flag {
         return Ok(OutputMode::Plain);
+    }
+    // GOG_AUTO_JSON: when stdout is not a TTY, default to JSON
+    if !is_tty && crate::cli::env_bool("GOG_AUTO_JSON") {
+        return Ok(OutputMode::Json);
     }
     // Default to Text mode
     Ok(OutputMode::Text)
@@ -47,7 +52,6 @@ pub fn write_json<T: Serialize>(
     value: &T,
     xform: &JsonTransform,
 ) -> anyhow::Result<()> {
-    use std::io::Write;
     let mut json_value = serde_json::to_value(value)?;
 
     if xform.results_only {
@@ -68,7 +72,6 @@ pub fn write_plain(
     writer: &mut impl std::io::Write,
     rows: &[Vec<String>],
 ) -> anyhow::Result<()> {
-    use std::io::Write;
     for row in rows {
         writeln!(writer, "{}", row.join("\t"))?;
     }

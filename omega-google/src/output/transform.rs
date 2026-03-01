@@ -12,7 +12,6 @@ pub const META_KEYS: &[&str] = &[
     "op",
     "action",
     "note",
-    "notes",
 ];
 
 /// Known result keys for fallback unwrapping.
