@@ -2597,6 +2597,16 @@ async fn handle_drive_download(
 
     let mime_type = file.mime_type.as_deref().unwrap_or("");
     let file_name = file.name.as_deref().unwrap_or("download");
+    let file_size = file.size.as_deref().unwrap_or("unknown");
+
+    // Dry-run: print what would happen and return early
+    if ctx.is_dry_run() {
+        eprintln!(
+            "[dry-run] would download '{}' ({} bytes)",
+            file_name, file_size
+        );
+        return codes::SUCCESS;
+    }
 
     // 2. Determine if this is a Google Workspace file (needs export) or binary (direct download)
     if export::is_google_workspace_type(mime_type) {
@@ -2713,6 +2723,35 @@ async fn handle_drive_upload(
         metadata["parents"] = serde_json::json!([parent]);
     }
 
+    // Handle --convert-to or --convert flags to set target Google Workspace MIME type
+    if let Some(ref target) = args.convert_to {
+        match crate::services::drive::types::convert_to_mime(target) {
+            Ok(mime) => {
+                metadata["mimeType"] = serde_json::json!(mime);
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return codes::USAGE_ERROR;
+            }
+        }
+    } else if args.convert {
+        // Auto-detect Google Workspace type from file extension
+        let ext = std::path::Path::new(&args.path)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let target_mime = match ext.as_str() {
+            "docx" | "doc" => Some(crate::services::drive::types::MIME_GOOGLE_DOC),
+            "xlsx" | "xls" => Some(crate::services::drive::types::MIME_GOOGLE_SHEET),
+            "pptx" | "ppt" => Some(crate::services::drive::types::MIME_GOOGLE_SLIDES),
+            _ => None, // Unrecognized extension: ignore silently (no conversion)
+        };
+        if let Some(mime) = target_mime {
+            metadata["mimeType"] = serde_json::json!(mime);
+        }
+    }
+
     // Build multipart body
     let boundary = "omega_google_upload_boundary";
     let metadata_json = serde_json::to_string(&metadata).unwrap_or_default();
@@ -2823,6 +2862,16 @@ async fn handle_gmail_attachment(
         Some(p) => p.clone(),
         None => filename.to_string(),
     };
+
+    // Dry-run: print what would happen and return early
+    if ctx.is_dry_run() {
+        eprintln!(
+            "[dry-run] would download '{}' ({} bytes)",
+            out_path,
+            decoded.len()
+        );
+        return codes::SUCCESS;
+    }
 
     // Write to file
     if let Err(e) = std::fs::write(&out_path, &decoded) {

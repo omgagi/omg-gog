@@ -68,13 +68,8 @@ pub fn export_formats(google_mime: &str) -> Vec<(&'static str, &'static str, &'s
     }
 }
 
-/// Check if a MIME type is a Google Workspace type that needs export.
-pub fn is_google_workspace_type(mime_type: &str) -> bool {
-    matches!(
-        mime_type,
-        MIME_GOOGLE_DOC | MIME_GOOGLE_SHEET | MIME_GOOGLE_SLIDES | MIME_GOOGLE_DRAWING
-    )
-}
+/// Re-export workspace type detection from drive::types to avoid duplication.
+pub use crate::services::drive::types::is_google_workspace_type;
 
 /// Get the default export format for a Google Workspace type.
 pub fn default_export_format(google_mime: &str) -> Option<&'static str> {

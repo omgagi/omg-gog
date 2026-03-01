@@ -32,9 +32,18 @@ pub fn build_file_copy_url(file_id: &str) -> String {
     format!("{}/files/{}/copy", DRIVE_BASE_URL, file_id)
 }
 
+/// Sanitize an API-provided filename by extracting only the base name.
+/// Strips directory separators and path traversal sequences (e.g., `..`, leading `/`).
+fn sanitize_filename(name: &str) -> &str {
+    std::path::Path::new(name)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("download")
+}
+
 /// Resolve the download output path.
-/// If --out is given, use it. Otherwise use the file name.
-/// For exports, replace the extension based on format.
+/// If --out is given, use it. Otherwise use the file name (sanitized to prevent
+/// path traversal). For exports, replace the extension based on format.
 pub fn resolve_download_path(
     filename: &str,
     out_flag: Option<&str>,
@@ -43,18 +52,20 @@ pub fn resolve_download_path(
     if let Some(out) = out_flag {
         return out.to_string();
     }
+    // Sanitize the API-provided filename to prevent path traversal
+    let safe_name = sanitize_filename(filename);
     if let Some(mime) = export_mime {
         let ext = extension_for_mime(mime);
         if !ext.is_empty() {
             // If filename already has an extension, replace it; otherwise append
-            if let Some(dot_pos) = filename.rfind('.') {
-                return format!("{}{}", &filename[..dot_pos], ext);
+            if let Some(dot_pos) = safe_name.rfind('.') {
+                return format!("{}{}", &safe_name[..dot_pos], ext);
             } else {
-                return format!("{}{}", filename, ext);
+                return format!("{}{}", safe_name, ext);
             }
         }
     }
-    filename.to_string()
+    safe_name.to_string()
 }
 
 #[cfg(test)]
@@ -146,5 +157,41 @@ mod tests {
     fn req_drive_004_resolve_path_export_extension() {
         let path = resolve_download_path("My Document", None, Some("application/pdf"));
         assert!(path.ends_with(".pdf"));
+    }
+
+    // ---------------------------------------------------------------
+    // Path traversal sanitization
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn resolve_path_sanitizes_traversal() {
+        let path = resolve_download_path("../../etc/evil", None, None);
+        assert_eq!(path, "evil");
+    }
+
+    #[test]
+    fn resolve_path_sanitizes_absolute() {
+        let path = resolve_download_path("/etc/passwd", None, None);
+        assert_eq!(path, "passwd");
+    }
+
+    #[test]
+    fn resolve_path_sanitizes_directory_components() {
+        let path = resolve_download_path("subdir/file.txt", None, None);
+        assert_eq!(path, "file.txt");
+    }
+
+    #[test]
+    fn resolve_path_sanitizes_dotdot_only() {
+        // ".." has no file_name component, should fallback to "download"
+        let path = resolve_download_path("..", None, None);
+        assert_eq!(path, "download");
+    }
+
+    #[test]
+    fn resolve_path_sanitizes_with_export() {
+        let path = resolve_download_path("../../evil.txt", None, Some("application/pdf"));
+        assert!(path.ends_with(".pdf"));
+        assert!(!path.contains(".."));
     }
 }
