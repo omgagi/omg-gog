@@ -1,6 +1,7 @@
 //! Sheets structural operations: insert rows/columns, create, copy, export.
 
 use super::SHEETS_BASE_URL;
+use crate::services::drive::types::DRIVE_BASE_URL;
 
 /// Build an insertDimension request for inserting rows or columns.
 ///
@@ -67,8 +68,8 @@ pub fn build_create_spreadsheet_url() -> String {
 /// Build URL for copying a spreadsheet via Drive API.
 pub fn build_copy_spreadsheet_url(spreadsheet_id: &str) -> String {
     format!(
-        "https://www.googleapis.com/drive/v3/files/{}/copy",
-        spreadsheet_id
+        "{}/files/{}/copy",
+        DRIVE_BASE_URL, spreadsheet_id
     )
 }
 
@@ -85,7 +86,8 @@ pub fn build_copy_body(title: &str, parent: Option<&str>) -> serde_json::Value {
 pub fn build_export_url(spreadsheet_id: &str, format: &str) -> String {
     let mime = resolve_export_mime(format);
     format!(
-        "https://www.googleapis.com/drive/v3/files/{}/export?mimeType={}",
+        "{}/files/{}/export?mimeType={}",
+        DRIVE_BASE_URL,
         spreadsheet_id,
         url::form_urlencoded::byte_serialize(mime.as_bytes()).collect::<String>()
     )

@@ -11,6 +11,9 @@ pub mod tasks;
 pub mod classroom;
 pub mod contacts;
 pub mod people;
+pub mod groups;
+pub mod keep;
+pub mod appscript;
 
 use crate::output::{OutputMode, JsonTransform};
 use crate::ui::Ui;

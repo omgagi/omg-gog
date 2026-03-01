@@ -289,7 +289,6 @@ pub fn propose_time_url(calendar_id: &str, event_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     // ---------------------------------------------------------------
     // REQ-CAL-001 (Must): CalendarListEntry type serialization

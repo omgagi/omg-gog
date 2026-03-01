@@ -280,7 +280,6 @@ pub struct BatchUpdateResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     // ---------------------------------------------------------------
     // REQ-SLIDES-002 (Must): Presentation metadata deserialization

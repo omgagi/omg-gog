@@ -1,7 +1,7 @@
-/// Integration tests for the output module.
-///
-/// Tests cover REQ-OUTPUT-001 through REQ-OUTPUT-005 (Must priority).
-/// Validates JSON transforms, field selection, output mode resolution, and plain formatting.
+//! Integration tests for the output module.
+//!
+//! Tests cover REQ-OUTPUT-001 through REQ-OUTPUT-005 (Must priority).
+//! Validates JSON transforms, field selection, output mode resolution, and plain formatting.
 
 use omega_google::output::*;
 use omega_google::output::transform;
@@ -318,7 +318,7 @@ fn req_output_003_path_negative_index() {
 fn req_output_001_json_pretty_printed() {
     let value = json!({"id": "1", "name": "test"});
     let mut buf = Vec::new();
-    write_json(&mut buf, &value, &JsonTransform::default());
+    let _ = write_json(&mut buf, &value, &JsonTransform::default());
     let output = String::from_utf8(buf).unwrap();
     assert!(output.contains("  "), "JSON should be pretty-printed with indentation");
 }
@@ -336,7 +336,7 @@ fn req_output_001_json_with_results_only() {
         select: vec![],
     };
     let mut buf = Vec::new();
-    write_json(&mut buf, &value, &transform);
+    let _ = write_json(&mut buf, &value, &transform);
     let output = String::from_utf8(buf).unwrap();
     // Should contain the threads array, not the envelope
     assert!(!output.contains("nextPageToken"));
@@ -352,7 +352,7 @@ fn req_output_001_json_with_select() {
         select: vec!["id".to_string(), "name".to_string()],
     };
     let mut buf = Vec::new();
-    write_json(&mut buf, &value, &transform);
+    let _ = write_json(&mut buf, &value, &transform);
     let output = String::from_utf8(buf).unwrap();
     assert!(!output.contains("extra"));
 }
@@ -371,7 +371,7 @@ fn req_output_001_plain_tab_separated() {
         vec!["2".to_string(), "doc.pdf".to_string()],
     ];
     let mut buf = Vec::new();
-    write_plain(&mut buf, &rows);
+    let _ = write_plain(&mut buf, &rows);
     let output = String::from_utf8(buf).unwrap();
     // Each row should be tab-separated
     for line in output.lines() {
@@ -387,7 +387,7 @@ fn req_output_001_plain_no_ansi() {
         vec!["test".to_string(), "value".to_string()],
     ];
     let mut buf = Vec::new();
-    write_plain(&mut buf, &rows);
+    let _ = write_plain(&mut buf, &rows);
     let output = String::from_utf8(buf).unwrap();
     // Should not contain ANSI escape codes
     assert!(!output.contains("\x1b["), "plain output should not contain ANSI codes");
@@ -436,7 +436,7 @@ fn req_output_002_result_keys_defined() {
 fn req_output_005_json_no_ansi() {
     let value = json!({"status": "error", "message": "something failed"});
     let mut buf = Vec::new();
-    write_json(&mut buf, &value, &JsonTransform::default());
+    let _ = write_json(&mut buf, &value, &JsonTransform::default());
     let output = String::from_utf8(buf).unwrap();
     assert!(!output.contains("\x1b["), "JSON output must not contain ANSI escape codes");
 }
@@ -461,7 +461,7 @@ fn req_output_002_combined_results_only_and_select() {
         select: vec!["id".to_string(), "name".to_string()],
     };
     let mut buf = Vec::new();
-    write_json(&mut buf, &value, &transform);
+    let _ = write_json(&mut buf, &value, &transform);
     let output = String::from_utf8(buf).unwrap();
     // Should first unwrap to files array, then project to id+name
     assert!(!output.contains("nextPageToken"));
@@ -474,7 +474,7 @@ fn req_output_002_combined_results_only_and_select() {
 fn req_output_001_plain_empty_rows() {
     let rows: Vec<Vec<String>> = vec![];
     let mut buf = Vec::new();
-    write_plain(&mut buf, &rows);
+    let _ = write_plain(&mut buf, &rows);
     let output = String::from_utf8(buf).unwrap();
     assert!(output.is_empty() || output.trim().is_empty());
 }

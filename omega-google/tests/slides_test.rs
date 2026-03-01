@@ -2,7 +2,6 @@
 
 use omega_google::services::slides::types::*;
 use omega_google::services::slides::markdown::*;
-use std::collections::HashMap;
 
 // ---------------------------------------------------------------
 // REQ-SLIDES-002 (Must): Presentation from realistic API response
@@ -252,8 +251,8 @@ Additional data and references."#;
 
     let slides = parse_markdown_to_slides(markdown);
 
-    // Should produce 5 slides (4 headings + appendix after separator)
-    assert_eq!(slides.len(), 5);
+    // Should produce 4 slides (4 headings, --- is only a boundary)
+    assert_eq!(slides.len(), 4);
 
     // First slide: Company Overview
     assert_eq!(slides[0].title, "Company Overview");
@@ -268,9 +267,9 @@ Additional data and references."#;
     assert_eq!(slides[2].title, "Goals for 2025");
     assert!(slides[2].body.contains("European markets"));
 
-    // Fourth/Fifth: empty from separator + Appendix
-    assert_eq!(slides[4].title, "Appendix");
-    assert!(slides[4].body.contains("Additional data"));
+    // Fourth: Appendix (--- is only a boundary, no blank slides)
+    assert_eq!(slides[3].title, "Appendix");
+    assert!(slides[3].body.contains("Additional data"));
 }
 
 // Requirement: REQ-SLIDES-004 (Must)

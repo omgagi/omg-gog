@@ -1,11 +1,57 @@
-# Developer Progress: omega-google M2 Services + Docs Service + M4 Services + Integration Tests
+# Developer Progress: omega-google M2-M5 Services
 
-## Status: COMPLETE (M4 Integration Tests Created and Validated)
+## Status: COMPLETE (M5 Admin/Workspace Services Implemented)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
-M4 integration tests created for Chat, Classroom, Tasks, Contacts, and People services.
-**1197 total tests passing**. Zero failures. Zero clippy warnings.
+M5 Groups, Keep, and Apps Script services implemented.
+**1301 total tests passing** (1045 unit + 256 integration). Zero failures. Zero clippy warnings.
+
+### M5 Admin/Workspace Services (69 new tests: 46 unit + 23 integration)
+
+Implemented Groups service (2 modules), Keep service (3 modules), and Apps Script service (2 modules):
+
+#### Groups Service (REQ-GROUPS-001 through REQ-GROUPS-003)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/groups/types.rs` | Group, GroupKey, GroupListResponse, Membership, MemberKey, MembershipRole, MembershipListResponse | 11 |
+| `src/services/groups/groups.rs` | `build_groups_list_url`, `build_group_lookup_url`, `build_members_list_url` | 8 |
+| `src/cli/groups.rs` | GroupsArgs, GroupsCommand (List, Members) + all arg structs | 0 (compile-verified) |
+| `tests/groups_test.rs` | Integration tests | 7 |
+
+#### Keep Service (REQ-KEEP-001 through REQ-KEEP-005)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/keep/types.rs` | Note, NoteBody, TextContent, ListContent, ListItem, NoteListResponse, Attachment, Permission | 10 |
+| `src/services/keep/notes.rs` | `build_notes_list_url`, `build_note_get_url`, `build_notes_search` | 10 |
+| `src/services/keep/attachments.rs` | `build_attachment_download_url` | 2 |
+| `src/cli/keep.rs` | KeepArgs (with service_account, impersonate), KeepCommand (List, Get, Search, Attachment) + all arg structs | 0 (compile-verified) |
+| `tests/keep_test.rs` | Integration tests | 6 |
+
+#### Apps Script Service (REQ-SCRIPT-001 through REQ-SCRIPT-004)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/appscript/types.rs` | Project, Content, ScriptFile, FunctionSet, Function, ExecutionResponse, ExecutionError, Operation | 11 |
+| `src/services/appscript/scripts.rs` | `build_project_get_url`, `build_content_get_url`, `build_run_url`, `build_run_body`, `build_project_create_url`, `build_project_create_body`, `normalize_google_id` | 15 |
+| `src/cli/appscript.rs` | AppScriptArgs, AppScriptCommand (Get, Content, Run, Create) + all arg structs | 0 (compile-verified) |
+| `tests/appscript_test.rs` | Integration tests | 10 |
+
+#### CLI Wiring
+
+| File | Changes |
+|------|---------|
+| `src/services/mod.rs` | Added `pub mod groups`, `pub mod keep`, `pub mod appscript` |
+| `src/cli/mod.rs` | Added module declarations, dispatch arms (`handle_groups`, `handle_keep`, `handle_appscript`) |
+| `src/cli/root.rs` | Added imports and Command enum variants: `Groups(GroupsArgs)` with alias "group", `Keep(KeepArgs)`, `AppScript(AppScriptArgs)` with aliases "script" and "apps-script" |
+
+#### Clippy Fix
+
+| File | Fix |
+|------|-----|
+| `src/services/groups/mod.rs` | Added `#[allow(clippy::module_inception)]` for `groups` submodule |
 
 ### M4 Integration Tests (39 new integration tests)
 

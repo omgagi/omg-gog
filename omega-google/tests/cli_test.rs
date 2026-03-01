@@ -1,7 +1,7 @@
-/// Integration tests for the CLI module.
-///
-/// Tests cover REQ-CLI-001 through REQ-CLI-009 (Must and Should priority).
-/// Validates flag parsing, desire path rewriting, exit codes, and env var handling.
+//! Integration tests for the CLI module.
+//!
+//! Tests cover REQ-CLI-001 through REQ-CLI-009 (Must and Should priority).
+//! Validates flag parsing, desire path rewriting, exit codes, and env var handling.
 
 use omega_google::cli;
 

@@ -55,18 +55,8 @@ pub fn parse_markdown_to_slides(markdown: &str) -> Vec<SlideContent> {
 
     let mut all_slides = Vec::new();
 
-    for (seg_idx, segment) in segments.iter().enumerate() {
+    for segment in &segments {
         let trimmed = segment.trim();
-
-        // If this is not the first segment, the --- separator produces a blank slide
-        if seg_idx > 0 {
-            all_slides.push(SlideContent {
-                title: String::new(),
-                body: String::new(),
-                speaker_notes: None,
-                layout: SlideLayout::Blank,
-            });
-        }
 
         if trimmed.is_empty() {
             continue;
@@ -346,6 +336,13 @@ pub fn slides_to_requests(slides: &[SlideContent]) -> Vec<serde_json::Value> {
                 }
             }));
         }
+
+        // Insert speaker notes
+        if let Some(ref notes) = slide.speaker_notes {
+            let notes_id = format!("{}_notes", slide_id);
+            let notes_reqs = super::notes::build_update_notes_request(&notes_id, notes);
+            requests.extend(notes_reqs);
+        }
     }
 
     requests
@@ -370,15 +367,15 @@ mod tests {
     }
 
     // Requirement: REQ-SLIDES-004 (Should)
-    // Acceptance: Two content slides separated by --- (with blank separator slide)
+    // Acceptance: Two content slides separated by --- (separator is just a boundary)
     #[test]
     fn req_slides_004_two_slides_separator() {
         let md = "# Slide One\nContent 1\n---\n## Slide Two\nContent 2";
         let slides = parse_markdown_to_slides(md);
-        // --- produces a blank separator slide
-        assert_eq!(slides.len(), 3);
+        // --- is a boundary only, no blank slide inserted
+        assert_eq!(slides.len(), 2);
         assert_eq!(slides[0].title, "Slide One");
-        assert_eq!(slides[2].title, "Slide Two");
+        assert_eq!(slides[1].title, "Slide Two");
     }
 
     // Requirement: REQ-SLIDES-004 (Should)
@@ -387,8 +384,8 @@ mod tests {
     fn req_slides_004_three_slides() {
         let md = "# First\n---\n## Second\nBody\n---\nJust text";
         let slides = parse_markdown_to_slides(md);
-        // Two --- separators produce 2 blank slides + 3 content slides = 5
-        assert_eq!(slides.len(), 5);
+        // --- is only a boundary, 3 content slides
+        assert_eq!(slides.len(), 3);
     }
 
     // ---------------------------------------------------------------
@@ -505,12 +502,11 @@ mod tests {
     fn req_slides_004_mixed_layouts() {
         let md = "# Title Slide\n---\n## Content Slide\nBody\n---\nBlank content";
         let slides = parse_markdown_to_slides(md);
-        // With blank separator slides: [TitleSlide, Blank(sep), TitleAndBody, Blank(sep), Blank(content)]
+        // No blank separator slides: [TitleSlide, TitleAndBody, Blank(content)]
+        assert_eq!(slides.len(), 3);
         assert_eq!(slides[0].layout, SlideLayout::TitleSlide);
-        assert_eq!(slides[1].layout, SlideLayout::Blank); // separator
-        assert_eq!(slides[2].layout, SlideLayout::TitleAndBody);
-        assert_eq!(slides[3].layout, SlideLayout::Blank); // separator
-        assert_eq!(slides[4].layout, SlideLayout::Blank); // content without heading
+        assert_eq!(slides[1].layout, SlideLayout::TitleAndBody);
+        assert_eq!(slides[2].layout, SlideLayout::Blank); // content without heading
     }
 
     // ---------------------------------------------------------------
@@ -535,22 +531,19 @@ Here are the details\n\
 ---\n\
 # Thank You";
         let slides = parse_markdown_to_slides(md);
-        // 4 content slides + 3 separator blank slides = 7
-        assert_eq!(slides.len(), 7);
+        // 4 content slides, --- is only a boundary
+        assert_eq!(slides.len(), 4);
         assert_eq!(slides[0].title, "Welcome to My Talk");
         assert_eq!(slides[0].layout, SlideLayout::TitleSlide);
-        // slides[1] = blank separator
-        assert_eq!(slides[2].title, "Agenda");
-        assert!(slides[2].body.contains("- Topic 1"));
-        // slides[3] = blank separator
-        assert_eq!(slides[4].title, "Details");
+        assert_eq!(slides[1].title, "Agenda");
+        assert!(slides[1].body.contains("- Topic 1"));
+        assert_eq!(slides[2].title, "Details");
         assert_eq!(
-            slides[4].speaker_notes,
+            slides[2].speaker_notes,
             Some("Remember to explain this clearly".to_string())
         );
-        // slides[5] = blank separator
-        assert_eq!(slides[6].title, "Thank You");
-        assert_eq!(slides[6].layout, SlideLayout::TitleSlide);
+        assert_eq!(slides[3].title, "Thank You");
+        assert_eq!(slides[3].layout, SlideLayout::TitleSlide);
     }
 
     // ---------------------------------------------------------------
@@ -676,9 +669,8 @@ Here are the details\n\
     fn edge_case_only_separator() {
         let md = "---";
         let slides = parse_markdown_to_slides(md);
-        // Produces 1 blank separator slide (seg_idx > 0)
-        // First segment is empty (no content), second segment is also empty
-        assert!(!slides.is_empty());
+        // --- is only a boundary; both segments are empty, so no slides
+        assert!(slides.is_empty());
     }
 
     // Edge case: Separator with content on both sides
@@ -686,8 +678,8 @@ Here are the details\n\
     fn edge_case_separator_both_sides() {
         let md = "Content A\n---\nContent B";
         let slides = parse_markdown_to_slides(md);
-        // [Content A, blank(separator), Content B]
-        assert_eq!(slides.len(), 3);
+        // [Content A, Content B] -- no blank separator slide
+        assert_eq!(slides.len(), 2);
     }
 
     // Edge case: Empty HTML notes comment

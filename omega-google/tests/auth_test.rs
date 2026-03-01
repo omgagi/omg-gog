@@ -1,7 +1,7 @@
-/// Integration tests for the auth module.
-///
-/// Tests cover REQ-AUTH-001 through REQ-AUTH-020.
-/// Focus on scope mapping, token key parsing, account resolution, and service enumeration.
+//! Integration tests for the auth module.
+//!
+//! Tests cover REQ-AUTH-001 through REQ-AUTH-020.
+//! Focus on scope mapping, token key parsing, account resolution, and service enumeration.
 
 use omega_google::auth::*;
 
@@ -205,7 +205,7 @@ fn req_auth_019_account_flag_priority() {
     // This test documents the expected resolution order:
     // flag > env > alias > account_clients > keyring default > single token
     // Since resolve_account is a todo!(), this test establishes the contract
-    let config = omega_google::config::ConfigFile::default();
+    let _config = omega_google::config::ConfigFile::default();
     // Would need a mock CredentialStore, but the test documents expected behavior
     // resolve_account(Some("flag@example.com"), &config, &store, "default")
     // should return "flag@example.com"

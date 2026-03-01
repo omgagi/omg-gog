@@ -1,7 +1,7 @@
-/// Integration tests for the config module.
-///
-/// Tests cover REQ-CONFIG-001 through REQ-CONFIG-009 (Must priority).
-/// These tests validate config file I/O with real filesystem operations.
+//! Integration tests for the config module.
+//!
+//! Tests cover REQ-CONFIG-001 through REQ-CONFIG-009 (Must priority).
+//! These tests validate config file I/O with real filesystem operations.
 
 use std::collections::HashMap;
 use std::os::unix::fs::PermissionsExt;
@@ -324,7 +324,7 @@ fn req_config_001_failure_malformed_json5() {
     std::fs::write(&config_path, "{ this is not valid }").unwrap();
 
     // json5 should fail to parse (or succeed if it treats unquoted strings as valid)
-    let content = std::fs::read_to_string(&config_path).unwrap();
+    let _content = std::fs::read_to_string(&config_path).unwrap();
     // Truly broken JSON5:
     let broken_path = dir.path().join("broken.json");
     std::fs::write(&broken_path, "{ \"key\": }").unwrap();

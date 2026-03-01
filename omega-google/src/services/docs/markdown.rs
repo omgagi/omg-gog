@@ -20,7 +20,7 @@ fn structural_element_to_markdown(elem: &StructuralElement) -> String {
     }
     if let Some(ref table) = elem.table {
         let mut md = String::new();
-        for row in &table.table_rows {
+        for (row_idx, row) in table.table_rows.iter().enumerate() {
             let mut cells = Vec::new();
             for cell in &row.table_cells {
                 let cell_text: String = cell
@@ -35,6 +35,13 @@ fn structural_element_to_markdown(elem: &StructuralElement) -> String {
             md.push_str("| ");
             md.push_str(&cells.join(" | "));
             md.push_str(" |\n");
+
+            // After header row, emit separator
+            if row_idx == 0 {
+                md.push_str("| ");
+                md.push_str(&cells.iter().map(|_| "---").collect::<Vec<_>>().join(" | "));
+                md.push_str(" |\n");
+            }
         }
         return md;
     }
@@ -306,5 +313,149 @@ mod tests {
         };
         let md = body_to_markdown(&body);
         assert!(md.is_empty());
+    }
+
+    // REQ-DOCS-016
+    #[test]
+    fn req_docs_016_table_separator_row() {
+        let body = Body {
+            content: vec![StructuralElement {
+                start_index: None,
+                end_index: None,
+                paragraph: None,
+                section_break: None,
+                table: Some(Table {
+                    rows: Some(2),
+                    columns: Some(2),
+                    table_rows: vec![
+                        TableRow {
+                            table_cells: vec![
+                                TableCell {
+                                    content: vec![StructuralElement {
+                                        start_index: None,
+                                        end_index: None,
+                                        paragraph: Some(Paragraph {
+                                            elements: vec![ParagraphElement {
+                                                start_index: None,
+                                                end_index: None,
+                                                text_run: Some(TextRun {
+                                                    content: Some("Name\n".to_string()),
+                                                    text_style: None,
+                                                    extra: HashMap::new(),
+                                                }),
+                                                inline_object_element: None,
+                                                extra: HashMap::new(),
+                                            }],
+                                            paragraph_style: None,
+                                            extra: HashMap::new(),
+                                        }),
+                                        section_break: None,
+                                        table: None,
+                                        table_of_contents: None,
+                                        extra: HashMap::new(),
+                                    }],
+                                    extra: HashMap::new(),
+                                },
+                                TableCell {
+                                    content: vec![StructuralElement {
+                                        start_index: None,
+                                        end_index: None,
+                                        paragraph: Some(Paragraph {
+                                            elements: vec![ParagraphElement {
+                                                start_index: None,
+                                                end_index: None,
+                                                text_run: Some(TextRun {
+                                                    content: Some("Value\n".to_string()),
+                                                    text_style: None,
+                                                    extra: HashMap::new(),
+                                                }),
+                                                inline_object_element: None,
+                                                extra: HashMap::new(),
+                                            }],
+                                            paragraph_style: None,
+                                            extra: HashMap::new(),
+                                        }),
+                                        section_break: None,
+                                        table: None,
+                                        table_of_contents: None,
+                                        extra: HashMap::new(),
+                                    }],
+                                    extra: HashMap::new(),
+                                },
+                            ],
+                            extra: HashMap::new(),
+                        },
+                        TableRow {
+                            table_cells: vec![
+                                TableCell {
+                                    content: vec![StructuralElement {
+                                        start_index: None,
+                                        end_index: None,
+                                        paragraph: Some(Paragraph {
+                                            elements: vec![ParagraphElement {
+                                                start_index: None,
+                                                end_index: None,
+                                                text_run: Some(TextRun {
+                                                    content: Some("Alice\n".to_string()),
+                                                    text_style: None,
+                                                    extra: HashMap::new(),
+                                                }),
+                                                inline_object_element: None,
+                                                extra: HashMap::new(),
+                                            }],
+                                            paragraph_style: None,
+                                            extra: HashMap::new(),
+                                        }),
+                                        section_break: None,
+                                        table: None,
+                                        table_of_contents: None,
+                                        extra: HashMap::new(),
+                                    }],
+                                    extra: HashMap::new(),
+                                },
+                                TableCell {
+                                    content: vec![StructuralElement {
+                                        start_index: None,
+                                        end_index: None,
+                                        paragraph: Some(Paragraph {
+                                            elements: vec![ParagraphElement {
+                                                start_index: None,
+                                                end_index: None,
+                                                text_run: Some(TextRun {
+                                                    content: Some("42\n".to_string()),
+                                                    text_style: None,
+                                                    extra: HashMap::new(),
+                                                }),
+                                                inline_object_element: None,
+                                                extra: HashMap::new(),
+                                            }],
+                                            paragraph_style: None,
+                                            extra: HashMap::new(),
+                                        }),
+                                        section_break: None,
+                                        table: None,
+                                        table_of_contents: None,
+                                        extra: HashMap::new(),
+                                    }],
+                                    extra: HashMap::new(),
+                                },
+                            ],
+                            extra: HashMap::new(),
+                        },
+                    ],
+                    extra: HashMap::new(),
+                }),
+                table_of_contents: None,
+                extra: HashMap::new(),
+            }],
+            extra: HashMap::new(),
+        };
+        let md = body_to_markdown(&body);
+        // Should have header row, separator, and data row
+        let lines: Vec<&str> = md.lines().collect();
+        assert_eq!(lines.len(), 3, "Expected 3 lines (header, separator, data), got: {:?}", lines);
+        assert!(lines[0].contains("Name"));
+        assert!(lines[1].contains("---"));
+        assert!(lines[2].contains("Alice"));
     }
 }

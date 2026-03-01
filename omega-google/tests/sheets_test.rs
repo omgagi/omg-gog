@@ -2,7 +2,6 @@
 
 use omega_google::services::sheets::types::*;
 use omega_google::services::sheets::a1::*;
-use std::collections::HashMap;
 
 // ---------------------------------------------------------------
 // REQ-SHEETS-001 (Must): ValueRange from realistic API response

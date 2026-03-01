@@ -1,7 +1,7 @@
-/// Integration tests for the HTTP module.
-///
-/// Tests cover REQ-HTTP-001 through REQ-HTTP-006 (Must priority).
-/// Uses mockito for HTTP server mocking and tests retry/circuit breaker behavior.
+//! Integration tests for the HTTP module.
+//!
+//! Tests cover REQ-HTTP-001 through REQ-HTTP-006 (Must priority).
+//! Uses mockito for HTTP server mocking and tests retry/circuit breaker behavior.
 
 use omega_google::http::RetryConfig;
 use omega_google::http::circuit_breaker::{CircuitBreaker, CIRCUIT_BREAKER_THRESHOLD, CIRCUIT_BREAKER_RESET_TIME};

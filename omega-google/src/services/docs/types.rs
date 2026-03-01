@@ -251,7 +251,6 @@ pub struct ParagraphStyle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     // ---------------------------------------------------------------
     // REQ-DOCS-002: Document metadata deserialization

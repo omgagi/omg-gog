@@ -40,7 +40,8 @@ pub fn parse_sed_expression(expr: &str) -> Result<SedExpression, String> {
     }
 
     let delimiter = expr.chars().nth(1).unwrap();
-    let rest = &expr[2..];
+    let delim_byte_len = delimiter.len_utf8();
+    let rest = &expr[1 + delim_byte_len..];
 
     // Split by delimiter
     let parts: Vec<&str> = rest.split(delimiter).collect();
@@ -210,5 +211,16 @@ mod tests {
         let content = "# Just comments\n\n";
         let exprs = parse_sed_file(content).unwrap();
         assert!(exprs.is_empty());
+    }
+
+    // REQ-DOCS-014
+    #[test]
+    fn test_multibyte_delimiter() {
+        // This should not panic
+        let result = parse_sed_expression("s\u{00e9}find\u{00e9}replace\u{00e9}");
+        assert!(result.is_ok());
+        let expr = result.unwrap();
+        assert_eq!(expr.find, "find");
+        assert_eq!(expr.replace, "replace");
     }
 }

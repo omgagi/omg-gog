@@ -375,7 +375,7 @@ mod tests {
         let bad_json = r#"{ broken: json }"#;
         // json5 is more lenient, but this should still be parseable as json5
         // (unquoted keys are valid in JSON5)
-        let result: Result<ConfigFile, _> = json5::from_str(bad_json);
+        let _result: Result<ConfigFile, _> = json5::from_str(bad_json);
         // JSON5 allows unquoted keys, so this may actually succeed
         // But truly broken JSON5 should fail:
         let truly_broken = r#"{ "key": }"#;

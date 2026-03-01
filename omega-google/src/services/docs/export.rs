@@ -1,7 +1,6 @@
 //! Document export, copy, and create operations via the Drive API.
 
-/// Drive API base URL used for export/copy/create operations.
-const DRIVE_BASE_URL: &str = "https://www.googleapis.com/drive/v3";
+use crate::services::drive::types::DRIVE_BASE_URL;
 
 /// Google Docs MIME type.
 const DOCS_MIME_TYPE: &str = "application/vnd.google-apps.document";

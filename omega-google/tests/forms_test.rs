@@ -1,7 +1,6 @@
 //! Forms service integration tests.
 
 use omega_google::services::forms::types::*;
-use std::collections::HashMap;
 
 // ---------------------------------------------------------------
 // REQ-FORMS-001 (Must): Form from realistic API response

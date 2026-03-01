@@ -115,7 +115,6 @@ pub struct FormResponseList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     // REQ-FORMS-001
     #[test]

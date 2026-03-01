@@ -1,7 +1,6 @@
 //! Document comment CRUD operations via the Drive API.
 
-/// Drive API base URL for comment operations.
-const DRIVE_BASE_URL: &str = "https://www.googleapis.com/drive/v3";
+use crate::services::drive::types::DRIVE_BASE_URL;
 
 /// Build URL for listing comments on a file.
 pub fn build_comments_list_url(file_id: &str) -> String {

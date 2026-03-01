@@ -313,7 +313,6 @@ pub fn strip_office_extension(filename: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     // ---------------------------------------------------------------
     // REQ-DRIVE-001 (Must): DriveFile type serialization

@@ -13,6 +13,9 @@ use super::tasks::TasksArgs;
 use super::classroom::ClassroomArgs;
 use super::contacts::ContactsArgs;
 use super::people::PeopleArgs;
+use super::groups::GroupsArgs;
+use super::keep::KeepArgs;
+use super::appscript::AppScriptArgs;
 
 /// omega-google: Google Workspace CLI
 #[derive(Parser, Debug)]
@@ -143,6 +146,18 @@ pub enum Command {
     /// Google People operations (profiles, search, relations)
     #[command(alias = "person")]
     People(PeopleArgs),
+
+    // M5 services
+    /// Google Groups operations (list, members)
+    #[command(alias = "group")]
+    Groups(GroupsArgs),
+
+    /// Google Keep operations (notes, attachments)
+    Keep(KeepArgs),
+
+    /// Google Apps Script operations
+    #[command(name = "appscript", aliases = ["script", "apps-script"])]
+    AppScript(AppScriptArgs),
 }
 
 // --- Auth subcommands ---

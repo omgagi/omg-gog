@@ -4,7 +4,6 @@ use omega_google::services::docs::types::*;
 use omega_google::services::docs::content::*;
 use omega_google::services::docs::sedmat::*;
 use omega_google::services::docs::markdown::*;
-use std::collections::HashMap;
 
 // ---------------------------------------------------------------
 // REQ-DOCS-002 (Must): Document deserialization from realistic API response

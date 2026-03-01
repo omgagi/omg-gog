@@ -73,58 +73,10 @@ pub fn parse_cell_values(input: &str) -> Vec<Vec<serde_json::Value>> {
         .collect()
 }
 
-/// Build the request body for creating a new spreadsheet.
-///
-/// POST /v4/spreadsheets
-pub fn build_create_spreadsheet_body(title: &str, sheet_names: &[String]) -> serde_json::Value {
-    let sheets: Vec<serde_json::Value> = if sheet_names.is_empty() {
-        vec![]
-    } else {
-        sheet_names
-            .iter()
-            .enumerate()
-            .map(|(i, name)| {
-                serde_json::json!({
-                    "properties": {
-                        "title": name,
-                        "index": i
-                    }
-                })
-            })
-            .collect()
-    };
-
-    let mut body = serde_json::json!({
-        "properties": {
-            "title": title
-        }
-    });
-
-    if !sheets.is_empty() {
-        body["sheets"] = serde_json::Value::Array(sheets);
-    }
-
-    body
-}
-
-/// Build the request body for copying a spreadsheet via the Drive API.
-///
-/// POST /drive/v3/files/{fileId}/copy
-pub fn build_copy_body(title: &str, parent: Option<&str>) -> serde_json::Value {
-    let mut body = serde_json::json!({
-        "name": title
-    });
-
-    if let Some(p) = parent {
-        body["parents"] = serde_json::json!([p]);
-    }
-
-    body
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::structure::{build_create_spreadsheet_body, build_copy_body};
     use serde_json::json;
 
     // ---------------------------------------------------------------

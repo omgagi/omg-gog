@@ -1,7 +1,6 @@
 //! Drive service integration tests.
 
 use omega_google::services::drive::types::*;
-use std::collections::HashMap;
 
 // ---------------------------------------------------------------
 // REQ-DRIVE-001 (Must): File list from realistic API response
@@ -63,7 +62,7 @@ fn req_drive_001_integration_file_list_from_api() {
 // Acceptance: URLs generated for multiple files
 #[test]
 fn req_drive_013_integration_multiple_urls() {
-    let file_ids = vec!["doc_1", "sheet_1", "pdf_1"];
+    let file_ids = ["doc_1", "sheet_1", "pdf_1"];
     let urls: Vec<String> = file_ids.iter().map(|id| file_url(id)).collect();
     assert_eq!(urls.len(), 3);
     assert_eq!(urls[0], "https://drive.google.com/open?id=doc_1");

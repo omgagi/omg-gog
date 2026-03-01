@@ -28,7 +28,7 @@ pub fn build_create_presentation_body(title: &str) -> serde_json::Value {
 /// The template_id identifies the source presentation to copy.
 pub fn build_create_from_template_body(
     title: &str,
-    template_id: &str,
+    _template_id: &str,
     parent: Option<&str>,
 ) -> serde_json::Value {
     let mut body = serde_json::json!({
@@ -37,9 +37,8 @@ pub fn build_create_from_template_body(
     if let Some(p) = parent {
         body["parents"] = serde_json::json!([p]);
     }
-    // The template_id is used in the URL (Drive copy), not the body.
-    // We store it for reference so callers know which template to copy.
-    body["_templateId"] = serde_json::json!(template_id);
+    // The template_id is used in the URL path via build_template_copy_url,
+    // not in the body. No internal fields should be injected into the API request.
     body
 }
 
@@ -106,12 +105,13 @@ mod tests {
     // ---------------------------------------------------------------
 
     // Requirement: REQ-SLIDES-003 (Must)
-    // Acceptance: Template body contains name and template reference
+    // Acceptance: Template body contains name but no internal fields
     #[test]
     fn req_slides_003_template_body() {
         let body = build_create_from_template_body("From Template", "template_123", None);
         assert_eq!(body["name"], "From Template");
-        assert_eq!(body["_templateId"], "template_123");
+        // _templateId should NOT be in the body -- it is used in the URL path only
+        assert!(body.get("_templateId").is_none());
     }
 
     // Requirement: REQ-SLIDES-003 (Must)

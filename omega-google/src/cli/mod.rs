@@ -13,6 +13,9 @@ pub mod tasks;
 pub mod classroom;
 pub mod contacts;
 pub mod people;
+pub mod groups;
+pub mod keep;
+pub mod appscript;
 
 use std::ffi::OsString;
 
@@ -77,8 +80,42 @@ pub async fn execute(args: Vec<OsString>) -> i32 {
     }
 }
 
+/// Extract the command name string for allowlisting checks.
+fn command_name(cmd: &root::Command) -> &str {
+    match cmd {
+        root::Command::Version => "version",
+        root::Command::Config(_) => "config",
+        root::Command::Auth(_) => "auth",
+        root::Command::Time(_) => "time",
+        root::Command::Gmail(_) => "gmail",
+        root::Command::Calendar(_) => "calendar",
+        root::Command::Drive(_) => "drive",
+        root::Command::Docs(_) => "docs",
+        root::Command::Sheets(_) => "sheets",
+        root::Command::Slides(_) => "slides",
+        root::Command::Forms(_) => "forms",
+        root::Command::Chat(_) => "chat",
+        root::Command::Classroom(_) => "classroom",
+        root::Command::Tasks(_) => "tasks",
+        root::Command::Contacts(_) => "contacts",
+        root::Command::People(_) => "people",
+        root::Command::Groups(_) => "groups",
+        root::Command::Keep(_) => "keep",
+        root::Command::AppScript(_) => "appscript",
+    }
+}
+
 /// Dispatch a parsed command to its handler.
 async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
+    // Enforce command allowlisting if --enable-commands is set
+    if let Some(ref enabled) = flags.enable_commands {
+        let cmd_name = command_name(&cmd);
+        if let Err(e) = enforce_enabled_commands(cmd_name, enabled) {
+            eprintln!("Error: {}", e);
+            return codes::USAGE_ERROR;
+        }
+    }
+
     match cmd {
         root::Command::Version => handle_version(flags),
         root::Command::Config(args) => handle_config(args, flags),
@@ -96,6 +133,9 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
         root::Command::Tasks(args) => handle_tasks(args, flags),
         root::Command::Contacts(args) => handle_contacts(args, flags),
         root::Command::People(args) => handle_people(args, flags),
+        root::Command::Groups(args) => handle_groups(args, flags),
+        root::Command::Keep(args) => handle_keep(args, flags),
+        root::Command::AppScript(args) => handle_appscript(args, flags),
     }
 }
 
@@ -634,6 +674,24 @@ fn handle_contacts(_args: contacts::ContactsArgs, _flags: &root::RootFlags) -> i
 
 /// Handle the `people` command and its subcommands.
 fn handle_people(_args: people::PeopleArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `groups` command and its subcommands.
+fn handle_groups(_args: groups::GroupsArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `keep` command and its subcommands.
+fn handle_keep(_args: keep::KeepArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `appscript` command and its subcommands.
+fn handle_appscript(_args: appscript::AppScriptArgs, _flags: &root::RootFlags) -> i32 {
     eprintln!("Command registered. API call requires: omega-google auth add <email>");
     codes::SUCCESS
 }

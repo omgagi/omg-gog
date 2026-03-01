@@ -2,8 +2,6 @@
 //! These test the interaction between Gmail types, query builders, and MIME construction.
 
 use omega_google::services::gmail::types::*;
-use omega_google::services::gmail::mime::*;
-use std::collections::HashMap;
 
 // ---------------------------------------------------------------
 // REQ-GMAIL-001 (Must): Thread search integration
@@ -147,7 +145,7 @@ fn req_gmail_006_integration_header_extraction() {
 // Acceptance: Multiple thread URLs generated correctly
 #[test]
 fn req_gmail_008_integration_multiple_urls() {
-    let thread_ids = vec!["18abc", "18def", "18ghi"];
+    let thread_ids = ["18abc", "18def", "18ghi"];
     let urls: Vec<String> = thread_ids.iter().map(|id| thread_url(id)).collect();
     assert_eq!(urls.len(), 3);
     for url in &urls {
