@@ -9,7 +9,7 @@
 | M5 | Admin/Workspace Services (Groups, Keep, Apps Script) | COMPLETE | 1296 | 2026-03-01 |
 | M6 | Polish (Completion, Allowlisting, Agent Mode, Open, CSV) | COMPLETE | 1357 | 2026-03-01 |
 | RT-M1 | Auth Core (token exchange, TokenData, refresh, keyring, cred factory) | COMPLETE | 1201 | 2026-03-01 |
-| RT-M2 | Auth Flows (desktop/manual OAuth, auth CLI handlers) | PENDING | - | - |
+| RT-M2 | Auth Flows (desktop/manual OAuth, auth CLI handlers) | COMPLETE | 1242 | 2026-03-01 |
 | RT-M3 | Execution Infrastructure (API helpers, pagination, bootstrap, verbose/dry-run) | PENDING | - | - |
 | RT-M4 | Core Service Handlers (Gmail, Calendar, Drive) | PENDING | - | - |
 | RT-M5 | File I/O (download, upload, attachments, export) | PENDING | - | - |

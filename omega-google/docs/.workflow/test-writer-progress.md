@@ -1,8 +1,60 @@
 # Test Writer Progress -- omega-google
 
-## Status: M1 COMPLETE, M2 COMPLETE, RT-M1 COMPLETE, RT-M2 COMPLETE
+## Status: M1 COMPLETE, M2 COMPLETE, RT-M1 COMPLETE, RT-M2 COMPLETE, RT-M3 COMPLETE
 
-All M1 Foundation, M2 Core Services, RT-M1 Auth Core, and RT-M2 Auth Flows tests have been written.
+All M1 Foundation, M2 Core Services, RT-M1 Auth Core, RT-M2 Auth Flows, and RT-M3 Execution Infrastructure tests have been written.
+
+---
+
+## RT-M3 Execution Infrastructure Test Summary
+
+| Module | File | Unit Tests | Ignored | Pass | Fail | Status |
+|--------|------|-----------|---------|------|------|--------|
+| http/api.rs (api_get, api_post, api_patch, api_delete, api_put_bytes, api_get_raw, check_response_status, redact_auth_header) | `src/http/api.rs` | 48 | 0 | 48 | 0 | Written |
+| services/pagination.rs (paginate, check_fail_empty, fetch_page) | `src/services/pagination.rs` | 21 | 0 | 21 | 0 | Written |
+| services/mod.rs (ServiceContext extended, bootstrap_service_context) | `src/services/mod.rs` | 20 | 0 | 20 | 0 | Written |
+| **RT-M3 TOTAL** | | **89** | **0** | **89** | **0** | |
+
+### RT-M3 Test Results
+- **Passed: 89** (all tests pass against current stubs and implementations)
+- **Failed: 0** (all stubs return errors which tests expect; real API logic tested via mockito)
+- **Ignored: 0**
+- **Total: 89**
+
+### RT-M3 Files Created/Modified
+- **NEW:** `src/http/api.rs` -- Generic API call helpers with 48 inline tests
+- **NEW:** `src/services/pagination.rs` -- Pagination loop with 21 inline tests
+- **MODIFIED:** `src/http/mod.rs` -- Added `pub mod api;`
+- **MODIFIED:** `src/services/mod.rs` -- Added `pub mod pagination;`, extended `ServiceContext` with `circuit_breaker`, `retry_config`, `email` fields, added `is_verbose()` accessor, added `bootstrap_service_context()` stub, added 20 inline tests
+
+### RT-M3 Design Notes
+- All API helpers (`api_get`, `api_post`, `api_patch`, `api_delete`, `api_put_bytes`, `api_get_raw`) take explicit parameters (client, breaker, retry_config, verbose, dry_run) rather than a `ServiceContext` reference, making them testable independently of the full context.
+- The `ServiceContext` struct was extended with `circuit_breaker: Arc<CircuitBreaker>`, `retry_config: RetryConfig`, and `email: String` fields.
+- `bootstrap_service_context()` is a stub that bails -- the developer must implement the full auth bootstrap flow (resolve account -> load token -> refresh -> build client).
+- Pagination uses a `url_fn` closure pattern so callers control URL construction (including maxResults, pageToken placement).
+- `check_fail_empty()` is a separate function (not embedded in paginate) so the caller can apply it after all pagination completes, matching the requirement that it "applies after pagination completes".
+- Dry-run on POST/PATCH returns an error (the request was not executed so there is no response to return). Dry-run on DELETE/POST_empty returns Ok (void operations).
+- Tests use `mockito` for HTTP mocking with `expect(0)` assertions to verify dry-run does NOT make network calls.
+
+### RT-M3 Requirement Traceability
+
+| Req ID | Priority | Test IDs | Coverage | Status |
+|--------|----------|----------|----------|--------|
+| REQ-RT-017 | Must | `req_rt_017_bootstrap_function_exists`, `req_rt_017_bootstrap_no_account_returns_error`, `req_rt_017_bootstrap_missing_account_returns_error`, `req_rt_017_failure_no_credentials_file`, `req_rt_017_failure_ambiguous_account` | Bootstrap function exists, error on no account, error on missing account, failure modes | Written |
+| REQ-RT-018 | Must | `req_rt_018_service_context_construction_all_fields`, `req_rt_018_service_context_has_circuit_breaker`, `req_rt_018_service_context_has_retry_config`, `req_rt_018_service_context_has_email`, `req_rt_018_is_dry_run_accessor`, `req_rt_018_is_verbose_accessor`, `req_rt_018_is_force_accessor`, `req_rt_018_account_accessor`, `req_rt_018_service_context_output_modes`, `req_rt_018_json_transform_from_flags`, `req_rt_018_json_transform_empty_select`, `req_rt_018_edge_all_flags_set`, `req_rt_018_edge_default_flags` | ServiceContext construction, all field accessors, output modes, JsonTransform, edge cases | Written |
+| REQ-RT-019 | Must | `req_rt_019_api_get_deserializes_json_response`, `req_rt_019_api_get_404_returns_error`, `req_rt_019_api_get_401_returns_auth_error`, `req_rt_019_api_get_403_returns_permission_error`, `req_rt_019_api_get_invalid_json_returns_deserialization_error`, `req_rt_019_api_get_wrong_json_shape_returns_error`, `req_rt_019_api_get_circuit_breaker_open_blocks_request`, `req_rt_019_api_get_500_server_error`, `req_rt_019_api_get_empty_body_on_200_returns_error`, `req_rt_019_api_get_extra_fields_in_response_still_works`, `req_rt_019_api_get_url_with_query_params`, `req_rt_019_edge_unicode_in_response`, `req_rt_019_edge_large_response_body`, `req_rt_019_edge_null_required_field` | GET deserialization, error codes (401/403/404/500), circuit breaker, edge cases (empty body, extra fields, unicode, large response, null field, query params) | Written |
+| REQ-RT-020 | Must | `req_rt_020_api_post_sends_json_and_deserializes`, `req_rt_020_api_post_400_returns_error`, `req_rt_020_api_post_empty_handles_204`, `req_rt_020_api_patch_sends_json_and_deserializes`, `req_rt_020_api_delete_succeeds_on_204`, `req_rt_020_api_delete_404_returns_error`, `req_rt_020_api_put_bytes_uploads_raw_body`, `req_rt_020_api_get_raw_returns_response`, `req_rt_020_api_get_raw_404_returns_error`, `req_rt_020_edge_post_empty_body_object` | POST/PATCH/DELETE/PUT operations, content-type headers, error handling, empty responses, raw response streaming, edge cases | Written |
+| REQ-RT-021 | Must | `req_rt_021_circuit_breaker_works_with_arc`, `req_rt_021_shared_breaker_accumulates_failures`, `req_rt_021_circuit_breaker_is_arc_wrapped`, `req_rt_021_shared_breaker_across_operations` | Arc wrapping, shared state accumulation, cross-operation failure tracking | Written |
+| REQ-RT-022 | Must | `req_rt_022_check_status_2xx_ok`, `req_rt_022_check_status_3xx_ok`, `req_rt_022_check_status_4xx_error`, `req_rt_022_check_status_5xx_error`, `req_rt_022_check_status_non_json_error_body`, `req_rt_022_check_status_empty_error_body`, `req_rt_022_api_error_maps_to_exit_code`, `req_rt_022_check_status_boundary_399_400`, `req_rt_022_check_status_zero` | check_response_status for all status ranges, non-JSON bodies, exit code mapping, boundary cases | Written |
+| REQ-RT-023 | Must | `req_rt_023_single_page_no_next_token`, `req_rt_023_multi_page_all_pages_fetches_all`, `req_rt_023_multi_page_verbose_progress`, `req_rt_023_max_pages_guard_constant`, `req_rt_023_error_on_page_propagates_immediately`, `req_rt_023_empty_items_with_next_token_continues`, `req_rt_023_edge_missing_items_field`, `req_rt_023_edge_extract_fn_error`, `req_rt_023_edge_auth_error_on_first_page`, `req_rt_023_url_fn_receives_correct_page_tokens`, `req_rt_023_fetch_page_deserializes_typed` | Single page, multi-page (3 pages), verbose progress, max pages guard, fail-fast on error, empty items continuation, edge cases (missing field, extract error, auth error), URL construction, typed fetch | Written |
+| REQ-RT-024 | Must | `req_rt_024_single_page_mode_returns_hint`, `req_rt_024_page_token_starts_from_specific_page`, `req_rt_024_single_page_no_more_pages_no_hint`, `req_rt_024_edge_page_token_special_chars` | Single-page mode with hint, --page token, no hint when no more pages, special chars in token | Written |
+| REQ-RT-025 | Must | `req_rt_025_check_fail_empty_returns_error_on_empty`, `req_rt_025_check_fail_empty_ok_when_not_set`, `req_rt_025_check_fail_empty_ok_when_items_present`, `req_rt_025_fail_empty_after_all_pages_empty`, `req_rt_025_single_item_prevents_fail_empty`, `req_rt_025_edge_check_fail_empty_with_numbers` | Empty results with flag, flag not set, non-empty results, after multi-page pagination, single item, different types | Written |
+| REQ-RT-081 | Must | `req_rt_081_api_get_verbose_succeeds`, `req_rt_081_api_post_verbose_succeeds`, `req_rt_081_redact_auth_header_bearer`, `req_rt_081_redact_auth_header_non_bearer`, `req_rt_081_redact_auth_header_empty`, `req_rt_081_verbose_on_error_still_works` | Verbose mode on GET/POST, Bearer token redaction, non-bearer passthrough, empty header, error + verbose combination | Written |
+| REQ-RT-082 | Must | `req_rt_082_dry_run_post_does_not_execute`, `req_rt_082_dry_run_patch_does_not_execute`, `req_rt_082_dry_run_delete_does_not_execute`, `req_rt_082_dry_run_put_bytes_does_not_execute`, `req_rt_082_get_executes_normally_even_with_dry_run_context`, `req_rt_082_dry_run_post_with_verbose`, `req_rt_082_dry_run_post_empty_returns_ok` | Dry-run blocks POST/PATCH/DELETE/PUT (verified with expect(0)), GET still executes, dry-run + verbose, dry-run on empty-response POST | Written |
+
+### Specs Gaps Found
+- None found for RT-M3. The architecture document (Module 7, 8, 9) matches the codebase structure and the implementation stubs align with the specified interfaces.
+- Minor note: the architecture doc specifies `api_get<T>(ctx: &ServiceContext, url: &str)` taking a ServiceContext, but the implementation takes decomposed parameters (client, breaker, retry_config, verbose) for better testability. This is an intentional deviation that makes the functions unit-testable without constructing a full ServiceContext. The developer should ensure service handlers bridge between ServiceContext and these parameters.
 
 ---
 

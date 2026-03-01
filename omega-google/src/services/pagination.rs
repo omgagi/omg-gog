@@ -15,6 +15,10 @@ use crate::services::common::PaginationParams;
 pub const MAX_PAGES: usize = 1000;
 
 /// Trait for types that carry a nextPageToken.
+///
+/// Intended for typed pagination in service handlers (RT-M4). Service response
+/// types that implement this trait can be used with typed pagination helpers
+/// that automatically extract the next page token from the response.
 pub trait HasNextPageToken {
     fn next_page_token(&self) -> Option<&str>;
 }
@@ -73,6 +77,21 @@ pub async fn paginate<T>(
     // Return items and the next page token (for hint printing)
     let hint_token = if params.all_pages { None } else { last_next_token };
     Ok((all_items, hint_token))
+}
+
+/// Paginate with progress indicator on stderr.
+///
+/// Equivalent to calling [`paginate`] with `verbose=true`, which causes
+/// "Fetching page N..." messages to be printed on stderr for page > 1.
+pub async fn paginate_with_progress<T>(
+    client: &reqwest::Client,
+    breaker: &CircuitBreaker,
+    retry_config: &RetryConfig,
+    params: &PaginationParams,
+    url_fn: impl Fn(Option<&str>) -> String,
+    extract_fn: impl Fn(serde_json::Value) -> anyhow::Result<(Vec<T>, Option<String>)>,
+) -> anyhow::Result<(Vec<T>, Option<String>)> {
+    paginate(client, breaker, retry_config, true, params, url_fn, extract_fn).await
 }
 
 /// Check if results are empty and fail_empty is set.

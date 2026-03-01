@@ -46,8 +46,8 @@ pub async fn api_get<T: DeserializeOwned>(
 
 /// POST JSON body to a URL, deserialize JSON response.
 ///
-/// When dry_run is true, logs the request details and returns early
-/// with a default-constructed error (POST is mutating).
+/// When dry_run is true, logs the request details and returns `Ok(None)`.
+/// On normal execution, returns `Ok(Some(parsed))`.
 pub async fn api_post<T: DeserializeOwned>(
     client: &reqwest::Client,
     url: &str,
@@ -56,13 +56,13 @@ pub async fn api_post<T: DeserializeOwned>(
     retry_config: &RetryConfig,
     verbose: bool,
     dry_run: bool,
-) -> anyhow::Result<T> {
+) -> anyhow::Result<Option<T>> {
     let body_json = serde_json::to_vec(body)?;
 
     if dry_run {
         let body_str = String::from_utf8_lossy(&body_json);
         eprintln!("[dry-run] POST {} would send: {}", url, body_str);
-        anyhow::bail!("dry-run: POST not executed");
+        return Ok(None);
     }
 
     if verbose {
@@ -89,7 +89,7 @@ pub async fn api_post<T: DeserializeOwned>(
 
     check_response_status(status, &resp_body)?;
     let parsed: T = serde_json::from_str(&resp_body)?;
-    Ok(parsed)
+    Ok(Some(parsed))
 }
 
 /// POST JSON body, return no parsed body (for 204/empty responses).
@@ -135,6 +135,9 @@ pub async fn api_post_empty(
 }
 
 /// PATCH JSON body to a URL, deserialize JSON response.
+///
+/// When dry_run is true, logs the request details and returns `Ok(None)`.
+/// On normal execution, returns `Ok(Some(parsed))`.
 pub async fn api_patch<T: DeserializeOwned>(
     client: &reqwest::Client,
     url: &str,
@@ -143,13 +146,13 @@ pub async fn api_patch<T: DeserializeOwned>(
     retry_config: &RetryConfig,
     verbose: bool,
     dry_run: bool,
-) -> anyhow::Result<T> {
+) -> anyhow::Result<Option<T>> {
     let body_json = serde_json::to_vec(body)?;
 
     if dry_run {
         let body_str = String::from_utf8_lossy(&body_json);
         eprintln!("[dry-run] PATCH {} would send: {}", url, body_str);
-        anyhow::bail!("dry-run: PATCH not executed");
+        return Ok(None);
     }
 
     if verbose {
@@ -174,7 +177,7 @@ pub async fn api_patch<T: DeserializeOwned>(
 
     check_response_status(status, &resp_body)?;
     let parsed: T = serde_json::from_str(&resp_body)?;
-    Ok(parsed)
+    Ok(Some(parsed))
 }
 
 /// DELETE a URL, return no parsed body.
@@ -211,6 +214,9 @@ pub async fn api_delete(
 }
 
 /// PUT raw bytes (for file upload).
+///
+/// When dry_run is true, logs the request details and returns `Ok(None)`.
+/// On normal execution, returns `Ok(Some(parsed))`.
 #[allow(clippy::too_many_arguments)]
 pub async fn api_put_bytes<T: DeserializeOwned>(
     client: &reqwest::Client,
@@ -221,10 +227,10 @@ pub async fn api_put_bytes<T: DeserializeOwned>(
     retry_config: &RetryConfig,
     verbose: bool,
     dry_run: bool,
-) -> anyhow::Result<T> {
+) -> anyhow::Result<Option<T>> {
     if dry_run {
         eprintln!("[dry-run] PUT {} would upload {} bytes", url, body.len());
-        anyhow::bail!("dry-run: PUT not executed");
+        return Ok(None);
     }
 
     if verbose {
@@ -250,7 +256,7 @@ pub async fn api_put_bytes<T: DeserializeOwned>(
 
     check_response_status(status, &resp_body)?;
     let parsed: T = serde_json::from_str(&resp_body)?;
-    Ok(parsed)
+    Ok(Some(parsed))
 }
 
 /// GET a URL, return raw response (for file download / streaming).
@@ -284,17 +290,29 @@ pub async fn api_get_raw(
     Ok(response)
 }
 
-/// Check response status, format Google API error if 4xx/5xx.
+/// Check response status, return typed `OmegaError::ApiError` on 4xx/5xx.
+///
+/// Returns a typed error that can be downcast for exit-code mapping via
+/// `exit_code_for()`. The `Display` impl on `OmegaError::ApiError` includes
+/// the status code and parsed Google error message.
 pub fn check_response_status(status: u16, body: &str) -> anyhow::Result<()> {
     if status < 400 {
         return Ok(());
     }
-    let msg = crate::error::api_error::format_api_error(status, body);
-    anyhow::bail!(msg)
+    let message = crate::error::api_error::parse_google_error(body)
+        .unwrap_or_else(|| body.to_string());
+    Err(crate::error::exit::OmegaError::ApiError { status, message }.into())
 }
 
 /// Redact the Authorization header value for verbose logging.
 /// Replaces `Bearer <token>` with `Bearer [REDACTED]`.
+///
+/// This utility is intended for use by service handlers and CLI modules that
+/// log request headers. The generic API helpers (`api_get`, `api_post`, etc.)
+/// do not have access to the Authorization header directly because it is set
+/// on the `reqwest::Client` via default headers or per-request by the auth
+/// middleware layer. Service handlers that log headers manually should use
+/// this function to ensure tokens are never printed to stderr.
 pub fn redact_auth_header(header_value: &str) -> String {
     if header_value.starts_with("Bearer ") {
         "Bearer [REDACTED]".to_string()
@@ -660,11 +678,12 @@ mod tests {
         let url = format!("{}/test/create", server.url());
         let body = serde_json::json!({"name": "created"});
 
-        let result: TestResponse =
+        let result: Option<TestResponse> =
             api_post(&client, &url, &body, &breaker, &config, false, false).await.unwrap();
 
-        assert_eq!(result.id, "new-id");
-        assert_eq!(result.name, "created");
+        let response = result.expect("non-dry-run POST should return Some");
+        assert_eq!(response.id, "new-id");
+        assert_eq!(response.name, "created");
         mock.assert_async().await;
     }
 
@@ -686,7 +705,7 @@ mod tests {
         let url = format!("{}/test/bad-request", server.url());
         let body = serde_json::json!({});
 
-        let result: anyhow::Result<TestResponse> =
+        let result: anyhow::Result<Option<TestResponse>> =
             api_post(&client, &url, &body, &breaker, &config, false, false).await;
 
         assert!(result.is_err());
@@ -738,11 +757,12 @@ mod tests {
         let url = format!("{}/test/update/123", server.url());
         let body = serde_json::json!({"name": "updated"});
 
-        let result: TestResponse =
+        let result: Option<TestResponse> =
             api_patch(&client, &url, &body, &breaker, &config, false, false).await.unwrap();
 
-        assert_eq!(result.id, "123");
-        assert_eq!(result.name, "updated");
+        let response = result.expect("non-dry-run PATCH should return Some");
+        assert_eq!(response.id, "123");
+        assert_eq!(response.name, "updated");
         mock.assert_async().await;
     }
 
@@ -810,12 +830,13 @@ mod tests {
         let url = format!("{}/upload/file", server.url());
         let body = vec![0u8, 1, 2, 3, 4, 5];
 
-        let result: TestResponse =
+        let result: Option<TestResponse> =
             api_put_bytes(&client, &url, "application/octet-stream", body, &breaker, &config, false, false)
                 .await
                 .unwrap();
 
-        assert_eq!(result.id, "file-1");
+        let response = result.expect("non-dry-run PUT should return Some");
+        assert_eq!(response.id, "file-1");
         mock.assert_async().await;
     }
 
@@ -1089,9 +1110,9 @@ mod tests {
         let url = format!("{}/test/verbose-post", server.url());
         let body = serde_json::json!({"key": "value"});
 
-        let result: TestResponse =
+        let result: Option<TestResponse> =
             api_post(&client, &url, &body, &breaker, &config, true, false).await.unwrap();
-        assert_eq!(result.id, "vp");
+        assert_eq!(result.expect("non-dry-run should return Some").id, "vp");
         mock.assert_async().await;
     }
 
@@ -1148,7 +1169,7 @@ mod tests {
     // ===================================================================
 
     // Requirement: REQ-RT-082 (Must)
-    // Acceptance: dry_run=true on POST does NOT execute the request
+    // Acceptance: dry_run=true on POST does NOT execute the request, returns Ok(None)
     #[tokio::test]
     async fn req_rt_082_dry_run_post_does_not_execute() {
         let mut server = mockito::Server::new_async().await;
@@ -1167,21 +1188,16 @@ mod tests {
         let url = format!("{}/test/create", server.url());
         let body = serde_json::json!({"name": "test"});
 
-        let result: anyhow::Result<TestResponse> =
+        let result: anyhow::Result<Option<TestResponse>> =
             api_post(&client, &url, &body, &breaker, &config, false, true).await;
 
-        assert!(result.is_err(), "dry-run POST should return error (not executed)");
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("dry-run"),
-            "Error should mention dry-run: {}",
-            err_msg
-        );
+        assert!(result.is_ok(), "dry-run POST should return Ok (exit code 0)");
+        assert!(result.unwrap().is_none(), "dry-run POST should return None (no response body)");
         mock.assert_async().await; // Verifies 0 calls were made
     }
 
     // Requirement: REQ-RT-082 (Must)
-    // Acceptance: dry_run=true on PATCH does NOT execute the request
+    // Acceptance: dry_run=true on PATCH does NOT execute the request, returns Ok(None)
     #[tokio::test]
     async fn req_rt_082_dry_run_patch_does_not_execute() {
         let mut server = mockito::Server::new_async().await;
@@ -1197,10 +1213,11 @@ mod tests {
         let url = format!("{}/test/update/1", server.url());
         let body = serde_json::json!({"name": "updated"});
 
-        let result: anyhow::Result<TestResponse> =
+        let result: anyhow::Result<Option<TestResponse>> =
             api_patch(&client, &url, &body, &breaker, &config, false, true).await;
 
-        assert!(result.is_err());
+        assert!(result.is_ok(), "dry-run PATCH should return Ok (exit code 0)");
+        assert!(result.unwrap().is_none(), "dry-run PATCH should return None");
         mock.assert_async().await;
     }
 
@@ -1226,7 +1243,7 @@ mod tests {
     }
 
     // Requirement: REQ-RT-082 (Must)
-    // Acceptance: dry_run=true on PUT does NOT execute the request
+    // Acceptance: dry_run=true on PUT does NOT execute the request, returns Ok(None)
     #[tokio::test]
     async fn req_rt_082_dry_run_put_bytes_does_not_execute() {
         let mut server = mockito::Server::new_async().await;
@@ -1242,11 +1259,12 @@ mod tests {
         let url = format!("{}/upload/dry", server.url());
         let body = vec![0u8; 100];
 
-        let result: anyhow::Result<TestResponse> =
+        let result: anyhow::Result<Option<TestResponse>> =
             api_put_bytes(&client, &url, "application/octet-stream", body, &breaker, &config, false, true)
                 .await;
 
-        assert!(result.is_err(), "dry-run PUT should return error");
+        assert!(result.is_ok(), "dry-run PUT should return Ok (exit code 0)");
+        assert!(result.unwrap().is_none(), "dry-run PUT should return None");
         mock.assert_async().await;
     }
 
@@ -1278,7 +1296,7 @@ mod tests {
     }
 
     // Requirement: REQ-RT-082 (Must)
-    // Acceptance: dry_run POST with verbose also logs the dry-run message
+    // Acceptance: dry_run POST with verbose also logs the dry-run message, returns Ok(None)
     #[tokio::test]
     async fn req_rt_082_dry_run_post_with_verbose() {
         let client = reqwest::Client::new();
@@ -1287,7 +1305,7 @@ mod tests {
         let body = serde_json::json!({"subject": "Test email"});
 
         // Both verbose=true and dry_run=true -- should not crash
-        let result: anyhow::Result<TestResponse> = api_post(
+        let result: anyhow::Result<Option<TestResponse>> = api_post(
             &client,
             "http://127.0.0.1:1/never-called",
             &body,
@@ -1298,9 +1316,8 @@ mod tests {
         )
         .await;
 
-        assert!(result.is_err());
-        let err = result.unwrap_err().to_string();
-        assert!(err.contains("dry-run"));
+        assert!(result.is_ok(), "dry-run POST with verbose should return Ok");
+        assert!(result.unwrap().is_none(), "dry-run POST should return None");
     }
 
     // Requirement: REQ-RT-082 (Must)
@@ -1372,9 +1389,9 @@ mod tests {
         let url = format!("{}/test/empty-body", server.url());
         let body = serde_json::json!({});
 
-        let result: TestResponse =
+        let result: Option<TestResponse> =
             api_post(&client, &url, &body, &breaker, &config, false, false).await.unwrap();
-        assert_eq!(result.id, "eb");
+        assert_eq!(result.expect("non-dry-run should return Some").id, "eb");
         mock.assert_async().await;
     }
 

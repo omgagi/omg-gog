@@ -1,6 +1,6 @@
 # Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3
 
-## Status: COMPLETE (RT-M3 Execution Infrastructure)
+## Status: COMPLETE (RT-M3 Review Fixes Applied)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -10,7 +10,28 @@ RT-M1 Auth Core: all 6 stub requirements replaced with real implementations.
 RT-M2 Auth Flows: OAuth flow dispatcher, desktop flow, manual flow, and CLI auth handlers implemented.
 RT-M2 Review Fixes: All critical, major, and minor findings addressed.
 RT-M3 Execution Infrastructure: API helpers, pagination, ServiceContext -- all 89 tests passing.
+RT-M3 Review Fixes: All critical and major findings addressed.
 **1331 unit tests passing.** Zero failures. Zero clippy warnings.
+
+### RT-M3 Review Fixes
+
+Applied all findings from the RT-M3 code review. All 1331 tests pass, zero clippy warnings.
+
+#### Critical Fixes
+
+| Finding | File | Fix |
+|---------|------|-----|
+| C-1 (dry-run returns error) | `src/http/api.rs` | Changed `api_post<T>`, `api_patch<T>`, `api_put_bytes<T>` return types from `Result<T>` to `Result<Option<T>>`. Dry-run now returns `Ok(None)` (exit code 0) instead of `bail!()`. Updated 8 test call sites to match new signatures. |
+| C-2 (untyped errors) | `src/http/api.rs` | Changed `check_response_status` from `anyhow::bail!(msg)` to `Err(OmegaError::ApiError { status, message }.into())`. Errors are now typed and can be downcast for exit-code mapping via `exit_code_for()`. |
+
+#### Major Fixes
+
+| Finding | File | Fix |
+|---------|------|-----|
+| M-1 (redact_auth_header unused) | `src/http/api.rs` | Added doc comment explaining the function is a utility for service handlers that log headers manually. Auth header is set on the reqwest::Client, not on RetryableRequest, so it cannot be logged in the generic API helpers. |
+| M-2 (write_output fallback) | `src/services/mod.rs` | Consolidated Plain/Text/Csv match arms into single branch with doc comment explaining this is the default fallback until service handlers implement PlainOutput/TextOutput traits in RT-M4. |
+| M-3 (paginate_with_progress missing) | `src/services/pagination.rs` | Added `paginate_with_progress` wrapper function that delegates to `paginate` with `verbose=true`. |
+| M-4 (HasNextPageToken unused) | `src/services/pagination.rs` | Added doc comment explaining the trait is intended for typed pagination in service handlers (RT-M4). |
 
 ### RT-M3: Execution Infrastructure
 
