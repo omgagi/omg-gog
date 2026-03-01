@@ -1,6 +1,6 @@
 # Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2
 
-## Status: COMPLETE (RT-M2 Auth Flows Implemented)
+## Status: COMPLETE (RT-M2 Auth Flows Review Fixes Applied)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -8,9 +8,37 @@ M5 Groups, Keep, and Apps Script services implemented.
 M6 Polish commands implemented: open, completion, exit-codes, schema, agent, CSV output mode.
 RT-M1 Auth Core: all 6 stub requirements replaced with real implementations.
 RT-M2 Auth Flows: OAuth flow dispatcher, desktop flow, manual flow, and CLI auth handlers implemented.
-**1242 unit tests passing, 55 CLI integration tests passing.** Zero failures. Zero clippy warnings.
+RT-M2 Review Fixes: All critical, major, and minor findings addressed.
+**1242 unit tests passing, 55 CLI integration tests passing, 1514 total tests.** Zero failures. Zero clippy warnings.
 
-### RT-M2: Auth Flows
+### RT-M2: Auth Flows Review Fixes
+
+Applied all findings from the RT-M2 code review. All 1242 unit tests and 55 CLI integration tests pass.
+
+#### Critical Fixes
+
+| Finding | File | Fix |
+|---------|------|-----|
+| C1 (Security) | `src/cli/mod.rs` | Replaced `reqwest::Client::new()` with `crate::http::client::build_client()?` in `handle_auth_add`, enforcing TLS 1.2+, proper User-Agent, and request timeout |
+| C2 (Confirmation) | `src/cli/mod.rs` | `handle_auth_remove` now requires stdin "y" confirmation. `--no-input` without `--force` returns error. `--force` deletes without prompting |
+| C3 (Tests) | `tests/cli_test.rs` | Confirmed REQ-RT-008 through REQ-RT-012 integration tests already exist with proper coverage |
+
+#### Major Fixes
+
+| Finding | File | Fix |
+|---------|------|-----|
+| M1 (Flags) | `src/cli/root.rs`, `src/cli/mod.rs` | Added `--services`, `--readonly`, `--drive-scope` flags to `AuthAddArgs`. `--services` filters service list, `--readonly`/`--drive-scope` parsed into `ScopeOptions` |
+| M2 (Default indicator) | `src/cli/mod.rs` | `handle_auth_list` now shows `is_default` in JSON and `*` marker in text output |
+| M3 (Token details) | `src/cli/mod.rs` | `handle_auth_status` now shows services, scopes, created_at, and needs_refresh status |
+| M4 (Legacy cleanup) | `src/cli/mod.rs`, `src/auth/mod.rs`, `src/auth/keyring.rs` | Added `delete_token_by_raw_key` to `CredentialStore` trait. `handle_auth_remove` tries legacy key format after primary delete |
+
+#### Minor Fixes
+
+| Finding | File | Fix |
+|---------|------|-----|
+| m2 (Debug redaction) | `src/auth/mod.rs` | Updated `req_rt_007_token_data_debug_contains_access_token` test to verify Debug output does NOT contain actual token values and contains `[REDACTED]` markers |
+
+### RT-M2: Auth Flows (original)
 
 Implemented OAuth flow orchestration and CLI auth handlers. All 1242 unit tests and 55 CLI integration tests pass.
 

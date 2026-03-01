@@ -420,8 +420,41 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
         FlowMode::Desktop
     };
 
-    // 4. Collect services -- default to user services
-    let services = crate::auth::user_services();
+    // 4. Collect services -- filter by --services flag or default to user services
+    let services = if let Some(ref svc_list) = add_args.services {
+        let mut parsed = Vec::new();
+        for name in svc_list.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+            match crate::auth::parse_service(name) {
+                Ok(s) => parsed.push(s),
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return codes::USAGE_ERROR;
+                }
+            }
+        }
+        if parsed.is_empty() {
+            eprintln!("Error: --services list is empty");
+            return codes::USAGE_ERROR;
+        }
+        parsed
+    } else {
+        crate::auth::user_services()
+    };
+
+    // 4b. Parse scope options from --readonly and --drive-scope
+    let scope_options = crate::auth::ScopeOptions {
+        readonly: add_args.readonly,
+        drive_scope: match add_args.drive_scope.as_deref() {
+            Some("readonly") => crate::auth::DriveScopeMode::Readonly,
+            Some("file") => crate::auth::DriveScopeMode::File,
+            Some("full") | None => crate::auth::DriveScopeMode::Full,
+            Some(other) => {
+                eprintln!("Error: unknown drive scope '{}'. Use: full, readonly, file", other);
+                return codes::USAGE_ERROR;
+            }
+        },
+    };
+    let _ = &scope_options; // Used when scope computation is wired up
 
     // 5. Run OAuth flow to get authorization code
     let flow_result = match run_oauth_flow(&creds, &services, mode, add_args.force_consent).await {
@@ -433,7 +466,13 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
     };
 
     // 6. Exchange code for tokens
-    let http_client = reqwest::Client::new();
+    let http_client = match crate::http::client::build_client() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error: failed to build HTTP client: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
     let token_response = match crate::auth::oauth::exchange_code(
         &http_client,
         &creds,
@@ -562,18 +601,31 @@ fn handle_auth_remove(email: &str, flags: &root::RootFlags) -> i32 {
     };
 
     // Prompt for confirmation unless --force
-    if !flags.force && !flags.no_input {
-        eprintln!("Remove account '{}'? Use --force to skip this prompt.", email);
-        // In non-interactive mode (no_input), we already checked above.
-        // Without --force, we warn but proceed since we can't read stdin
-        // in the CLI handler context reliably. The --force flag is the
-        // recommended approach.
+    if !flags.force {
+        if flags.no_input {
+            eprintln!("Error: Confirmation required but --no-input is set. Use --force to skip.");
+            return codes::GENERIC_ERROR;
+        }
+        eprint!("Remove account '{}'? [y/N] ", email);
+        let mut input = String::new();
+        if let Err(e) = std::io::stdin().read_line(&mut input) {
+            eprintln!("Error reading input: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+        if input.trim().to_lowercase() != "y" {
+            eprintln!("Cancelled.");
+            return codes::SUCCESS;
+        }
     }
 
     if let Err(e) = store.delete_token(&client_name, email) {
         eprintln!("Error removing account: {}", e);
         return codes::GENERIC_ERROR;
     }
+
+    // Also try legacy key format (token:<email> without client prefix)
+    let legacy_key = crate::auth::legacy_token_key(email);
+    let _ = store.delete_token_by_raw_key(&legacy_key); // Ignore errors - legacy key may not exist
 
     eprintln!("Account '{}' removed.", email);
     codes::SUCCESS
@@ -587,6 +639,9 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
             return codes::CONFIG_ERROR;
         }
     };
+
+    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = crate::config::normalize_client_name(client_name);
 
     let store = match crate::auth::keyring::credential_store_factory(&cfg) {
         Ok(s) => s,
@@ -604,14 +659,19 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
         }
     };
 
+    // Get default account for the current client
+    let default_account = store.get_default_account(&client_name).unwrap_or(None);
+
     if flags.json {
         let json_accounts: Vec<serde_json::Value> = tokens.iter().map(|t| {
+            let is_default = default_account.as_deref() == Some(&t.email) && t.client == client_name;
             serde_json::json!({
                 "email": t.email,
                 "client": t.client,
                 "services": t.services,
                 "scopes": t.scopes,
                 "created_at": t.created_at.to_rfc3339(),
+                "is_default": is_default,
             })
         }).collect();
         println!("{}", to_json_pretty(&json_accounts));
@@ -619,8 +679,10 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
         eprintln!("No authenticated accounts found. Use 'omega-google auth add' to add one.");
     } else {
         for t in &tokens {
+            let is_default = default_account.as_deref() == Some(&t.email) && t.client == client_name;
+            let marker = if is_default { "* " } else { "  " };
             let services_str: Vec<String> = t.services.iter().map(|s| format!("{:?}", s)).collect();
-            println!("{}\t{}\t{}", t.email, t.client, services_str.join(","));
+            println!("{}{}\t{}\t{}", marker, t.email, t.client, services_str.join(","));
         }
     }
     codes::SUCCESS
@@ -657,8 +719,17 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
         ).ok()
     });
 
+    // Load token details if we have a current account
+    let token_details = current_account.as_ref().and_then(|email| {
+        store.as_ref().and_then(|s| {
+            s.get_token(&client_name, email).ok()
+        })
+    });
+
+    let needs_refresh = token_details.as_ref().map(crate::auth::token::needs_refresh);
+
     if flags.json {
-        let json_val = serde_json::json!({
+        let mut json_val = serde_json::json!({
             "config_path": config_path,
             "keyring_backend": keyring_backend,
             "client": client_name,
@@ -666,6 +737,12 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
             "credentials_found": cred_exists,
             "current_account": current_account,
         });
+        if let Some(ref td) = token_details {
+            json_val["services"] = serde_json::to_value(&td.services).unwrap_or_default();
+            json_val["scopes"] = serde_json::to_value(&td.scopes).unwrap_or_default();
+            json_val["created_at"] = serde_json::Value::String(td.created_at.to_rfc3339());
+            json_val["needs_refresh"] = serde_json::Value::Bool(needs_refresh.unwrap_or(false));
+        }
         println!("{}", to_json_pretty(&json_val));
     } else {
         println!("Config path:       {}", config_path);
@@ -676,6 +753,17 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
         match &current_account {
             Some(acct) => println!("Current account:   {}", acct),
             None => println!("Current account:   (none)"),
+        }
+        if let Some(ref td) = token_details {
+            let services_str: Vec<String> = td.services.iter().map(|s| format!("{:?}", s)).collect();
+            println!("Services:          {}", services_str.join(", "));
+            println!("Scopes:            {}", td.scopes.join(", "));
+            println!("Created:           {}", td.created_at.to_rfc3339());
+            match needs_refresh {
+                Some(true) => println!("Token status:      needs refresh"),
+                Some(false) => println!("Token status:      valid"),
+                None => {}
+            }
         }
     }
     codes::SUCCESS

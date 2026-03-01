@@ -1,5 +1,6 @@
 pub mod scopes;
 pub mod oauth;
+pub mod oauth_flow;
 pub mod token;
 pub mod keyring;
 pub mod service_account;
@@ -52,6 +53,13 @@ pub trait CredentialStore: Send + Sync {
     fn keys(&self) -> anyhow::Result<Vec<String>>;
     fn get_default_account(&self, client: &str) -> anyhow::Result<Option<String>>;
     fn set_default_account(&self, client: &str, email: &str) -> anyhow::Result<()>;
+
+    /// Delete a token by raw storage key (e.g., legacy "token:<email>" format).
+    /// Default implementation is a no-op. Backends that support raw key deletion
+    /// should override this.
+    fn delete_token_by_raw_key(&self, _key: &str) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 /// Token data stored in the keyring.
@@ -377,13 +385,9 @@ mod tests {
     }
 
     // Requirement: REQ-RT-007 (Must)
-    // Security: access_token must not appear in Debug output of errors/logs
-    // (This verifies the field exists; actual redaction is tested at serialization level)
+    // Security: Debug output must NOT contain actual token values (custom Debug impl redacts them)
     #[test]
     fn req_rt_007_token_data_debug_contains_access_token() {
-        // This test documents that Debug DOES contain access_token.
-        // A future enhancement could add a custom Debug impl that redacts it.
-        // For now, we just verify the struct is Debug-printable.
         let token = TokenData {
             client: "default".to_string(),
             email: "user@example.com".to_string(),
@@ -395,7 +399,13 @@ mod tests {
             expires_at: None,
         };
         let debug_str = format!("{:?}", token);
-        // Verify it compiles and produces output
-        assert!(!debug_str.is_empty());
+        // Verify Debug output does NOT contain actual token values
+        assert!(!debug_str.contains("secret_refresh"),
+            "Debug output must not contain the actual refresh_token value");
+        assert!(!debug_str.contains("secret_access"),
+            "Debug output must not contain the actual access_token value");
+        // Verify it contains the redaction markers instead
+        assert!(debug_str.contains("[REDACTED]"),
+            "Debug output should contain [REDACTED] markers");
     }
 }

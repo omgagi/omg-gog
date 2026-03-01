@@ -240,6 +240,18 @@ pub struct AuthAddArgs {
     /// Force re-consent even if token exists
     #[arg(long)]
     pub force_consent: bool,
+
+    /// Comma-separated list of services to authorize
+    #[arg(long)]
+    pub services: Option<String>,
+
+    /// Request read-only scopes
+    #[arg(long)]
+    pub readonly: bool,
+
+    /// Drive scope level: full, readonly, or file
+    #[arg(long)]
+    pub drive_scope: Option<String>,
 }
 
 #[derive(Args, Debug)]

@@ -125,6 +125,12 @@ impl CredentialStore for FileCredentialStore {
         map.insert(client.to_string(), email.to_string());
         self.write_defaults_map(&map)
     }
+
+    fn delete_token_by_raw_key(&self, key: &str) -> anyhow::Result<()> {
+        let mut map = self.read_tokens_map()?;
+        map.remove(key);
+        self.write_tokens_map(&map)
+    }
 }
 
 /// OS keyring credential store wrapping the `keyring` crate.
@@ -203,6 +209,14 @@ impl CredentialStore for KeyringCredentialStore {
         let entry = keyring::Entry::new("omega-google", &key)?;
         entry.set_password(email)?;
         Ok(())
+    }
+
+    fn delete_token_by_raw_key(&self, key: &str) -> anyhow::Result<()> {
+        let entry = keyring::Entry::new("omega-google", key)?;
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(e) => Err(e.into()),
+        }
     }
 }
 
