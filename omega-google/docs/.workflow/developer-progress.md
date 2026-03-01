@@ -1,13 +1,49 @@
-# Developer Progress: omega-google M2-M6 + RT-M1
+# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2
 
-## Status: COMPLETE (RT-M1 Auth Core Implemented)
+## Status: COMPLETE (RT-M2 Auth Flows Implemented)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
 M5 Groups, Keep, and Apps Script services implemented.
 M6 Polish commands implemented: open, completion, exit-codes, schema, agent, CSV output mode.
 RT-M1 Auth Core: all 6 stub requirements replaced with real implementations.
-**1201 unit tests passing, 255+ integration tests passing.** Zero failures. Zero clippy warnings.
+RT-M2 Auth Flows: OAuth flow dispatcher, desktop flow, manual flow, and CLI auth handlers implemented.
+**1242 unit tests passing, 55 CLI integration tests passing.** Zero failures. Zero clippy warnings.
+
+### RT-M2: Auth Flows
+
+Implemented OAuth flow orchestration and CLI auth handlers. All 1242 unit tests and 55 CLI integration tests pass.
+
+#### Module 1: OAuth Flow Implementations (`src/auth/oauth_flow.rs`)
+
+| Function | Implementation | REQ |
+|----------|---------------|-----|
+| `run_oauth_flow()` | Dispatcher: Desktop/Manual/Remote mode routing | REQ-RT-002, REQ-RT-003 |
+| `run_desktop_flow()` | Ephemeral TCP listener on 127.0.0.1:0, browser open, 120s timeout, HTTP response | REQ-RT-002 |
+| `run_manual_flow()` | OOB redirect URI, stdin URL reading, code extraction | REQ-RT-003 |
+| `open_browser()` | Platform-specific: `open` (macOS), `xdg-open` (Linux) | REQ-RT-002 |
+
+Security: Local server binds to 127.0.0.1 only (never 0.0.0.0). Test builds use 1-second timeout to avoid blocking.
+
+#### Module 2: CLI Auth Handlers (`src/cli/mod.rs`)
+
+| Handler | Implementation | REQ |
+|---------|---------------|-----|
+| `handle_auth_add()` | Load creds, determine flow mode, run OAuth, exchange code, fetch email, store token | REQ-RT-008 |
+| `handle_auth_remove()` | Delete account from credential store with --force support | REQ-RT-009 |
+| `handle_auth_status()` | Show config path, keyring backend, client, credential file status, current account | REQ-RT-010 |
+| `handle_auth_list()` | List authenticated accounts from credential store (JSON/plain) | REQ-RT-011 |
+| `handle_auth_tokens_list()` | List stored token keys | REQ-RT-012 |
+| `handle_auth_tokens_delete()` | Delete specific token from credential store | REQ-RT-012 |
+| `fetch_email_from_token()` | Fetch user email via Google userinfo endpoint | REQ-RT-008 |
+
+#### Test Results
+
+| Test Suite | Tests | Status |
+|-----------|-------|--------|
+| `auth::oauth_flow::tests` | 41 (+ 2 ignored) | PASS |
+| `cli_test` (integration) | 55 | PASS |
+| **Full lib suite** | **1242** | **PASS** |
 
 ### RT-M1: Auth Core (reviewer fix round)
 
