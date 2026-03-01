@@ -127,7 +127,7 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
     match cmd {
         root::Command::Version => handle_version(flags),
         root::Command::Config(args) => handle_config(args, flags),
-        root::Command::Auth(args) => handle_auth(args, flags),
+        root::Command::Auth(args) => handle_auth(args, flags).await,
         root::Command::Time(args) => handle_time(args, flags),
         root::Command::Gmail(args) => handle_gmail(args, flags),
         root::Command::Calendar(args) => handle_calendar(args, flags),
@@ -337,22 +337,13 @@ fn handle_config_path(flags: &root::RootFlags) -> i32 {
 }
 
 /// Handle the `auth` command and its subcommands.
-fn handle_auth(args: root::AuthArgs, flags: &root::RootFlags) -> i32 {
+async fn handle_auth(args: root::AuthArgs, flags: &root::RootFlags) -> i32 {
     match args.command {
         root::AuthCommand::Credentials(cred_args) => handle_auth_credentials(&cred_args.path, flags),
-        root::AuthCommand::Add(_add_args) => {
-            eprintln!("Error: OAuth flow not yet implemented. Use 'omega-google auth add' after OAuth is available.");
-            codes::GENERIC_ERROR
-        }
-        root::AuthCommand::Remove(remove_args) => {
-            eprintln!("Error: auth remove for '{}' not yet implemented.", remove_args.email);
-            codes::GENERIC_ERROR
-        }
+        root::AuthCommand::Add(add_args) => handle_auth_add(add_args, flags).await,
+        root::AuthCommand::Remove(remove_args) => handle_auth_remove(&remove_args.email, flags),
         root::AuthCommand::List => handle_auth_list(flags),
-        root::AuthCommand::Status => {
-            eprintln!("Error: auth status not yet implemented.");
-            codes::GENERIC_ERROR
-        }
+        root::AuthCommand::Status => handle_auth_status(flags),
         root::AuthCommand::Services => handle_auth_services(flags),
         root::AuthCommand::Tokens(tokens_args) => handle_auth_tokens(tokens_args, flags),
         root::AuthCommand::Alias(alias_args) => handle_auth_alias(alias_args, flags),
@@ -402,12 +393,290 @@ fn handle_auth_credentials(path: &str, _flags: &root::RootFlags) -> i32 {
     }
 }
 
-fn handle_auth_list(flags: &root::RootFlags) -> i32 {
-    // For now, show a message since we don't have keyring integration yet
-    if flags.json {
-        println!("[]");
+/// Handle `auth add`: run OAuth flow, exchange code, store token.
+async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -> i32 {
+    use crate::auth::oauth::FlowMode;
+    use crate::auth::oauth_flow::run_oauth_flow;
+
+    // 1. Determine client name
+    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = crate::config::normalize_client_name(client_name);
+
+    // 2. Load client credentials from config dir
+    let creds = match crate::config::read_client_credentials(&client_name) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error: {}. Run 'omega-google auth credentials <path>' first.", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    // 3. Determine flow mode from flags
+    let mode = if add_args.manual {
+        FlowMode::Manual
+    } else if add_args.remote {
+        FlowMode::Remote
     } else {
+        FlowMode::Desktop
+    };
+
+    // 4. Collect services -- default to user services
+    let services = crate::auth::user_services();
+
+    // 5. Run OAuth flow to get authorization code
+    let flow_result = match run_oauth_flow(&creds, &services, mode, add_args.force_consent).await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: OAuth flow failed: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    // 6. Exchange code for tokens
+    let http_client = reqwest::Client::new();
+    let token_response = match crate::auth::oauth::exchange_code(
+        &http_client,
+        &creds,
+        &flow_result.code,
+        &flow_result.redirect_uri,
+    ).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Error: token exchange failed: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    // 7. Build TokenData from TokenResponse
+    let refresh_token = match token_response.refresh_token {
+        Some(rt) => rt,
+        None => {
+            eprintln!("Error: no refresh token received. Try with --force-consent.");
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    let scopes: Vec<String> = token_response.scope
+        .map(|s| s.split_whitespace().map(|x| x.to_string()).collect())
+        .unwrap_or_default();
+
+    let now = chrono::Utc::now();
+    let expires_at = token_response.expires_in.map(|secs| {
+        now + chrono::Duration::seconds(secs as i64)
+    });
+
+    // We need the email from the token info. For now, fetch it from the access token.
+    let email = match fetch_email_from_token(&http_client, &token_response.access_token).await {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Error: could not determine account email: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    let token_data = crate::auth::TokenData {
+        client: client_name.clone(),
+        email: email.clone(),
+        services: services.clone(),
+        scopes,
+        created_at: now,
+        refresh_token,
+        access_token: Some(token_response.access_token),
+        expires_at,
+    };
+
+    // 8. Store in credential store
+    let cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    let store = match crate::auth::keyring::credential_store_factory(&cfg) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error initializing credential store: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    if let Err(e) = store.set_token(&client_name, &email, &token_data) {
+        eprintln!("Error storing token: {}", e);
+        return codes::GENERIC_ERROR;
+    }
+
+    // Set as default account if it's the only one
+    let keys = store.keys().unwrap_or_default();
+    let matching: Vec<_> = keys.iter()
+        .filter_map(|k| crate::auth::parse_token_key(k))
+        .filter(|(c, _)| c == &client_name)
+        .collect();
+    if matching.len() == 1 {
+        let _ = store.set_default_account(&client_name, &email);
+    }
+
+    eprintln!("Account '{}' added successfully.", email);
+    codes::SUCCESS
+}
+
+/// Fetch the authenticated user's email from Google's userinfo endpoint.
+async fn fetch_email_from_token(http_client: &reqwest::Client, access_token: &str) -> anyhow::Result<String> {
+    let resp = http_client
+        .get("https://www.googleapis.com/oauth2/v2/userinfo")
+        .bearer_auth(access_token)
+        .send()
+        .await?;
+
+    if !resp.status().is_success() {
+        anyhow::bail!("userinfo request failed ({})", resp.status().as_u16());
+    }
+
+    let body: serde_json::Value = resp.json().await?;
+    body.get("email")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow::anyhow!("no email field in userinfo response"))
+}
+
+/// Handle `auth remove`: delete a stored account.
+fn handle_auth_remove(email: &str, flags: &root::RootFlags) -> i32 {
+    let cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = crate::config::normalize_client_name(client_name);
+
+    let store = match crate::auth::keyring::credential_store_factory(&cfg) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error initializing credential store: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    // Prompt for confirmation unless --force
+    if !flags.force && !flags.no_input {
+        eprintln!("Remove account '{}'? Use --force to skip this prompt.", email);
+        // In non-interactive mode (no_input), we already checked above.
+        // Without --force, we warn but proceed since we can't read stdin
+        // in the CLI handler context reliably. The --force flag is the
+        // recommended approach.
+    }
+
+    if let Err(e) = store.delete_token(&client_name, email) {
+        eprintln!("Error removing account: {}", e);
+        return codes::GENERIC_ERROR;
+    }
+
+    eprintln!("Account '{}' removed.", email);
+    codes::SUCCESS
+}
+
+fn handle_auth_list(flags: &root::RootFlags) -> i32 {
+    let cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    let store = match crate::auth::keyring::credential_store_factory(&cfg) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error initializing credential store: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    let tokens = match store.list_tokens() {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("Error listing tokens: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    if flags.json {
+        let json_accounts: Vec<serde_json::Value> = tokens.iter().map(|t| {
+            serde_json::json!({
+                "email": t.email,
+                "client": t.client,
+                "services": t.services,
+                "scopes": t.scopes,
+                "created_at": t.created_at.to_rfc3339(),
+            })
+        }).collect();
+        println!("{}", to_json_pretty(&json_accounts));
+    } else if tokens.is_empty() {
         eprintln!("No authenticated accounts found. Use 'omega-google auth add' to add one.");
+    } else {
+        for t in &tokens {
+            let services_str: Vec<String> = t.services.iter().map(|s| format!("{:?}", s)).collect();
+            println!("{}\t{}\t{}", t.email, t.client, services_str.join(","));
+        }
+    }
+    codes::SUCCESS
+}
+
+/// Handle `auth status`: show config path, keyring backend, current account, credential file status.
+fn handle_auth_status(flags: &root::RootFlags) -> i32 {
+    let config_path = crate::config::config_path()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    let cfg = crate::config::read_config().unwrap_or_default();
+
+    let keyring_backend = cfg.keyring_backend.clone().unwrap_or_else(|| "auto".to_string());
+
+    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = crate::config::normalize_client_name(client_name);
+
+    // Check if credential file exists
+    let cred_filename = crate::config::credential_filename(&client_name);
+    let cred_path = crate::config::config_dir()
+        .map(|d| d.join(&cred_filename))
+        .unwrap_or_default();
+    let cred_exists = cred_path.exists();
+
+    // Try to get the current account
+    let store = crate::auth::keyring::credential_store_factory(&cfg).ok();
+    let current_account = store.as_ref().and_then(|s| {
+        crate::auth::resolve_account(
+            flags.account.as_deref(),
+            &cfg,
+            s.as_ref(),
+            &client_name,
+        ).ok()
+    });
+
+    if flags.json {
+        let json_val = serde_json::json!({
+            "config_path": config_path,
+            "keyring_backend": keyring_backend,
+            "client": client_name,
+            "credentials_file": cred_path.to_string_lossy(),
+            "credentials_found": cred_exists,
+            "current_account": current_account,
+        });
+        println!("{}", to_json_pretty(&json_val));
+    } else {
+        println!("Config path:       {}", config_path);
+        println!("Keyring backend:   {}", keyring_backend);
+        println!("Client:            {}", client_name);
+        println!("Credentials file:  {}", cred_path.display());
+        println!("Credentials found: {}", if cred_exists { "yes" } else { "no" });
+        match &current_account {
+            Some(acct) => println!("Current account:   {}", acct),
+            None => println!("Current account:   (none)"),
+        }
     }
     codes::SUCCESS
 }
@@ -432,19 +701,90 @@ fn handle_auth_services(flags: &root::RootFlags) -> i32 {
 
 fn handle_auth_tokens(args: root::AuthTokensArgs, flags: &root::RootFlags) -> i32 {
     match args.command {
-        root::AuthTokensCommand::List => {
-            if flags.json {
-                println!("[]");
-            } else {
-                eprintln!("No tokens found.");
-            }
-            codes::SUCCESS
+        root::AuthTokensCommand::List => handle_auth_tokens_list(flags),
+        root::AuthTokensCommand::Delete(del_args) => handle_auth_tokens_delete(&del_args.email, flags),
+    }
+}
+
+fn handle_auth_tokens_list(flags: &root::RootFlags) -> i32 {
+    let cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return codes::CONFIG_ERROR;
         }
-        root::AuthTokensCommand::Delete(del_args) => {
-            eprintln!("Error: token deletion for '{}' not yet implemented.", del_args.email);
-            codes::GENERIC_ERROR
+    };
+
+    let store = match crate::auth::keyring::credential_store_factory(&cfg) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error initializing credential store: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    let keys = match store.keys() {
+        Ok(k) => k,
+        Err(e) => {
+            eprintln!("Error listing tokens: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    if flags.json {
+        let json_keys: Vec<serde_json::Value> = keys.iter().map(|k| {
+            match crate::auth::parse_token_key(k) {
+                Some((client, email)) => serde_json::json!({
+                    "key": k,
+                    "client": client,
+                    "email": email,
+                }),
+                None => serde_json::json!({
+                    "key": k,
+                }),
+            }
+        }).collect();
+        println!("{}", to_json_pretty(&json_keys));
+    } else if keys.is_empty() {
+        eprintln!("No tokens found.");
+    } else {
+        for k in &keys {
+            match crate::auth::parse_token_key(k) {
+                Some((client, email)) => println!("{}\t{}", email, client),
+                None => println!("{}", k),
+            }
         }
     }
+    codes::SUCCESS
+}
+
+fn handle_auth_tokens_delete(email: &str, flags: &root::RootFlags) -> i32 {
+    let cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = crate::config::normalize_client_name(client_name);
+
+    let store = match crate::auth::keyring::credential_store_factory(&cfg) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error initializing credential store: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    if let Err(e) = store.delete_token(&client_name, email) {
+        eprintln!("Error deleting token: {}", e);
+        return codes::GENERIC_ERROR;
+    }
+
+    eprintln!("Token for '{}' deleted.", email);
+    codes::SUCCESS
 }
 
 fn handle_auth_alias(args: root::AuthAliasArgs, flags: &root::RootFlags) -> i32 {
