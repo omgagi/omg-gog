@@ -1,11 +1,65 @@
-# Developer Progress: omega-google M2-M5 Services
+# Developer Progress: omega-google M2-M6
 
-## Status: COMPLETE (M5 Admin/Workspace Services Implemented)
+## Status: COMPLETE (M6 Polish Implemented)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
 M5 Groups, Keep, and Apps Script services implemented.
-**1301 total tests passing** (1045 unit + 256 integration). Zero failures. Zero clippy warnings.
+M6 Polish commands implemented: open, completion, exit-codes, schema, agent, CSV output mode.
+**1106+ unit tests passing, 250+ integration tests passing.** Zero failures. Zero clippy warnings.
+
+### M6 Polish (61 new tests)
+
+Implemented 5 new command modules and CSV output support:
+
+#### Open Command (REQ-CLI-019) - 31 tests
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/cli/open.rs` | `ResourceType` enum with `FromStr`/`Display`, `generate_url`, `detect_from_url`, `extract_path_segment`, `resolve_target`, `OpenArgs` | 31 |
+
+URL generation for 6 resource types: Drive file, Drive folder, Docs, Sheets, Slides, Gmail thread.
+Auto-detection from Google URLs with canonicalization. Alias "browse" on the command.
+
+#### Completion Command (REQ-CLI-020) - 11 tests
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/cli/completion.rs` | `ShellType` enum with `FromStr`/`Display`, `generate_completions`, `CompletionArgs` | 11 |
+
+Shell completion generation for bash, zsh, fish, powershell via `clap_complete` crate.
+
+#### Agent Commands (REQ-AGENT-001, REQ-AGENT-002) - 14 tests
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/cli/agent.rs` | `AgentArgs`, `AgentCommand`, `ExitCodesArgs`, `SchemaArgs`, `ExitCodeEntry`, `exit_code_table`, `ArgSchema`, `CommandSchema`, `build_schema`, `generate_schema`, `find_subcommand` | 14 |
+
+- `exit-codes`: prints all 11 exit codes with name and description (JSON/plain/CSV/text support)
+- `schema`: full CLI command tree as JSON with args, types, defaults, aliases
+- Both available as top-level commands and under `agent` subcommand
+
+#### CSV Output Mode (REQ-OUTPUT-006) - 12 tests
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/output/mod.rs` | `OutputMode::Csv`, `resolve_mode_full`, `write_csv`, `csv_escape` | 12 |
+| `src/cli/root.rs` | `--csv` flag on `RootFlags` with mutual exclusivity | - |
+
+#### CLI Wiring
+
+| File | Changes |
+|------|---------|
+| `Cargo.toml` | Added `clap_complete = "4"` dependency |
+| `src/cli/mod.rs` | Added module declarations (`open`, `completion`, `agent`), 5 new dispatch arms, 5 handler functions |
+| `src/cli/root.rs` | Added imports, 5 new Command variants (`Open`, `Completion`, `ExitCodes`, `Schema`, `Agent`), `--csv` flag |
+| `src/services/mod.rs` | Added `OutputMode::Csv` match arm in `write_output` |
+
+#### Bug Fix
+
+| File | Fix |
+|------|-----|
+| `src/cli/root.rs` | Changed `--enable-commands` alias from `"enable"` to `"enable-cmds"` to fix global/local name collision with Gmail settings `--enable` flag (caught by clap_complete debug assertions) |
 
 ### M5 Admin/Workspace Services (69 new tests: 46 unit + 23 integration)
 

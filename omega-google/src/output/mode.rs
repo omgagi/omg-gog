@@ -9,4 +9,5 @@
 
 pub use super::OutputMode;
 pub use super::resolve_mode;
+pub use super::resolve_mode_full;
 pub use super::JsonTransform;
