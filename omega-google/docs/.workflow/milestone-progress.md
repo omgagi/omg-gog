@@ -7,4 +7,4 @@
 | M3 | Productivity Services (Docs, Sheets, Slides, Forms) | COMPLETE | 921 | 2026-03-01 |
 | M4 | Collaboration Services (Chat, Classroom, Tasks, Contacts, People) | COMPLETE | 1204 | 2026-03-01 |
 | M5 | Admin/Workspace Services (Groups, Keep, Apps Script) | COMPLETE | 1296 | 2026-03-01 |
-| M6 | Polish (Tracking, Completion, Allowlisting, Agent Mode, Tests) | PENDING | - | - |
+| M6 | Polish (Completion, Allowlisting, Agent Mode, Open, CSV) | COMPLETE | 1357 | 2026-03-01 |

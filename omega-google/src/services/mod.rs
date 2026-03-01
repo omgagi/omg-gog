@@ -50,6 +50,12 @@ impl ServiceContext {
                 println!("{}", json_str);
                 Ok(())
             }
+            OutputMode::Csv => {
+                // For CSV output, serialize to JSON string as fallback
+                let json_str = serde_json::to_string(value)?;
+                println!("{}", json_str);
+                Ok(())
+            }
         }
     }
 

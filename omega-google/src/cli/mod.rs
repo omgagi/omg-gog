@@ -16,6 +16,9 @@ pub mod people;
 pub mod groups;
 pub mod keep;
 pub mod appscript;
+pub mod open;
+pub mod completion;
+pub mod agent;
 
 use std::ffi::OsString;
 
@@ -102,6 +105,11 @@ fn command_name(cmd: &root::Command) -> &str {
         root::Command::Groups(_) => "groups",
         root::Command::Keep(_) => "keep",
         root::Command::AppScript(_) => "appscript",
+        root::Command::Open(_) => "open",
+        root::Command::Completion(_) => "completion",
+        root::Command::ExitCodes => "exit-codes",
+        root::Command::Schema(_) => "schema",
+        root::Command::Agent(_) => "agent",
     }
 }
 
@@ -136,6 +144,11 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
         root::Command::Groups(args) => handle_groups(args, flags),
         root::Command::Keep(args) => handle_keep(args, flags),
         root::Command::AppScript(args) => handle_appscript(args, flags),
+        root::Command::Open(args) => handle_open(args, flags),
+        root::Command::Completion(args) => handle_completion(args),
+        root::Command::ExitCodes => handle_exit_codes(flags),
+        root::Command::Schema(args) => handle_schema(args, flags),
+        root::Command::Agent(args) => handle_agent(args, flags),
     }
 }
 
@@ -694,6 +707,98 @@ fn handle_keep(_args: keep::KeepArgs, _flags: &root::RootFlags) -> i32 {
 fn handle_appscript(_args: appscript::AppScriptArgs, _flags: &root::RootFlags) -> i32 {
     eprintln!("Command registered. API call requires: omega-google auth add <email>");
     codes::SUCCESS
+}
+
+/// Handle the `open` command: offline URL generation.
+fn handle_open(args: open::OpenArgs, flags: &root::RootFlags) -> i32 {
+    match open::resolve_target(&args.target, &args.r#type) {
+        Ok(url) => {
+            if flags.json {
+                let json_val = serde_json::json!({
+                    "url": url,
+                    "target": args.target,
+                });
+                println!("{}", to_json_pretty(&json_val));
+            } else {
+                println!("{}", url);
+            }
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            codes::USAGE_ERROR
+        }
+    }
+}
+
+/// Handle the `completion` command: generate shell completions.
+fn handle_completion(args: completion::CompletionArgs) -> i32 {
+    let mut stdout = std::io::stdout();
+    match completion::generate_completions(&args.shell, &mut stdout) {
+        Ok(()) => codes::SUCCESS,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            codes::USAGE_ERROR
+        }
+    }
+}
+
+/// Handle the `exit-codes` command.
+fn handle_exit_codes(flags: &root::RootFlags) -> i32 {
+    let table = agent::exit_code_table();
+
+    if flags.json {
+        println!("{}", to_json_pretty(&table));
+    } else if flags.csv {
+        println!("code,name,description");
+        for entry in &table {
+            println!("{},{},{}",
+                crate::output::csv_escape(&entry.code.to_string()),
+                crate::output::csv_escape(&entry.name),
+                crate::output::csv_escape(&entry.description),
+            );
+        }
+    } else if flags.plain {
+        for entry in &table {
+            println!("{}\t{}\t{}", entry.code, entry.name, entry.description);
+        }
+    } else {
+        let header = format!("{:<6} {:<20} DESCRIPTION", "CODE", "NAME");
+        println!("{}", header);
+        println!("{}", "-".repeat(60));
+        for entry in &table {
+            println!("{:<6} {:<20} {}", entry.code, entry.name, entry.description);
+        }
+    }
+    codes::SUCCESS
+}
+
+/// Handle the `schema` / `help-json` command.
+fn handle_schema(args: agent::SchemaArgs, flags: &root::RootFlags) -> i32 {
+    let schema = agent::generate_schema(args.command.as_deref(), args.include_hidden);
+
+    if flags.plain {
+        // For plain mode, just output the command names
+        if let Some(subs) = schema.get("subcommands").and_then(|s| s.as_array()) {
+            for sub in subs {
+                if let Some(name) = sub.get("name").and_then(|n| n.as_str()) {
+                    println!("{}", name);
+                }
+            }
+        }
+    } else {
+        // Default and --json both output full JSON
+        println!("{}", to_json_pretty(&schema));
+    }
+    codes::SUCCESS
+}
+
+/// Handle the `agent` command and its subcommands.
+fn handle_agent(args: agent::AgentArgs, flags: &root::RootFlags) -> i32 {
+    match args.command {
+        agent::AgentCommand::ExitCodes => handle_exit_codes(flags),
+        agent::AgentCommand::Schema(schema_args) => handle_schema(schema_args, flags),
+    }
 }
 
 /// Rewrite desire path arguments before parsing.

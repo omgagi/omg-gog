@@ -16,6 +16,9 @@ use super::people::PeopleArgs;
 use super::groups::GroupsArgs;
 use super::keep::KeepArgs;
 use super::appscript::AppScriptArgs;
+use super::open::OpenArgs;
+use super::completion::CompletionArgs;
+use super::agent::AgentArgs;
 
 /// omega-google: Google Workspace CLI
 #[derive(Parser, Debug)]
@@ -36,13 +39,17 @@ pub struct Cli {
 /// Global flags available on every command.
 #[derive(Args, Debug, Clone, Default)]
 pub struct RootFlags {
-    /// Output JSON (mutually exclusive with --plain)
-    #[arg(long, short = 'j', global = true, env = "GOG_JSON", aliases = ["machine"], conflicts_with = "plain")]
+    /// Output JSON (mutually exclusive with --plain and --csv)
+    #[arg(long, short = 'j', global = true, env = "GOG_JSON", aliases = ["machine"], conflicts_with_all = ["plain", "csv"])]
     pub json: bool,
 
-    /// Output plain tab-separated values (mutually exclusive with --json)
-    #[arg(long, short = 'p', global = true, env = "GOG_PLAIN", conflicts_with = "json")]
+    /// Output plain tab-separated values (mutually exclusive with --json and --csv)
+    #[arg(long, short = 'p', global = true, env = "GOG_PLAIN", conflicts_with_all = ["json", "csv"])]
     pub plain: bool,
+
+    /// Output CSV (mutually exclusive with --json and --plain)
+    #[arg(long, global = true, env = "GOG_CSV", conflicts_with_all = ["json", "plain"])]
+    pub csv: bool,
 
     /// Color mode: auto, always, never
     #[arg(long, global = true, env = "GOG_COLOR", default_value = "auto")]
@@ -81,7 +88,7 @@ pub struct RootFlags {
     pub results_only: bool,
 
     /// Restrict available commands (comma-separated list)
-    #[arg(long, global = true, env = "GOG_ENABLE_COMMANDS", alias = "enable")]
+    #[arg(long, global = true, env = "GOG_ENABLE_COMMANDS", alias = "enable-cmds")]
     pub enable_commands: Option<String>,
 }
 
@@ -158,6 +165,25 @@ pub enum Command {
     /// Google Apps Script operations
     #[command(name = "appscript", aliases = ["script", "apps-script"])]
     AppScript(AppScriptArgs),
+
+    // M6 polish commands
+    /// Open a Google resource in the browser (offline URL generation)
+    #[command(alias = "browse")]
+    Open(OpenArgs),
+
+    /// Generate shell completions
+    Completion(CompletionArgs),
+
+    /// Print exit code table
+    #[command(name = "exit-codes")]
+    ExitCodes,
+
+    /// Print machine-readable CLI schema as JSON
+    #[command(alias = "help-json")]
+    Schema(super::agent::SchemaArgs),
+
+    /// Agent-oriented commands (exit-codes, schema)
+    Agent(AgentArgs),
 }
 
 // --- Auth subcommands ---
