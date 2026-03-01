@@ -1,9 +1,37 @@
-# Developer Progress: omega-google M2 Services + Docs Service
+# Developer Progress: omega-google M2 Services + Docs Service + M4 Chat & Tasks
 
-## Status: COMPLETE (M3 Docs Service Implemented)
+## Status: COMPLETE (M4 Chat & Tasks Services Implemented)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
-**679 lib tests + 38 integration tests passing**. Zero failures.
+M4 Chat and Tasks services implemented.
+**817 lib tests passing**. Zero failures. Zero warnings.
+
+### M4: Chat & Tasks Services (85 new tests)
+
+Implemented Chat service (5 modules) and Tasks service (3 modules):
+
+#### Chat Service (47 tests)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/chat/types.rs` | Space, SpaceListResponse, Message, MessageSender, MessageListResponse, Thread, ThreadListResponse, CreateSpaceRequest, CreateMessageRequest | 17 |
+| `src/services/chat/spaces.rs` | `build_spaces_list_url`, `build_spaces_find_url`, `build_space_create_url`, `build_space_create_body` | 8 |
+| `src/services/chat/messages.rs` | `build_messages_list_url`, `build_message_send_url`, `build_message_send_body` | 10 |
+| `src/services/chat/threads.rs` | `build_threads_list_url` | 5 |
+| `src/services/chat/dm.rs` | `build_dm_space_url`, `build_dm_space_body`, `build_dm_send_url`, `build_dm_send_body` | 7 |
+| `src/cli/chat.rs` | ChatArgs, ChatCommand, ChatSpacesCommand, ChatMessagesCommand, ChatThreadsCommand, ChatDmCommand + all arg structs | 0 (compile-verified) |
+
+#### Tasks Service (38 tests)
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/tasks/types.rs` | TaskList, TaskListsResponse, Task, TaskLink, TasksResponse | 13 |
+| `src/services/tasks/tasklists.rs` | `build_tasklists_list_url`, `build_tasklist_create_url`, `build_tasklist_create_body` | 7 |
+| `src/services/tasks/task_ops.rs` | `build_tasks_list_url`, `build_task_get_url`, `build_task_create_url`, `build_task_create_body`, `build_task_update_url`, `build_task_update_body`, `build_task_delete_url`, `build_tasks_clear_url` | 18 |
+| `src/cli/tasks.rs` | TasksArgs, TasksCommand, TasksListsCommand + all arg structs (Lists, List, Get, Add, Update, Done, Undo, Delete, Clear) | 0 (compile-verified) |
+
+Module declarations added to `src/services/mod.rs` and `src/cli/mod.rs`.
+Command wiring (root.rs Command enum, dispatch) deferred to wiring agent.
 
 ### M3: Google Docs Service (97 new tests)
 

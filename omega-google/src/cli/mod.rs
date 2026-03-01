@@ -8,6 +8,8 @@ pub mod docs;
 pub mod sheets;
 pub mod slides;
 pub mod forms;
+pub mod chat;
+pub mod tasks;
 
 use std::ffi::OsString;
 

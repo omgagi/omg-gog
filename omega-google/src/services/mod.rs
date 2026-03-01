@@ -6,6 +6,8 @@ pub mod docs;
 pub mod slides;
 pub mod sheets;
 pub mod forms;
+pub mod chat;
+pub mod tasks;
 
 use crate::output::{OutputMode, JsonTransform};
 use crate::ui::Ui;
