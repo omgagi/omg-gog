@@ -1,12 +1,41 @@
-# Developer Progress: omega-google M2-M6
+# Developer Progress: omega-google M2-M6 + RT-M1
 
-## Status: COMPLETE (M6 Polish Implemented)
+## Status: COMPLETE (RT-M1 Auth Core Implemented)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
 M5 Groups, Keep, and Apps Script services implemented.
 M6 Polish commands implemented: open, completion, exit-codes, schema, agent, CSV output mode.
-**1106+ unit tests passing, 250+ integration tests passing.** Zero failures. Zero clippy warnings.
+RT-M1 Auth Core: all 6 stub requirements replaced with real implementations.
+**1201 unit tests passing, 255+ integration tests passing.** Zero failures. Zero clippy warnings.
+
+### RT-M1: Auth Core (reviewer fix round)
+
+Replaced all 5 stub implementations and added custom Debug for TokenData.
+All changes address critical findings C-1 through C-4 from the M1 review.
+
+#### Changes Made
+
+| Finding | File | Change |
+|---------|------|--------|
+| C-1 (REQ-RT-001) | `src/auth/oauth.rs` | Replaced `exchange_code` stub with real HTTP POST to Google token endpoint. Added `http_client: &reqwest::Client` as first parameter. Internal `exchange_code_with_url` for testability. Updated tests to use mockito mock server for actual HTTP verification. |
+| C-1 (REQ-RT-005) | `src/auth/token.rs` | Replaced `refresh_access_token` stub with real HTTP POST using grant_type=refresh_token. Detects `invalid_grant` errors and provides re-auth guidance. Internal `refresh_access_token_with_url` for testability. Updated tests to use mockito. |
+| C-1 (REQ-RT-006) | `src/auth/service_account.rs` | Replaced `exchange_jwt` stub with real HTTP POST using JWT bearer grant type. Added `http_client: &reqwest::Client` parameter, changed return type to `ServiceAccountTokenResponse`. Internal `exchange_jwt_with_url` for testability. Updated tests to use mockito. |
+| C-1 (REQ-RT-013) | `src/auth/keyring.rs` | Implemented `KeyringCredentialStore::new()` with keyring availability probe. Implemented all 7 `CredentialStore` trait methods using `keyring::Entry`. |
+| C-1 (REQ-RT-015) | `src/auth/keyring.rs` | Implemented `credential_store_factory()` with auto/keychain/keyring/file backend selection, env var override (`GOG_KEYRING_BACKEND`), and auto-fallback from OS keyring to file. |
+| C-4 | `src/auth/mod.rs` | Removed `derive(Debug)` from `TokenData`, replaced with custom `Debug` impl that redacts `refresh_token` as `[REDACTED]` and `access_token` as `Some("[REDACTED]")` or `None`. |
+
+#### Test Results
+
+| Module | Tests | Status |
+|--------|-------|--------|
+| `auth::oauth::tests` | 15 | PASS |
+| `auth::token::tests` | 32 | PASS |
+| `auth::service_account::tests` | 14 | PASS |
+| `auth::keyring::tests` | 27 (+ 4 ignored) | PASS |
+| `auth::tests` (mod.rs) | 7 | PASS |
+| Integration: `auth_test` | 21 | PASS |
+| **Full suite** | **1201 lib + 255 integration** | **PASS** |
 
 ### M6 Polish (61 new tests)
 

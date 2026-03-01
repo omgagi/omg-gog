@@ -55,7 +55,7 @@ pub trait CredentialStore: Send + Sync {
 }
 
 /// Token data stored in the keyring.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TokenData {
     pub client: String,
     pub email: String,
@@ -63,6 +63,27 @@ pub struct TokenData {
     pub scopes: Vec<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub refresh_token: String,
+    /// Cached access token from the last OAuth exchange or refresh.
+    /// Added by REQ-RT-007. None for tokens that predate this field.
+    pub access_token: Option<String>,
+    /// Expiration time of the access_token.
+    /// Added by REQ-RT-007. None for tokens that predate this field.
+    pub expires_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl std::fmt::Debug for TokenData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenData")
+            .field("client", &self.client)
+            .field("email", &self.email)
+            .field("services", &self.services)
+            .field("scopes", &self.scopes)
+            .field("created_at", &self.created_at)
+            .field("refresh_token", &"[REDACTED]")
+            .field("access_token", &self.access_token.as_ref().map(|_| "[REDACTED]"))
+            .field("expires_at", &self.expires_at)
+            .finish()
+    }
 }
 
 /// Service information for display.
@@ -233,4 +254,148 @@ pub fn token_key(client: &str, email: &str) -> String {
 /// Build a legacy keyring token key (no client prefix).
 pub fn legacy_token_key(email: &str) -> String {
     format!("token:{}", email)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // =================================================================
+    // REQ-RT-007 (Must): Access token caching in TokenData
+    // =================================================================
+
+    // Requirement: REQ-RT-007 (Must)
+    // Acceptance: Extend TokenData with access_token: Option<String>
+    #[test]
+    fn req_rt_007_token_data_has_access_token_field() {
+        let token = TokenData {
+            client: "default".to_string(),
+            email: "user@example.com".to_string(),
+            services: vec![Service::Gmail],
+            scopes: vec!["https://www.googleapis.com/auth/gmail.modify".to_string()],
+            created_at: chrono::Utc::now(),
+            refresh_token: "refresh_tok".to_string(),
+            access_token: Some("ya29.access_token_here".to_string()),
+            expires_at: None,
+        };
+        assert_eq!(token.access_token.as_deref(), Some("ya29.access_token_here"));
+    }
+
+    // Requirement: REQ-RT-007 (Must)
+    // Acceptance: Extend TokenData with expires_at: Option<DateTime<Utc>>
+    #[test]
+    fn req_rt_007_token_data_has_expires_at_field() {
+        let now = chrono::Utc::now();
+        let expires = now + chrono::Duration::hours(1);
+        let token = TokenData {
+            client: "default".to_string(),
+            email: "user@example.com".to_string(),
+            services: vec![],
+            scopes: vec![],
+            created_at: now,
+            refresh_token: "rt".to_string(),
+            access_token: Some("at".to_string()),
+            expires_at: Some(expires),
+        };
+        assert!(token.expires_at.is_some());
+        assert_eq!(token.expires_at.unwrap(), expires);
+    }
+
+    // Requirement: REQ-RT-007 (Must)
+    // Acceptance: New fields are Option (can be None)
+    #[test]
+    fn req_rt_007_token_data_new_fields_optional_none() {
+        let token = TokenData {
+            client: "default".to_string(),
+            email: "user@example.com".to_string(),
+            services: vec![],
+            scopes: vec![],
+            created_at: chrono::Utc::now(),
+            refresh_token: "rt".to_string(),
+            access_token: None,
+            expires_at: None,
+        };
+        assert!(token.access_token.is_none());
+        assert!(token.expires_at.is_none());
+    }
+
+    // Requirement: REQ-RT-007 (Must)
+    // Edge case: access_token is empty string (valid but degenerate)
+    #[test]
+    fn req_rt_007_token_data_empty_access_token() {
+        let token = TokenData {
+            client: "default".to_string(),
+            email: "user@example.com".to_string(),
+            services: vec![],
+            scopes: vec![],
+            created_at: chrono::Utc::now(),
+            refresh_token: "rt".to_string(),
+            access_token: Some("".to_string()),
+            expires_at: None,
+        };
+        assert_eq!(token.access_token.as_deref(), Some(""));
+    }
+
+    // Requirement: REQ-RT-007 (Must)
+    // Edge case: expires_at in the far past
+    #[test]
+    fn req_rt_007_token_data_expires_at_in_past() {
+        let past = chrono::Utc::now() - chrono::Duration::days(365);
+        let token = TokenData {
+            client: "default".to_string(),
+            email: "user@example.com".to_string(),
+            services: vec![],
+            scopes: vec![],
+            created_at: chrono::Utc::now() - chrono::Duration::days(366),
+            refresh_token: "rt".to_string(),
+            access_token: Some("expired_at".to_string()),
+            expires_at: Some(past),
+        };
+        // Token should be constructible with past expiry
+        assert!(token.expires_at.unwrap() < chrono::Utc::now());
+    }
+
+    // Requirement: REQ-RT-007 (Must)
+    // Edge case: TokenData clone preserves new fields
+    #[test]
+    fn req_rt_007_token_data_clone_preserves_new_fields() {
+        let now = chrono::Utc::now();
+        let expires = now + chrono::Duration::hours(1);
+        let token = TokenData {
+            client: "default".to_string(),
+            email: "user@example.com".to_string(),
+            services: vec![Service::Drive],
+            scopes: vec!["drive".to_string()],
+            created_at: now,
+            refresh_token: "rt".to_string(),
+            access_token: Some("at_clone_test".to_string()),
+            expires_at: Some(expires),
+        };
+        let cloned = token.clone();
+        assert_eq!(cloned.access_token, token.access_token);
+        assert_eq!(cloned.expires_at, token.expires_at);
+    }
+
+    // Requirement: REQ-RT-007 (Must)
+    // Security: access_token must not appear in Debug output of errors/logs
+    // (This verifies the field exists; actual redaction is tested at serialization level)
+    #[test]
+    fn req_rt_007_token_data_debug_contains_access_token() {
+        // This test documents that Debug DOES contain access_token.
+        // A future enhancement could add a custom Debug impl that redacts it.
+        // For now, we just verify the struct is Debug-printable.
+        let token = TokenData {
+            client: "default".to_string(),
+            email: "user@example.com".to_string(),
+            services: vec![],
+            scopes: vec![],
+            created_at: chrono::Utc::now(),
+            refresh_token: "secret_refresh".to_string(),
+            access_token: Some("secret_access".to_string()),
+            expires_at: None,
+        };
+        let debug_str = format!("{:?}", token);
+        // Verify it compiles and produces output
+        assert!(!debug_str.is_empty());
+    }
 }

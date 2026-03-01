@@ -1,8 +1,56 @@
 # Test Writer Progress -- omega-google
 
-## Status: M1 COMPLETE, M2 COMPLETE
+## Status: M1 COMPLETE, M2 COMPLETE, RT-M1 COMPLETE
 
-All M1 Foundation and M2 Core Services tests have been written. Tests are in TDD red phase (fail with `todo!()` panics for unimplemented functions, pass for pure type/serde tests).
+All M1 Foundation, M2 Core Services, and RT-M1 Auth Core tests have been written. RT-M1 tests are in TDD red phase (7 failures requiring implementation changes, 4 ignored requiring OS keyring).
+
+---
+
+## RT-M1 Auth Core Test Summary
+
+| Module | File | Unit Tests | Ignored | Pass | Fail | Status |
+|--------|------|-----------|---------|------|------|--------|
+| auth/mod.rs (TokenData) | `src/auth/mod.rs` | 7 | 0 | 7 | 0 | Written |
+| auth/token.rs (serde, refresh) | `src/auth/token.rs` | 32 | 0 | 25 | 7 | Written (TDD red) |
+| auth/oauth.rs (exchange_code) | `src/auth/oauth.rs` | 15 | 0 | 15 | 0 | Written |
+| auth/service_account.rs (exchange_jwt) | `src/auth/service_account.rs` | 14 | 0 | 14 | 0 | Written |
+| auth/keyring.rs (KeyringCredentialStore, factory) | `src/auth/keyring.rs` | 31 | 4 | 27 | 0 | Written |
+| **RT-M1 TOTAL** | | **99** | **4** | **88** | **7** | |
+
+### RT-M1 Test Results (TDD Red Phase)
+- **Passed: 88** (struct fields, deserialization backward compat, stub error returns, file store operations, security checks)
+- **Failed: 7** (serialize_token new fields, needs_refresh expires_at logic -- require developer implementation)
+- **Ignored: 4** (OS keyring tests -- require real macOS Keychain/Linux Secret Service)
+- **Total: 99**
+
+### Failures Requiring Developer Implementation
+1. `req_rt_007_serialize_includes_access_token` -- serialize_token must include access_token in JSON
+2. `req_rt_007_serialize_includes_expires_at` -- serialize_token must include expires_at in JSON
+3. `req_rt_007_roundtrip_with_new_fields` -- depends on serialize_token fix
+4. `req_rt_007_needs_refresh_expires_at_within_buffer` -- needs_refresh must check expires_at first
+5. `req_rt_007_needs_refresh_expires_at_exactly_five_minutes` -- needs_refresh boundary check
+6. `req_rt_007_edge_expires_at_far_future` -- needs_refresh with distant expires_at
+7. `req_rt_005_needs_refresh_within_five_min_buffer` -- needs_refresh must use 5-min buffer
+
+### Stubs Added (developer must implement)
+- `TokenData.access_token: Option<String>` -- field added to struct
+- `TokenData.expires_at: Option<DateTime<Utc>>` -- field added to struct
+- `deserialize_token()` -- updated to read new fields (backward compatible)
+- `refresh_access_token()` -- stub function in token.rs (bails with "not yet implemented")
+- `KeyringCredentialStore` -- stub struct with CredentialStore impl (all methods bail)
+- `credential_store_factory()` -- stub function in keyring.rs (bails with "not yet implemented")
+- `ServiceAccountTokenResponse` -- struct added to service_account.rs
+
+### RT-M1 Requirement Traceability
+
+| Req ID | Priority | Test IDs | Coverage | Status |
+|--------|----------|----------|----------|--------|
+| REQ-RT-001 | Must | `req_rt_001_exchange_code_function_exists`, `req_rt_001_exchange_code_posts_authorization_code`, `req_rt_001_token_response_deserialize_full`, `req_rt_001_token_response_deserialize_minimal`, `req_rt_001_exchange_code_400_invalid_grant`, `req_rt_001_exchange_code_401_invalid_client`, `req_rt_001_uses_reqwest_not_oauth2_crate`, `req_rt_001_edge_empty_code`, `req_rt_001_edge_code_with_special_chars`, `req_rt_001_edge_token_response_extra_fields`, `req_rt_001_edge_token_response_missing_access_token`, `req_rt_001_edge_token_response_missing_token_type`, `req_rt_001_security_token_url_is_google`, `req_rt_001_security_auth_url_is_google`, `req_rt_001_form_urlencoded_not_json_body` | Function exists, TokenResponse serde, error handling, edge cases, security | Written |
+| REQ-RT-005 | Must | `req_rt_005_refresh_access_token_exists`, `req_rt_005_refresh_posts_to_token_endpoint`, `req_rt_005_token_response_deserialize_happy_path`, `req_rt_005_token_response_deserialize_no_refresh_token`, `req_rt_005_refresh_invalid_grant_error`, `req_rt_005_refresh_network_error`, `req_rt_005_refresh_empty_refresh_token`, `req_rt_005_security_token_url_hardcoded`, `req_rt_005_needs_refresh_within_five_min_buffer`, `req_rt_005_needs_refresh_outside_five_min_buffer` | Refresh function, TokenResponse, failure modes, edge cases, security | Written |
+| REQ-RT-006 | Must | `req_rt_006_exchange_jwt_function_exists`, `req_rt_006_exchange_jwt_posts_jwt_bearer_grant_type`, `req_rt_006_service_account_token_response_deserialize`, `req_rt_006_exchange_jwt_failure_returns_error`, `req_rt_006_jwt_claims_serialize_correctly`, `req_rt_006_jwt_claims_no_subject`, `req_rt_006_edge_empty_assertion`, `req_rt_006_service_account_key_deserialize`, `req_rt_006_edge_wrong_key_type`, `req_rt_006_edge_key_file_not_found`, `req_rt_006_edge_malformed_key_file`, `req_rt_006_edge_sa_token_response_extra_fields`, `req_rt_006_security_token_url`, `req_rt_006_security_private_key_not_in_error` | JWT exchange, SA token response, claims, key loading, edge cases, security | Written |
+| REQ-RT-007 | Must | `req_rt_007_token_data_has_access_token_field`, `req_rt_007_token_data_has_expires_at_field`, `req_rt_007_token_data_new_fields_optional_none`, `req_rt_007_token_data_empty_access_token`, `req_rt_007_token_data_expires_at_in_past`, `req_rt_007_token_data_clone_preserves_new_fields`, `req_rt_007_token_data_debug_contains_access_token`, `req_rt_007_serialize_includes_access_token`, `req_rt_007_serialize_includes_expires_at`, `req_rt_007_serialize_omits_access_token_when_none`, `req_rt_007_serialize_omits_expires_at_when_none`, `req_rt_007_deserialize_reads_access_token`, `req_rt_007_deserialize_reads_expires_at`, `req_rt_007_deserialize_backward_compatible_no_new_fields`, `req_rt_007_roundtrip_with_new_fields`, `req_rt_007_roundtrip_without_new_fields`, `req_rt_007_needs_refresh_expires_at_within_buffer`, `req_rt_007_needs_refresh_expires_at_outside_buffer`, `req_rt_007_needs_refresh_expires_at_exactly_five_minutes`, `req_rt_007_needs_refresh_expires_at_already_expired`, `req_rt_007_needs_refresh_no_expires_at_fresh_token`, `req_rt_007_needs_refresh_no_expires_at_old_token`, `req_rt_007_old_token_without_new_fields_triggers_refresh`, `req_rt_007_edge_deserialize_empty_string`, `req_rt_007_edge_deserialize_invalid_json`, `req_rt_007_edge_deserialize_missing_email`, `req_rt_007_edge_access_token_special_chars`, `req_rt_007_edge_expires_at_invalid_format`, `req_rt_007_edge_expires_at_far_future` | TokenData fields, serialize/deserialize, needs_refresh with expires_at, backward compat, edge cases | Written |
+| REQ-RT-013 | Must | `req_rt_013_keyring_credential_store_struct_exists`, `req_rt_013_keyring_implements_credential_store`, `req_rt_013_service_name_is_omega_google`, `req_rt_013_key_format`, `req_rt_013_graceful_failure_no_panic`, `req_rt_013_keyring_store_is_send_sync`, `req_rt_013_keyring_set_get_roundtrip` (ignored), `req_rt_013_keyring_delete` (ignored), `req_rt_013_keyring_list_tokens` (ignored), `req_rt_013_keyring_default_account` (ignored), `req_rt_013_edge_get_nonexistent_token`, `req_rt_013_edge_delete_nonexistent_token`, `req_rt_013_security_file_permissions`, `req_rt_013_failure_permission_denied` | Struct existence, trait impl, key format, graceful failure, OS keyring ops (ignored), edge cases, security | Written |
+| REQ-RT-015 | Must | `req_rt_015_factory_function_exists`, `req_rt_015_factory_file_backend`, `req_rt_015_factory_keychain_backend`, `req_rt_015_factory_keyring_synonym`, `req_rt_015_factory_auto_backend`, `req_rt_015_factory_none_defaults_to_auto`, `req_rt_015_factory_returns_boxed_trait`, `req_rt_015_factory_env_overrides_config`, `req_rt_015_edge_unknown_backend`, `req_rt_015_edge_empty_backend_string`, `req_rt_015_file_store_set_get_delete_cycle`, `req_rt_015_file_store_list_tokens`, `req_rt_015_file_store_keys`, `req_rt_015_file_store_default_account`, `req_rt_015_file_store_empty_directory`, `req_rt_015_file_store_multiple_clients`, `req_rt_015_file_store_overwrite_token` | Factory function, backend dispatch, file store operations, edge cases | Written |
 
 ---
 
