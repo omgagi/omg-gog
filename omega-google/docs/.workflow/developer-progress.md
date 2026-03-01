@@ -1,6 +1,6 @@
-# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4 + RT-M5
+# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4 + RT-M5 + RT-M6-Batch1
 
-## Status: COMPLETE (RT-M5 File I/O)
+## Status: COMPLETE (RT-M6 Batch 1 -- Small Service Handlers)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -13,7 +13,36 @@ RT-M3 Execution Infrastructure: API helpers, pagination, ServiceContext -- all 8
 RT-M3 Review Fixes: All critical and major findings addressed.
 RT-M4 Core Service Handlers: Gmail, Calendar, Drive handlers converted to async with auth bootstrap and full API dispatch.
 RT-M5 File I/O: Drive download/upload, Gmail attachment download, shared export module implemented.
-**1380 unit tests + 147 integration tests passing (1527 total).** Zero failures. Zero clippy warnings.
+RT-M6 Batch 1: Forms, People, Groups, Keep, AppScript handlers converted from sync stubs to async with auth bootstrap and full API dispatch.
+**1385 unit tests + 142 integration tests passing (1527 total).** Zero failures. Zero clippy warnings.
+
+### RT-M6 Batch 1: Small Service Handlers (Forms, People, Groups, Keep, AppScript)
+
+Converted 5 small service handlers from sync stubs to async handlers that bootstrap auth and dispatch subcommands, following the exact pattern established by handle_gmail/handle_calendar/handle_drive.
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/cli/mod.rs` | Replaced 5 sync stub handlers with async implementations: `handle_forms` (4 sub-handlers), `handle_people` (4 sub-handlers), `handle_groups` (2 sub-handlers + group lookup), `handle_keep` (4 sub-handlers), `handle_appscript` (4 sub-handlers). Updated dispatch table entries to `.await`. Total: 18 new async sub-handler functions. |
+
+#### Handler Details
+
+| Service | Handler | Sub-handlers | Features |
+|---------|---------|-------------|----------|
+| Forms | `handle_forms` | `handle_forms_get`, `handle_forms_create`, `handle_forms_responses_list`, `handle_forms_responses_get` | Nested responses subcommand, dry-run for create, pagination for responses list with filter |
+| People | `handle_people` | `handle_people_me`, `handle_people_get`, `handle_people_search`, `handle_people_relations` | Query join for search, optional resource_name for relations |
+| Groups | `handle_groups` | `handle_groups_list`, `handle_groups_members` | Paginated list via `paginate()`, group lookup by email before members list, fail_empty support |
+| Keep | `handle_keep` | `handle_keep_list`, `handle_keep_get`, `handle_keep_search`, `handle_keep_attachment` | Paginated list with filter, client-side search (fetch all + filter), binary attachment download via `api_get_raw` with stdout/file output |
+| AppScript | `handle_appscript` | `handle_appscript_get`, `handle_appscript_content`, `handle_appscript_run`, `handle_appscript_create` | `normalize_google_id` for URL/bare ID input, `build_run_body` validation for JSON params, dry-run for run/create |
+
+#### Test Results
+
+| Check | Result |
+|-------|--------|
+| `cargo build` | PASS |
+| `cargo clippy -- -D warnings` | PASS (zero warnings) |
+| `cargo test --jobs 1` | **1385 unit + 142 integration = 1527 total, 0 failures** |
 
 ### RT-M5: File I/O
 

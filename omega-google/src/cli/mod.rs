@@ -144,15 +144,15 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
         root::Command::Docs(args) => handle_docs(args, flags),
         root::Command::Sheets(args) => handle_sheets(args, flags),
         root::Command::Slides(args) => handle_slides(args, flags),
-        root::Command::Forms(args) => handle_forms(args, flags),
+        root::Command::Forms(args) => handle_forms(args, flags).await,
         root::Command::Chat(args) => handle_chat(args, flags),
         root::Command::Classroom(args) => handle_classroom(args, flags),
         root::Command::Tasks(args) => handle_tasks(args, flags),
         root::Command::Contacts(args) => handle_contacts(args, flags),
-        root::Command::People(args) => handle_people(args, flags),
-        root::Command::Groups(args) => handle_groups(args, flags),
-        root::Command::Keep(args) => handle_keep(args, flags),
-        root::Command::AppScript(args) => handle_appscript(args, flags),
+        root::Command::People(args) => handle_people(args, flags).await,
+        root::Command::Groups(args) => handle_groups(args, flags).await,
+        root::Command::Keep(args) => handle_keep(args, flags).await,
+        root::Command::AppScript(args) => handle_appscript(args, flags).await,
         root::Command::Open(args) => handle_open(args, flags),
         root::Command::Completion(args) => handle_completion(args),
         root::Command::ExitCodes => handle_exit_codes(flags),
@@ -2928,8 +2928,162 @@ fn handle_slides(_args: slides::SlidesArgs, _flags: &root::RootFlags) -> i32 {
 }
 
 /// Handle the `forms` command and its subcommands.
-fn handle_forms(_args: forms::FormsArgs, _flags: &root::RootFlags) -> i32 {
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+async fn handle_forms(args: forms::FormsArgs, flags: &root::RootFlags) -> i32 {
+    use forms::FormsCommand;
+
+    // Bootstrap auth
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    match args.command {
+        FormsCommand::Get(ref a) => handle_forms_get(&ctx, a).await,
+        FormsCommand::Create(ref a) => handle_forms_create(&ctx, a).await,
+        FormsCommand::Responses(ref a) => {
+            match a.command {
+                forms::FormsResponsesCommand::List(ref la) => handle_forms_responses_list(&ctx, la).await,
+                forms::FormsResponsesCommand::Get(ref ga) => handle_forms_responses_get(&ctx, ga).await,
+            }
+        }
+    }
+}
+
+/// Handle Forms get.
+async fn handle_forms_get(
+    ctx: &crate::services::ServiceContext,
+    args: &forms::FormsGetArgs,
+) -> i32 {
+    let url = crate::services::forms::build_form_get_url(&args.form_id);
+    let form: crate::services::forms::types::Form = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&form) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Forms create.
+async fn handle_forms_create(
+    ctx: &crate::services::ServiceContext,
+    args: &forms::FormsCreateArgs,
+) -> i32 {
+    let url = crate::services::forms::build_form_create_url();
+    let body = crate::services::forms::build_form_create_body(
+        &args.title,
+        args.description.as_deref(),
+    );
+
+    match crate::http::api::api_post::<crate::services::forms::types::Form>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(form)) => {
+            if let Err(e) = ctx.write_output(&form) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!("[dry-run] would create form '{}'", args.title);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Forms responses list.
+async fn handle_forms_responses_list(
+    ctx: &crate::services::ServiceContext,
+    args: &forms::FormsResponsesListArgs,
+) -> i32 {
+    let url = crate::services::forms::responses::build_responses_list_url_with_options(
+        &args.form_id,
+        args.max,
+        args.page.as_deref(),
+        args.filter.as_deref(),
+    );
+
+    let list: crate::services::forms::types::FormResponseList = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let next_token = list.next_page_token.clone();
+    if let Err(e) = ctx.write_paginated(&list, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Forms responses get.
+async fn handle_forms_responses_get(
+    ctx: &crate::services::ServiceContext,
+    args: &forms::FormsResponsesGetArgs,
+) -> i32 {
+    let url = crate::services::forms::build_response_get_url(&args.form_id, &args.response_id);
+
+    let response: crate::services::forms::types::FormResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&response) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
 }
 
@@ -2958,27 +3112,714 @@ fn handle_contacts(_args: contacts::ContactsArgs, _flags: &root::RootFlags) -> i
 }
 
 /// Handle the `people` command and its subcommands.
-fn handle_people(_args: people::PeopleArgs, _flags: &root::RootFlags) -> i32 {
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+async fn handle_people(args: people::PeopleArgs, flags: &root::RootFlags) -> i32 {
+    use people::PeopleCommand;
+
+    // Bootstrap auth
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    match args.command {
+        PeopleCommand::Me => handle_people_me(&ctx).await,
+        PeopleCommand::Get(ref a) => handle_people_get(&ctx, a).await,
+        PeopleCommand::Search(ref a) => handle_people_search(&ctx, a).await,
+        PeopleCommand::Relations(ref a) => handle_people_relations(&ctx, a).await,
+    }
+}
+
+/// Handle People me.
+async fn handle_people_me(ctx: &crate::services::ServiceContext) -> i32 {
+    let url = crate::services::people::people::build_people_me_url();
+    let person: crate::services::people::types::PersonResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&person) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle People get.
+async fn handle_people_get(
+    ctx: &crate::services::ServiceContext,
+    args: &people::PeopleGetArgs,
+) -> i32 {
+    let url = crate::services::people::people::build_people_get_url(&args.resource_name);
+    let person: crate::services::people::types::PersonResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&person) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle People search.
+async fn handle_people_search(
+    ctx: &crate::services::ServiceContext,
+    args: &people::PeopleSearchArgs,
+) -> i32 {
+    let query = args.query.join(" ");
+    let url = crate::services::people::people::build_people_search_url(
+        &query,
+        args.max,
+        args.page.as_deref(),
+    );
+
+    let result: crate::services::people::types::SearchResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let next_token = result.next_page_token.clone();
+    if let Err(e) = ctx.write_paginated(&result, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle People relations.
+async fn handle_people_relations(
+    ctx: &crate::services::ServiceContext,
+    args: &people::PeopleRelationsArgs,
+) -> i32 {
+    let url = crate::services::people::people::build_people_relations_url(
+        args.resource_name.as_deref(),
+    );
+
+    let result: serde_json::Value = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&result) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
 }
 
 /// Handle the `groups` command and its subcommands.
-fn handle_groups(_args: groups::GroupsArgs, _flags: &root::RootFlags) -> i32 {
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+async fn handle_groups(args: groups::GroupsArgs, flags: &root::RootFlags) -> i32 {
+    use groups::GroupsCommand;
+
+    // Bootstrap auth
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    match args.command {
+        GroupsCommand::List(ref a) => handle_groups_list(&ctx, a).await,
+        GroupsCommand::Members(ref a) => handle_groups_members(&ctx, a).await,
+    }
+}
+
+/// Handle Groups list.
+async fn handle_groups_list(
+    ctx: &crate::services::ServiceContext,
+    args: &groups::GroupsListArgs,
+) -> i32 {
+    let params = crate::services::common::PaginationParams {
+        max_results: args.max,
+        page_token: args.page.clone(),
+        all_pages: args.all,
+        fail_empty: args.fail_empty,
+    };
+
+    let max = args.max;
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| crate::services::groups::groups::build_groups_list_url(max, pt),
+        |value| {
+            let groups = value
+                .get("groups")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((groups, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if crate::services::pagination::check_fail_empty(&items, args.fail_empty).is_err() {
+        return codes::EMPTY_RESULTS;
+    }
+
+    let response = serde_json::json!({
+        "groups": items,
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Groups members list.
+async fn handle_groups_members(
+    ctx: &crate::services::ServiceContext,
+    args: &groups::GroupsMembersArgs,
+) -> i32 {
+    // First, look up the group by email to get the group resource name
+    let lookup_url = crate::services::groups::groups::build_group_lookup_url(&args.group_email);
+    let group_lookup: serde_json::Value = match crate::http::api::api_get(
+        &ctx.client,
+        &lookup_url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(g) => g,
+        Err(e) => {
+            eprintln!("Error looking up group '{}': {}", args.group_email, e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let group_name = match group_lookup.get("name").and_then(|v| v.as_str()) {
+        Some(name) => name.to_string(),
+        None => {
+            eprintln!("Error: could not resolve group name for '{}'", args.group_email);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    let params = crate::services::common::PaginationParams {
+        max_results: args.max,
+        page_token: args.page.clone(),
+        all_pages: args.all,
+        fail_empty: args.fail_empty,
+    };
+
+    let max = args.max;
+    let gn = group_name.clone();
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| crate::services::groups::groups::build_members_list_url(&gn, max, pt),
+        |value| {
+            let members = value
+                .get("memberships")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((members, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if crate::services::pagination::check_fail_empty(&items, args.fail_empty).is_err() {
+        return codes::EMPTY_RESULTS;
+    }
+
+    let response = serde_json::json!({
+        "memberships": items,
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
 }
 
 /// Handle the `keep` command and its subcommands.
-fn handle_keep(_args: keep::KeepArgs, _flags: &root::RootFlags) -> i32 {
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+async fn handle_keep(args: keep::KeepArgs, flags: &root::RootFlags) -> i32 {
+    use keep::KeepCommand;
+
+    // Bootstrap auth
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    match args.command {
+        KeepCommand::List(ref a) => handle_keep_list(&ctx, a).await,
+        KeepCommand::Get(ref a) => handle_keep_get(&ctx, a).await,
+        KeepCommand::Search(ref a) => handle_keep_search(&ctx, a).await,
+        KeepCommand::Attachment(ref a) => handle_keep_attachment(&ctx, a).await,
+    }
+}
+
+/// Handle Keep list.
+async fn handle_keep_list(
+    ctx: &crate::services::ServiceContext,
+    args: &keep::KeepListArgs,
+) -> i32 {
+    let params = crate::services::common::PaginationParams {
+        max_results: args.max,
+        page_token: args.page.clone(),
+        all_pages: args.all,
+        fail_empty: args.fail_empty,
+    };
+
+    let max = args.max;
+    let filter = args.filter.clone();
+    let (items, next_token) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| crate::services::keep::notes::build_notes_list_url(max, pt, filter.as_deref()),
+        |value| {
+            let notes = value
+                .get("notes")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((notes, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if crate::services::pagination::check_fail_empty(&items, args.fail_empty).is_err() {
+        return codes::EMPTY_RESULTS;
+    }
+
+    let response = serde_json::json!({
+        "notes": items,
+    });
+
+    if let Err(e) = ctx.write_paginated(&response, next_token.as_deref()) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
 }
 
-/// Handle the `appscript` command and its subcommands.
-fn handle_appscript(_args: appscript::AppScriptArgs, _flags: &root::RootFlags) -> i32 {
-    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+/// Handle Keep get.
+async fn handle_keep_get(
+    ctx: &crate::services::ServiceContext,
+    args: &keep::KeepGetArgs,
+) -> i32 {
+    let url = crate::services::keep::notes::build_note_get_url(&args.note_id);
+    let note: crate::services::keep::types::Note = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&note) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
     codes::SUCCESS
+}
+
+/// Handle Keep search (client-side: list all notes then filter).
+async fn handle_keep_search(
+    ctx: &crate::services::ServiceContext,
+    args: &keep::KeepSearchArgs,
+) -> i32 {
+    // Fetch all notes (paginate through all pages)
+    let params = crate::services::common::PaginationParams {
+        max_results: None,
+        page_token: None,
+        all_pages: true,
+        fail_empty: false,
+    };
+
+    let (items, _) = match crate::services::pagination::paginate(
+        &ctx.client,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        &params,
+        |pt| crate::services::keep::notes::build_notes_list_url(None, pt, None),
+        |value| {
+            let notes = value
+                .get("notes")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.to_vec())
+                .unwrap_or_default();
+            let next = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            Ok((notes, next))
+        },
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    // Parse into Note types for client-side search
+    let notes: Vec<crate::services::keep::types::Note> = items
+        .iter()
+        .filter_map(|v| serde_json::from_value(v.clone()).ok())
+        .collect();
+
+    let results = crate::services::keep::notes::build_notes_search(&notes, &args.query);
+
+    // Apply max limit if specified
+    let limited: Vec<&crate::services::keep::types::Note> = if let Some(max) = args.max {
+        results.into_iter().take(max as usize).collect()
+    } else {
+        results
+    };
+
+    let response = serde_json::json!({
+        "notes": limited,
+        "resultCount": limited.len(),
+    });
+
+    if let Err(e) = ctx.write_output(&response) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle Keep attachment download.
+async fn handle_keep_attachment(
+    ctx: &crate::services::ServiceContext,
+    args: &keep::KeepAttachmentArgs,
+) -> i32 {
+    let url = crate::services::keep::attachments::build_attachment_download_url(&args.attachment_name);
+
+    let response = match crate::http::api::api_get_raw(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let bytes = match response.bytes().await {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Error reading response: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    if let Some(ref out_path) = args.out {
+        match std::fs::write(out_path, &bytes) {
+            Ok(()) => {
+                eprintln!("Downloaded {} bytes to {}", bytes.len(), out_path);
+                codes::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("Error writing file: {}", e);
+                codes::GENERIC_ERROR
+            }
+        }
+    } else {
+        // Write raw bytes to stdout
+        use std::io::Write;
+        match std::io::stdout().write_all(&bytes) {
+            Ok(()) => codes::SUCCESS,
+            Err(e) => {
+                eprintln!("Error writing to stdout: {}", e);
+                codes::GENERIC_ERROR
+            }
+        }
+    }
+}
+
+/// Handle the `appscript` command and its subcommands.
+async fn handle_appscript(args: appscript::AppScriptArgs, flags: &root::RootFlags) -> i32 {
+    use appscript::AppScriptCommand;
+
+    // Bootstrap auth
+    let ctx = match crate::services::bootstrap_service_context(flags).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::AUTH_REQUIRED;
+        }
+    };
+
+    match args.command {
+        AppScriptCommand::Get(ref a) => handle_appscript_get(&ctx, a).await,
+        AppScriptCommand::Content(ref a) => handle_appscript_content(&ctx, a).await,
+        AppScriptCommand::Run(ref a) => handle_appscript_run(&ctx, a).await,
+        AppScriptCommand::Create(ref a) => handle_appscript_create(&ctx, a).await,
+    }
+}
+
+/// Handle AppScript get project.
+async fn handle_appscript_get(
+    ctx: &crate::services::ServiceContext,
+    args: &appscript::AppScriptGetArgs,
+) -> i32 {
+    let script_id = crate::services::appscript::scripts::normalize_google_id(&args.script_id);
+    let url = crate::services::appscript::scripts::build_project_get_url(&script_id);
+
+    let project: crate::services::appscript::types::Project = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&project) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle AppScript get content.
+async fn handle_appscript_content(
+    ctx: &crate::services::ServiceContext,
+    args: &appscript::AppScriptContentArgs,
+) -> i32 {
+    let script_id = crate::services::appscript::scripts::normalize_google_id(&args.script_id);
+    let url = crate::services::appscript::scripts::build_content_get_url(&script_id);
+
+    let content: crate::services::appscript::types::Content = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    if let Err(e) = ctx.write_output(&content) {
+        eprintln!("Error: {}", e);
+        return map_error_to_exit_code(&e);
+    }
+    codes::SUCCESS
+}
+
+/// Handle AppScript run.
+async fn handle_appscript_run(
+    ctx: &crate::services::ServiceContext,
+    args: &appscript::AppScriptRunArgs,
+) -> i32 {
+    let script_id = crate::services::appscript::scripts::normalize_google_id(&args.script_id);
+    let url = crate::services::appscript::scripts::build_run_url(&script_id);
+
+    let body = match crate::services::appscript::scripts::build_run_body(
+        &args.function,
+        args.params.as_deref(),
+        args.dev_mode,
+    ) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::USAGE_ERROR;
+        }
+    };
+
+    match crate::http::api::api_post::<crate::services::appscript::types::Operation>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(op)) => {
+            if let Err(e) = ctx.write_output(&op) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!(
+                "[dry-run] would run function '{}' on script '{}'",
+                args.function, script_id
+            );
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle AppScript create project.
+async fn handle_appscript_create(
+    ctx: &crate::services::ServiceContext,
+    args: &appscript::AppScriptCreateArgs,
+) -> i32 {
+    let url = crate::services::appscript::scripts::build_project_create_url();
+    let body = crate::services::appscript::scripts::build_project_create_body(
+        &args.title,
+        args.parent_id.as_deref(),
+    );
+
+    match crate::http::api::api_post::<crate::services::appscript::types::Project>(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(project)) => {
+            if let Err(e) = ctx.write_output(&project) {
+                eprintln!("Error: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!("[dry-run] would create project '{}'", args.title);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
 }
 
 /// Handle the `open` command: offline URL generation.
