@@ -4,6 +4,10 @@ pub mod exit_codes;
 pub mod gmail;
 pub mod calendar;
 pub mod drive;
+pub mod docs;
+pub mod sheets;
+pub mod slides;
+pub mod forms;
 
 use std::ffi::OsString;
 
@@ -78,6 +82,10 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
         root::Command::Gmail(args) => handle_gmail(args, flags),
         root::Command::Calendar(args) => handle_calendar(args, flags),
         root::Command::Drive(args) => handle_drive(args, flags),
+        root::Command::Docs(args) => handle_docs(args, flags),
+        root::Command::Sheets(args) => handle_sheets(args, flags),
+        root::Command::Slides(args) => handle_slides(args, flags),
+        root::Command::Forms(args) => handle_forms(args, flags),
     }
 }
 
@@ -567,6 +575,31 @@ fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
     }
 
     // All other Drive commands require authentication
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `docs` command and its subcommands.
+fn handle_docs(_args: docs::DocsArgs, _flags: &root::RootFlags) -> i32 {
+    // All Docs commands require authentication
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `sheets` command and its subcommands.
+fn handle_sheets(_args: sheets::SheetsArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `slides` command and its subcommands.
+fn handle_slides(_args: slides::SlidesArgs, _flags: &root::RootFlags) -> i32 {
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `forms` command and its subcommands.
+fn handle_forms(_args: forms::FormsArgs, _flags: &root::RootFlags) -> i32 {
     eprintln!("Command registered. API call requires: omega-google auth add <email>");
     codes::SUCCESS
 }
