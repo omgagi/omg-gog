@@ -11,7 +11,9 @@ pub fn build_events_list_url(
     page_token: Option<&str>,
     query: Option<&str>,
 ) -> String {
-    let base = format!("{}/calendars/{}/events", CALENDAR_BASE_URL, calendar_id);
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+    let encoded_cal = utf8_percent_encode(calendar_id, NON_ALPHANUMERIC).to_string();
+    let base = format!("{}/calendars/{}/events", CALENDAR_BASE_URL, encoded_cal);
     let mut params = Vec::new();
     if let Some(tmin) = time_min {
         params.push(format!("timeMin={}", tmin));
@@ -26,7 +28,10 @@ pub fn build_events_list_url(
         params.push(format!("pageToken={}", token));
     }
     if let Some(q) = query {
-        params.push(format!("q={}", q));
+        params.push(format!(
+            "q={}",
+            url::form_urlencoded::byte_serialize(q.as_bytes()).collect::<String>()
+        ));
     }
     params.push("singleEvents=true".to_string());
     params.push("orderBy=startTime".to_string());
@@ -39,9 +44,12 @@ pub fn build_events_list_url(
 
 /// Build URL for getting a single event.
 pub fn build_event_get_url(calendar_id: &str, event_id: &str) -> String {
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+    let encoded_cal = utf8_percent_encode(calendar_id, NON_ALPHANUMERIC).to_string();
+    let encoded_event = utf8_percent_encode(event_id, NON_ALPHANUMERIC).to_string();
     format!(
         "{}/calendars/{}/events/{}",
-        CALENDAR_BASE_URL, calendar_id, event_id
+        CALENDAR_BASE_URL, encoded_cal, encoded_event
     )
 }
 
@@ -107,59 +115,82 @@ pub fn build_event_create_body(
 
 /// Build URL for creating an event.
 pub fn build_event_create_url(calendar_id: &str) -> String {
-    format!("{}/calendars/{}/events", CALENDAR_BASE_URL, calendar_id)
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+    let encoded_cal = utf8_percent_encode(calendar_id, NON_ALPHANUMERIC).to_string();
+    format!("{}/calendars/{}/events", CALENDAR_BASE_URL, encoded_cal)
 }
 
 /// Build URL for updating an event.
 pub fn build_event_update_url(calendar_id: &str, event_id: &str) -> String {
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+    let encoded_cal = utf8_percent_encode(calendar_id, NON_ALPHANUMERIC).to_string();
+    let encoded_event = utf8_percent_encode(event_id, NON_ALPHANUMERIC).to_string();
     format!(
         "{}/calendars/{}/events/{}",
-        CALENDAR_BASE_URL, calendar_id, event_id
+        CALENDAR_BASE_URL, encoded_cal, encoded_event
     )
 }
 
 /// Build URL for deleting an event.
 pub fn build_event_delete_url(calendar_id: &str, event_id: &str) -> String {
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+    let encoded_cal = utf8_percent_encode(calendar_id, NON_ALPHANUMERIC).to_string();
+    let encoded_event = utf8_percent_encode(event_id, NON_ALPHANUMERIC).to_string();
     format!(
         "{}/calendars/{}/events/{}",
-        CALENDAR_BASE_URL, calendar_id, event_id
+        CALENDAR_BASE_URL, encoded_cal, encoded_event
     )
+}
+
+/// Parse an event datetime string to a fixed-offset DateTime for correct comparison.
+fn parse_event_time(s: &str) -> Option<chrono::DateTime<chrono::FixedOffset>> {
+    chrono::DateTime::parse_from_rfc3339(s).ok()
 }
 
 /// Detect scheduling conflicts in a list of events.
 /// Returns pairs of (event1_id, event2_id) that overlap.
+/// Parses datetime strings to `chrono::DateTime<FixedOffset>` before comparison
+/// so that events with different timezone offsets are compared correctly.
 pub fn find_conflicts(events: &[Event]) -> Vec<(String, String)> {
     let mut conflicts = Vec::new();
     for i in 0..events.len() {
         for j in (i + 1)..events.len() {
             let e1 = &events[i];
             let e2 = &events[j];
-            // Get start/end datetimes
-            let e1_start = e1
+            // Get start/end datetimes as strings
+            let e1_start_str = e1
                 .start
                 .as_ref()
                 .and_then(|s| s.date_time.as_deref());
-            let e1_end = e1
+            let e1_end_str = e1
                 .end
                 .as_ref()
                 .and_then(|e| e.date_time.as_deref());
-            let e2_start = e2
+            let e2_start_str = e2
                 .start
                 .as_ref()
                 .and_then(|s| s.date_time.as_deref());
-            let e2_end = e2
+            let e2_end_str = e2
                 .end
                 .as_ref()
                 .and_then(|e| e.date_time.as_deref());
 
-            if let (Some(s1), Some(e1_e), Some(s2), Some(e2_e)) =
-                (e1_start, e1_end, e2_start, e2_end)
+            if let (Some(s1_str), Some(e1_e_str), Some(s2_str), Some(e2_e_str)) =
+                (e1_start_str, e1_end_str, e2_start_str, e2_end_str)
             {
-                // Two events overlap if one starts before the other ends
-                if s1 < e2_e && s2 < e1_e {
-                    let id1 = e1.id.as_deref().unwrap_or("").to_string();
-                    let id2 = e2.id.as_deref().unwrap_or("").to_string();
-                    conflicts.push((id1, id2));
+                // Parse to DateTime<FixedOffset> for correct cross-timezone comparison
+                let s1 = parse_event_time(s1_str);
+                let e1_e = parse_event_time(e1_e_str);
+                let s2 = parse_event_time(s2_str);
+                let e2_e = parse_event_time(e2_e_str);
+
+                if let (Some(s1), Some(e1_e), Some(s2), Some(e2_e)) = (s1, e1_e, s2, e2_e) {
+                    // Two events overlap if one starts before the other ends
+                    if s1 < e2_e && s2 < e1_e {
+                        let id1 = e1.id.as_deref().unwrap_or("").to_string();
+                        let id2 = e2.id.as_deref().unwrap_or("").to_string();
+                        conflicts.push((id1, id2));
+                    }
                 }
             }
         }

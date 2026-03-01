@@ -1,18 +1,584 @@
 pub mod root;
 pub mod desire_paths;
 pub mod exit_codes;
+pub mod gmail;
+pub mod calendar;
+pub mod drive;
 
 use std::ffi::OsString;
 
+use clap::Parser;
+
+use crate::error::exit::codes;
+
+/// Safely serialize a value to pretty-printed JSON, returning an error JSON string on failure.
+fn to_json_pretty(val: &impl serde::Serialize) -> String {
+    serde_json::to_string_pretty(val)
+        .unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e))
+}
+
 /// Execute the CLI with the given arguments. Returns the exit code.
-pub async fn execute(_args: Vec<OsString>) -> i32 {
-    // TODO: implement full CLI dispatch
-    0
+pub async fn execute(args: Vec<OsString>) -> i32 {
+    // Convert OsString args to String for desire path rewriting
+    // Use to_string_lossy to convert non-UTF-8 bytes to the Unicode replacement
+    // character rather than silently dropping arguments.
+    let string_args: Vec<String> = args
+        .iter()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+
+    // Apply desire path rewriting before parsing
+    let rewritten = rewrite_desire_path_args(string_args);
+
+    // Build the full arg list: prepend the binary name for clap
+    let mut full_args = vec!["omega-google".to_string()];
+    full_args.extend(rewritten);
+
+    // Parse with clap
+    let cli = match root::Cli::try_parse_from(&full_args) {
+        Ok(cli) => cli,
+        Err(e) => {
+            // clap errors: help (exit 0), version (exit 0), usage errors (exit 2)
+            let exit = if e.use_stderr() {
+                eprintln!("Error: {}", e.render().to_string().trim());
+                codes::USAGE_ERROR
+            } else {
+                // --help or --version output from clap
+                print!("{}", e.render());
+                codes::SUCCESS
+            };
+            return exit;
+        }
+    };
+
+    // Dispatch to the appropriate command handler
+    match cli.command {
+        Some(cmd) => dispatch_command(cmd, &cli.flags).await,
+        None => {
+            // No subcommand: print help
+            let full_args_help = vec!["omega-google".to_string(), "--help".to_string()];
+            match root::Cli::try_parse_from(&full_args_help) {
+                Ok(_) => codes::SUCCESS,
+                Err(e) => {
+                    print!("{}", e.render());
+                    codes::SUCCESS
+                }
+            }
+        }
+    }
+}
+
+/// Dispatch a parsed command to its handler.
+async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
+    match cmd {
+        root::Command::Version => handle_version(flags),
+        root::Command::Config(args) => handle_config(args, flags),
+        root::Command::Auth(args) => handle_auth(args, flags),
+        root::Command::Time(args) => handle_time(args, flags),
+        root::Command::Gmail(args) => handle_gmail(args, flags),
+        root::Command::Calendar(args) => handle_calendar(args, flags),
+        root::Command::Drive(args) => handle_drive(args, flags),
+    }
+}
+
+/// Handle the `version` command.
+fn handle_version(flags: &root::RootFlags) -> i32 {
+    let version = env!("CARGO_PKG_VERSION");
+    let name = env!("CARGO_PKG_NAME");
+
+    if flags.json {
+        let version_json = serde_json::json!({
+            "version": version,
+            "name": name,
+        });
+        println!("{}", to_json_pretty(&version_json));
+    } else {
+        println!("{} {}", name, version);
+    }
+    codes::SUCCESS
+}
+
+/// Handle the `config` command and its subcommands.
+fn handle_config(args: root::ConfigArgs, flags: &root::RootFlags) -> i32 {
+    match args.command {
+        root::ConfigCommand::Get(get_args) => handle_config_get(&get_args.key, flags),
+        root::ConfigCommand::Set(set_args) => handle_config_set(&set_args.key, &set_args.value, flags),
+        root::ConfigCommand::Unset(unset_args) => handle_config_unset(&unset_args.key, flags),
+        root::ConfigCommand::List => handle_config_list(flags),
+        root::ConfigCommand::Keys => handle_config_keys(flags),
+        root::ConfigCommand::Path => handle_config_path(flags),
+    }
+}
+
+fn handle_config_get(key: &str, flags: &root::RootFlags) -> i32 {
+    let cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+    let json_val = match serde_json::to_value(&cfg) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+    match json_val.get(key) {
+        Some(val) if !val.is_null() => {
+            if flags.json {
+                println!("{}", to_json_pretty(val));
+            } else {
+                match val {
+                    serde_json::Value::String(s) => println!("{}", s),
+                    other => println!("{}", other),
+                }
+            }
+            codes::SUCCESS
+        }
+        _ => {
+            eprintln!("Error: key '{}' is not set", key);
+            codes::CONFIG_ERROR
+        }
+    }
+}
+
+fn handle_config_set(key: &str, value: &str, _flags: &root::RootFlags) -> i32 {
+    let mut cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    match key {
+        "keyring_backend" => cfg.keyring_backend = Some(value.to_string()),
+        "default_timezone" => cfg.default_timezone = Some(value.to_string()),
+        _ => {
+            eprintln!("Error: unknown config key '{}'. Use 'config keys' to see valid keys.", key);
+            return codes::USAGE_ERROR;
+        }
+    }
+
+    if let Err(e) = crate::config::write_config(&cfg) {
+        eprintln!("Error writing config: {}", e);
+        return codes::CONFIG_ERROR;
+    }
+    codes::SUCCESS
+}
+
+fn handle_config_unset(key: &str, _flags: &root::RootFlags) -> i32 {
+    let mut cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading config: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    match key {
+        "keyring_backend" => cfg.keyring_backend = None,
+        "default_timezone" => cfg.default_timezone = None,
+        "account_aliases" => cfg.account_aliases = None,
+        "account_clients" => cfg.account_clients = None,
+        "client_domains" => cfg.client_domains = None,
+        _ => {
+            eprintln!("Error: unknown config key '{}'. Use 'config keys' to see valid keys.", key);
+            return codes::USAGE_ERROR;
+        }
+    }
+
+    if let Err(e) = crate::config::write_config(&cfg) {
+        eprintln!("Error writing config: {}", e);
+        return codes::CONFIG_ERROR;
+    }
+    codes::SUCCESS
+}
+
+fn handle_config_list(flags: &root::RootFlags) -> i32 {
+    let cfg = match crate::config::read_config() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return codes::CONFIG_ERROR;
+        }
+    };
+
+    if flags.json {
+        let json_val = match serde_json::to_value(&cfg) {
+            Ok(v) => v,
+            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+        };
+        println!("{}", to_json_pretty(&json_val));
+    } else {
+        let json_val = match serde_json::to_value(&cfg) {
+            Ok(v) => v,
+            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+        };
+        if let Some(obj) = json_val.as_object() {
+            for (k, v) in obj {
+                if !v.is_null() {
+                    match v {
+                        serde_json::Value::String(s) => println!("{}\t{}", k, s),
+                        other => println!("{}\t{}", k, other),
+                    }
+                }
+            }
+        }
+    }
+    codes::SUCCESS
+}
+
+fn handle_config_keys(flags: &root::RootFlags) -> i32 {
+    let keys = crate::config::known_keys();
+    if flags.json {
+        let json_val = match serde_json::to_value(&keys) {
+            Ok(v) => v,
+            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+        };
+        println!("{}", to_json_pretty(&json_val));
+    } else {
+        for key in &keys {
+            println!("{}", key);
+        }
+    }
+    codes::SUCCESS
+}
+
+fn handle_config_path(flags: &root::RootFlags) -> i32 {
+    match crate::config::config_path() {
+        Ok(path) => {
+            if flags.json {
+                let json_val = serde_json::json!({"path": path.to_string_lossy()});
+                println!("{}", to_json_pretty(&json_val));
+            } else {
+                println!("{}", path.display());
+            }
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            codes::CONFIG_ERROR
+        }
+    }
+}
+
+/// Handle the `auth` command and its subcommands.
+fn handle_auth(args: root::AuthArgs, flags: &root::RootFlags) -> i32 {
+    match args.command {
+        root::AuthCommand::Credentials(cred_args) => handle_auth_credentials(&cred_args.path, flags),
+        root::AuthCommand::Add(_add_args) => {
+            eprintln!("Error: OAuth flow not yet implemented. Use 'omega-google auth add' after OAuth is available.");
+            codes::GENERIC_ERROR
+        }
+        root::AuthCommand::Remove(remove_args) => {
+            eprintln!("Error: auth remove for '{}' not yet implemented.", remove_args.email);
+            codes::GENERIC_ERROR
+        }
+        root::AuthCommand::List => handle_auth_list(flags),
+        root::AuthCommand::Status => {
+            eprintln!("Error: auth status not yet implemented.");
+            codes::GENERIC_ERROR
+        }
+        root::AuthCommand::Services => handle_auth_services(flags),
+        root::AuthCommand::Tokens(tokens_args) => handle_auth_tokens(tokens_args, flags),
+        root::AuthCommand::Alias(alias_args) => handle_auth_alias(alias_args, flags),
+    }
+}
+
+fn handle_auth_credentials(path: &str, _flags: &root::RootFlags) -> i32 {
+    let path = std::path::Path::new(path);
+    if !path.exists() {
+        eprintln!("Error: file not found: {}", path.display());
+        return codes::GENERIC_ERROR;
+    }
+
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error reading file: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    let raw: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error parsing JSON: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    let creds = match crate::config::credentials::parse_credentials(&raw) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error parsing credentials: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    match crate::config::write_client_credentials(crate::config::DEFAULT_CLIENT_NAME, &creds) {
+        Ok(()) => {
+            eprintln!("Credentials stored for client '{}'.", crate::config::DEFAULT_CLIENT_NAME);
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error storing credentials: {}", e);
+            codes::CONFIG_ERROR
+        }
+    }
+}
+
+fn handle_auth_list(flags: &root::RootFlags) -> i32 {
+    // For now, show a message since we don't have keyring integration yet
+    if flags.json {
+        println!("[]");
+    } else {
+        eprintln!("No authenticated accounts found. Use 'omega-google auth add' to add one.");
+    }
+    codes::SUCCESS
+}
+
+fn handle_auth_services(flags: &root::RootFlags) -> i32 {
+    let services = crate::auth::services_info();
+
+    if flags.json {
+        let json_val = match serde_json::to_value(&services) {
+            Ok(v) => v,
+            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+        };
+        println!("{}", to_json_pretty(&json_val));
+    } else {
+        for si in &services {
+            let user_marker = if si.user { "user" } else { "admin" };
+            println!("{:?}\t{}\t{}", si.service, user_marker, si.scopes.join(", "));
+        }
+    }
+    codes::SUCCESS
+}
+
+fn handle_auth_tokens(args: root::AuthTokensArgs, flags: &root::RootFlags) -> i32 {
+    match args.command {
+        root::AuthTokensCommand::List => {
+            if flags.json {
+                println!("[]");
+            } else {
+                eprintln!("No tokens found.");
+            }
+            codes::SUCCESS
+        }
+        root::AuthTokensCommand::Delete(del_args) => {
+            eprintln!("Error: token deletion for '{}' not yet implemented.", del_args.email);
+            codes::GENERIC_ERROR
+        }
+    }
+}
+
+fn handle_auth_alias(args: root::AuthAliasArgs, flags: &root::RootFlags) -> i32 {
+    match args.command {
+        root::AuthAliasCommand::Set(set_args) => {
+            let mut cfg = match crate::config::read_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Error reading config: {}", e);
+                    return codes::CONFIG_ERROR;
+                }
+            };
+            let aliases = cfg.account_aliases.get_or_insert_with(Default::default);
+            aliases.insert(set_args.alias.clone(), set_args.email.clone());
+            if let Err(e) = crate::config::write_config(&cfg) {
+                eprintln!("Error writing config: {}", e);
+                return codes::CONFIG_ERROR;
+            }
+            eprintln!("Alias '{}' set to '{}'.", set_args.alias, set_args.email);
+            codes::SUCCESS
+        }
+        root::AuthAliasCommand::Unset(unset_args) => {
+            let mut cfg = match crate::config::read_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Error reading config: {}", e);
+                    return codes::CONFIG_ERROR;
+                }
+            };
+            if let Some(ref mut aliases) = cfg.account_aliases {
+                aliases.remove(&unset_args.alias);
+            }
+            if let Err(e) = crate::config::write_config(&cfg) {
+                eprintln!("Error writing config: {}", e);
+                return codes::CONFIG_ERROR;
+            }
+            eprintln!("Alias '{}' removed.", unset_args.alias);
+            codes::SUCCESS
+        }
+        root::AuthAliasCommand::List => {
+            let cfg = match crate::config::read_config() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return codes::CONFIG_ERROR;
+                }
+            };
+
+            let aliases = cfg.account_aliases.unwrap_or_default();
+            if flags.json {
+                let json_val = match serde_json::to_value(&aliases) {
+                    Ok(v) => v,
+                    Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+                };
+                println!("{}", to_json_pretty(&json_val));
+            } else if aliases.is_empty() {
+                eprintln!("No aliases configured.");
+            } else {
+                for (alias, email) in &aliases {
+                    println!("{}\t{}", alias, email);
+                }
+            }
+            codes::SUCCESS
+        }
+    }
+}
+
+/// Handle the `time` command and its subcommands.
+fn handle_time(args: root::TimeArgs, flags: &root::RootFlags) -> i32 {
+    match args.command {
+        root::TimeCommand::Now => handle_time_now(flags),
+    }
+}
+
+fn handle_time_now(flags: &root::RootFlags) -> i32 {
+    let now_utc = chrono::Utc::now();
+    let now_local = chrono::Local::now();
+
+    if flags.json {
+        let json_val = serde_json::json!({
+            "local": now_local.to_rfc3339(),
+            "utc": now_utc.to_rfc3339(),
+            "unix": now_utc.timestamp(),
+        });
+        println!("{}", to_json_pretty(&json_val));
+    } else {
+        println!("Local: {}", now_local.format("%Y-%m-%d %H:%M:%S %Z"));
+        println!("UTC:   {}", now_utc.format("%Y-%m-%d %H:%M:%S UTC"));
+        println!("Unix:  {}", now_utc.timestamp());
+    }
+    codes::SUCCESS
+}
+
+/// Handle the `gmail` command and its subcommands.
+fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
+    use gmail::GmailCommand;
+
+    // Commands that can work without authentication
+    match &args.command {
+        GmailCommand::Url(url_args) => {
+            use crate::services::gmail::types::thread_url;
+            if url_args.thread_ids.is_empty() {
+                eprintln!("Error: at least one thread ID is required");
+                return codes::USAGE_ERROR;
+            }
+            let urls: Vec<String> = url_args.thread_ids.iter().map(|id| thread_url(id)).collect();
+            if flags.json {
+                let json_val = match serde_json::to_value(&urls) {
+                    Ok(v) => v,
+                    Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+                };
+                println!("{}", to_json_pretty(&json_val));
+            } else {
+                for url in &urls {
+                    println!("{}", url);
+                }
+            }
+            return codes::SUCCESS;
+        }
+        _ => {}
+    }
+
+    // All other Gmail commands require authentication
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `calendar` command and its subcommands.
+fn handle_calendar(args: calendar::CalendarArgs, flags: &root::RootFlags) -> i32 {
+    use calendar::CalendarCommand;
+
+    match &args.command {
+        CalendarCommand::Time => {
+            // Calendar time: show server time (same as time now for stub)
+            let now_utc = chrono::Utc::now();
+            let now_local = chrono::Local::now();
+            if flags.json {
+                let json_val = serde_json::json!({
+                    "local": now_local.to_rfc3339(),
+                    "utc": now_utc.to_rfc3339(),
+                    "unix": now_utc.timestamp(),
+                });
+                println!("{}", to_json_pretty(&json_val));
+            } else {
+                println!("Local: {}", now_local.format("%Y-%m-%d %H:%M:%S %Z"));
+                println!("UTC:   {}", now_utc.format("%Y-%m-%d %H:%M:%S UTC"));
+                println!("Unix:  {}", now_utc.timestamp());
+            }
+            return codes::SUCCESS;
+        }
+        CalendarCommand::Colors => {
+            // Colors can work without auth (static data)
+            eprintln!("Command registered. API call requires: omega-google auth add <email>");
+            return codes::SUCCESS;
+        }
+        _ => {}
+    }
+
+    // All other Calendar commands require authentication
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
+}
+
+/// Handle the `drive` command and its subcommands.
+fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
+    use drive::DriveCommand;
+
+    // Commands that can work without authentication
+    match &args.command {
+        DriveCommand::Url(url_args) => {
+            use crate::services::drive::types::file_url;
+            if url_args.file_ids.is_empty() {
+                eprintln!("Error: at least one file ID is required");
+                return codes::USAGE_ERROR;
+            }
+            let urls: Vec<String> = url_args.file_ids.iter().map(|id| file_url(id)).collect();
+            if flags.json {
+                let json_val = match serde_json::to_value(&urls) {
+                    Ok(v) => v,
+                    Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+                };
+                println!("{}", to_json_pretty(&json_val));
+            } else {
+                for url in &urls {
+                    println!("{}", url);
+                }
+            }
+            return codes::SUCCESS;
+        }
+        _ => {}
+    }
+
+    // All other Drive commands require authentication
+    eprintln!("Command registered. API call requires: omega-google auth add <email>");
+    codes::SUCCESS
 }
 
 /// Rewrite desire path arguments before parsing.
-/// `--fields` is rewritten to `--select` except in `calendar events` context.
+/// Handles two kinds of rewrites:
+/// 1. Command aliases: `send` -> `gmail send`, `ls` -> `drive ls`, etc.
+/// 2. Flag aliases: `--fields` -> `--select` (except in `calendar events` context)
 pub fn rewrite_desire_path_args(args: Vec<String>) -> Vec<String> {
+    // First, rewrite command aliases (desire paths)
+    let args = rewrite_command_aliases(args);
+
     // Check if this is a calendar events command -- if so, don't rewrite --fields
     if is_calendar_events_command(&args) {
         return args;
@@ -45,6 +611,80 @@ pub fn rewrite_desire_path_args(args: Vec<String>) -> Vec<String> {
     }
 
     result
+}
+
+/// Rewrite top-level command aliases (desire paths) to their canonical forms.
+///
+/// Aliases:
+/// - `send` -> `gmail send`
+/// - `ls` -> `drive ls`
+/// - `search` -> `drive search`
+/// - `download` -> `drive download`
+/// - `upload` -> `drive upload`
+/// - `login` -> `auth add`
+/// - `logout` -> `auth remove`
+/// - `status` -> `auth status`
+/// - `me` / `whoami` -> `auth status`
+pub fn rewrite_command_aliases(args: Vec<String>) -> Vec<String> {
+    if args.is_empty() {
+        return args;
+    }
+
+    // Find the first non-flag argument (the command token)
+    let mut cmd_index = None;
+    let mut skip_next = false;
+    for (i, arg) in args.iter().enumerate() {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+        if arg.starts_with('-') {
+            if arg.contains('=') {
+                continue;
+            }
+            if global_flag_takes_value(arg) {
+                skip_next = true;
+            }
+            continue;
+        }
+        cmd_index = Some(i);
+        break;
+    }
+
+    let cmd_index = match cmd_index {
+        Some(i) => i,
+        None => return args,
+    };
+
+    let cmd = args[cmd_index].to_lowercase();
+
+    // Map desire path aliases to canonical (service, subcommand) pairs
+    let rewrite: Option<(&str, &str)> = match cmd.as_str() {
+        "send" => Some(("gmail", "send")),
+        "ls" => Some(("drive", "ls")),
+        "search" => Some(("drive", "search")),
+        "download" => Some(("drive", "download")),
+        "upload" => Some(("drive", "upload")),
+        "login" => Some(("auth", "add")),
+        "logout" => Some(("auth", "remove")),
+        "status" | "me" | "whoami" => Some(("auth", "status")),
+        _ => None,
+    };
+
+    match rewrite {
+        Some((service, subcommand)) => {
+            let mut result = Vec::with_capacity(args.len() + 1);
+            // Copy flags before the command
+            result.extend_from_slice(&args[..cmd_index]);
+            // Insert the rewritten command
+            result.push(service.to_string());
+            result.push(subcommand.to_string());
+            // Copy remaining args after the original command token
+            result.extend_from_slice(&args[cmd_index + 1..]);
+            result
+        }
+        None => args,
+    }
 }
 
 /// Check if the arguments represent a `calendar events` command.

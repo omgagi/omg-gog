@@ -1,6 +1,6 @@
 //! Gmail history listing.
 
-const GMAIL_BASE_URL: &str = "https://gmail.googleapis.com/gmail/v1";
+use super::types::GMAIL_BASE_URL;
 
 /// Build URL for listing history changes.
 pub fn build_history_list_url(start_history_id: &str, page_token: Option<&str>) -> String {

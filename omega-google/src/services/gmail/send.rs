@@ -1,6 +1,6 @@
 //! Email sending via Gmail API.
 
-const GMAIL_BASE_URL: &str = "https://gmail.googleapis.com/gmail/v1";
+use super::types::GMAIL_BASE_URL;
 
 /// Build the URL for sending a message.
 pub fn build_send_url() -> String {

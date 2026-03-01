@@ -1,6 +1,6 @@
 //! Gmail draft CRUD operations.
 
-const GMAIL_BASE_URL: &str = "https://gmail.googleapis.com/gmail/v1";
+use super::types::GMAIL_BASE_URL;
 
 /// Build URL for listing drafts.
 pub fn build_drafts_list_url(max_results: Option<u32>, page_token: Option<&str>) -> String {

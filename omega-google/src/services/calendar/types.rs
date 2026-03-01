@@ -247,9 +247,10 @@ pub fn resolve_time_range(
 
     let start_date = match from {
         Some(s) => {
-            // Try to parse as a date
             chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
-                .unwrap_or(today)
+                .map_err(|_| anyhow::anyhow!(
+                    "Invalid date format: '{}'. Expected YYYY-MM-DD, RFC3339, or relative (today, tomorrow, +Nd)", s
+                ))?
         }
         None => today,
     };
@@ -257,7 +258,9 @@ pub fn resolve_time_range(
     let end_date = match to {
         Some(s) => {
             chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
-                .unwrap_or(today + chrono::Duration::days(1))
+                .map_err(|_| anyhow::anyhow!(
+                    "Invalid date format: '{}'. Expected YYYY-MM-DD, RFC3339, or relative (today, tomorrow, +Nd)", s
+                ))?
         }
         None => start_date + chrono::Duration::days(1),
     };

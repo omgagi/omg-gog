@@ -1,6 +1,6 @@
 //! Gmail watch (push notification) management.
 
-const GMAIL_BASE_URL: &str = "https://gmail.googleapis.com/gmail/v1";
+use super::types::GMAIL_BASE_URL;
 
 /// Build URL for starting a watch.
 pub fn build_watch_start_url() -> String {

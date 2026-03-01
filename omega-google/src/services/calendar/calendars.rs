@@ -21,7 +21,9 @@ pub fn build_calendars_list_url(max_results: Option<u32>, page_token: Option<&st
 
 /// Build URL for listing ACL entries.
 pub fn build_acl_list_url(calendar_id: &str) -> String {
-    format!("{}/calendars/{}/acl", CALENDAR_BASE_URL, calendar_id)
+    use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+    let encoded_cal = utf8_percent_encode(calendar_id, NON_ALPHANUMERIC).to_string();
+    format!("{}/calendars/{}/acl", CALENDAR_BASE_URL, encoded_cal)
 }
 
 /// Resolve a calendar name to its ID.

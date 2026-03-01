@@ -20,17 +20,21 @@ pub fn build_thread_search_url(
         ));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", token));
+        params.push(format!(
+            "pageToken={}",
+            url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()
+        ));
     }
     format!("{}?{}", base, params.join("&"))
 }
 
 /// Build the URL for Gmail message search.
+/// When `include_body` is true, adds `format=full` to retrieve the full message body.
 pub fn build_message_search_url(
     query: &str,
     max_results: Option<u32>,
     page_token: Option<&str>,
-    _include_body: bool,
+    include_body: bool,
 ) -> String {
     let base = format!("{}/users/me/messages", GMAIL_BASE_URL);
     let max = max_results.unwrap_or(20);
@@ -44,7 +48,13 @@ pub fn build_message_search_url(
         ));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", token));
+        params.push(format!(
+            "pageToken={}",
+            url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()
+        ));
+    }
+    if include_body {
+        params.push("format=full".to_string());
     }
     format!("{}?{}", base, params.join("&"))
 }
@@ -120,10 +130,19 @@ mod tests {
     }
 
     // Requirement: REQ-GMAIL-002 (Must)
-    // Acceptance: Message search supports include-body
+    // Acceptance: Message search supports include-body (adds format=full)
     #[test]
     fn req_gmail_002_message_search_include_body() {
         let url = build_message_search_url("test", None, None, true);
         assert!(url.contains("users/me/messages"));
+        assert!(url.contains("format=full"));
+    }
+
+    // Requirement: REQ-GMAIL-002 (Must)
+    // Acceptance: Message search without include-body does not add format param
+    #[test]
+    fn req_gmail_002_message_search_no_include_body() {
+        let url = build_message_search_url("test", None, None, false);
+        assert!(!url.contains("format=full"));
     }
 }

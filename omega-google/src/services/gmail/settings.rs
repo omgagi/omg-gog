@@ -1,6 +1,6 @@
 //! Gmail settings: filters, forwarding, send-as, delegates, vacation, autoforward.
 
-const GMAIL_BASE_URL: &str = "https://gmail.googleapis.com/gmail/v1";
+use super::types::GMAIL_BASE_URL;
 
 /// Build URL for listing filters.
 pub fn build_filters_list_url() -> String {
