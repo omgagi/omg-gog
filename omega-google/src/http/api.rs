@@ -259,6 +259,52 @@ pub async fn api_put_bytes<T: DeserializeOwned>(
     Ok(Some(parsed))
 }
 
+/// POST raw bytes (for multipart file upload).
+///
+/// When dry_run is true, logs the request details and returns `Ok(None)`.
+/// On normal execution, returns `Ok(Some(parsed))`.
+#[allow(clippy::too_many_arguments)]
+pub async fn api_post_bytes<T: DeserializeOwned>(
+    client: &reqwest::Client,
+    url: &str,
+    content_type: &str,
+    body: Vec<u8>,
+    breaker: &CircuitBreaker,
+    retry_config: &RetryConfig,
+    verbose: bool,
+    dry_run: bool,
+) -> anyhow::Result<Option<T>> {
+    if dry_run {
+        eprintln!("[dry-run] POST {} would upload {} bytes", url, body.len());
+        return Ok(None);
+    }
+
+    if verbose {
+        eprintln!("> POST {}", url);
+        eprintln!("> Content-Type: {}", content_type);
+        eprintln!("> Body: {} bytes", body.len());
+    }
+
+    let mut request = RetryableRequest::new(Method::POST, url.to_string(), Some(body));
+    if let Ok(hv) = reqwest::header::HeaderValue::from_str(content_type) {
+        request.headers.insert(reqwest::header::CONTENT_TYPE, hv);
+    }
+
+    let start = Instant::now();
+    let response = execute_with_retry(client, &request, retry_config, breaker).await?;
+    let elapsed = start.elapsed();
+    let status = response.status().as_u16();
+    let resp_body = response.text().await?;
+
+    if verbose {
+        eprintln!("< {} ({} bytes, {}ms)", status, resp_body.len(), elapsed.as_millis());
+    }
+
+    check_response_status(status, &resp_body)?;
+    let parsed: T = serde_json::from_str(&resp_body)?;
+    Ok(Some(parsed))
+}
+
 /// GET a URL, return raw response (for file download / streaming).
 pub async fn api_get_raw(
     client: &reqwest::Client,

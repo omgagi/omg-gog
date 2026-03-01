@@ -1030,6 +1030,9 @@ async fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
         GmailCommand::Labels(ref labels_args) => {
             handle_gmail_labels(&ctx, labels_args).await
         }
+        GmailCommand::Attachment(ref att_args) => {
+            handle_gmail_attachment(&ctx, att_args).await
+        }
         _ => {
             eprintln!("Command not yet implemented");
             codes::GENERIC_ERROR
@@ -2052,14 +2055,8 @@ async fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
         DriveCommand::Ls(ref list_args) => handle_drive_list(&ctx, list_args).await,
         DriveCommand::Search(ref search_args) => handle_drive_search(&ctx, search_args).await,
         DriveCommand::Get(ref get_args) => handle_drive_get(&ctx, get_args).await,
-        DriveCommand::Download(ref _dl_args) => {
-            eprintln!("download requires RT-M5");
-            codes::GENERIC_ERROR
-        }
-        DriveCommand::Upload(ref _ul_args) => {
-            eprintln!("upload requires RT-M5");
-            codes::GENERIC_ERROR
-        }
+        DriveCommand::Download(ref dl_args) => handle_drive_download(&ctx, dl_args).await,
+        DriveCommand::Upload(ref ul_args) => handle_drive_upload(&ctx, ul_args).await,
         DriveCommand::Mkdir(ref mkdir_args) => handle_drive_mkdir(&ctx, mkdir_args).await,
         DriveCommand::Delete(ref delete_args) => handle_drive_delete(&ctx, delete_args).await,
         DriveCommand::Move(ref move_args) => handle_drive_move(&ctx, move_args).await,
@@ -2564,6 +2561,277 @@ async fn handle_drive_copy(
             map_error_to_exit_code(&e)
         }
     }
+}
+
+/// Handle Drive download.
+///
+/// For Google Workspace files, exports to the requested format (default: PDF).
+/// For binary files, downloads the raw content.
+async fn handle_drive_download(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveDownloadArgs,
+) -> i32 {
+    use crate::services::drive::files::*;
+    use crate::services::export;
+
+    // 1. Get file metadata to determine type and name
+    let metadata_url = format!(
+        "{}?fields=id,name,mimeType,size",
+        build_file_get_url(&args.file_id)
+    );
+    let file: crate::services::drive::types::DriveFile = match crate::http::api::api_get(
+        &ctx.client,
+        &metadata_url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let mime_type = file.mime_type.as_deref().unwrap_or("");
+    let file_name = file.name.as_deref().unwrap_or("download");
+
+    // 2. Determine if this is a Google Workspace file (needs export) or binary (direct download)
+    if export::is_google_workspace_type(mime_type) {
+        // Export path
+        let format = args.format.as_deref().unwrap_or("pdf");
+        let export_mime = match export::format_to_mime(format) {
+            Some(m) => m,
+            None => {
+                eprintln!(
+                    "Error: unsupported export format '{}'. Supported: pdf, docx, xlsx, pptx, csv, txt",
+                    format
+                );
+                return codes::USAGE_ERROR;
+            }
+        };
+        let url = build_file_export_url(&args.file_id, export_mime);
+        let out_path = resolve_download_path(file_name, args.out.as_deref(), Some(export_mime));
+
+        // Stream export to file
+        match download_to_file(ctx, &url, &out_path).await {
+            Ok(bytes) => {
+                eprintln!("Exported {} bytes to {}", bytes, out_path);
+                codes::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                map_error_to_exit_code(&e)
+            }
+        }
+    } else {
+        // Direct binary download
+        let url = build_file_download_url(&args.file_id);
+        let out_path = resolve_download_path(file_name, args.out.as_deref(), None);
+
+        match download_to_file(ctx, &url, &out_path).await {
+            Ok(bytes) => {
+                eprintln!("Downloaded {} bytes to {}", bytes, out_path);
+                codes::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                map_error_to_exit_code(&e)
+            }
+        }
+    }
+}
+
+/// Stream a URL response to a file on disk.
+async fn download_to_file(
+    ctx: &crate::services::ServiceContext,
+    url: &str,
+    out_path: &str,
+) -> anyhow::Result<u64> {
+    use futures_util::StreamExt;
+    use tokio::io::AsyncWriteExt;
+
+    let response = crate::http::api::api_get_raw(
+        &ctx.client,
+        url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await?;
+
+    let mut file = tokio::fs::File::create(out_path).await?;
+    let mut stream = response.bytes_stream();
+    let mut total: u64 = 0;
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        total += chunk.len() as u64;
+        file.write_all(&chunk).await?;
+    }
+
+    file.flush().await?;
+    Ok(total)
+}
+
+/// Handle Drive upload.
+///
+/// Reads a local file and uploads it via multipart POST with metadata.
+async fn handle_drive_upload(
+    ctx: &crate::services::ServiceContext,
+    args: &drive::DriveUploadArgs,
+) -> i32 {
+    use crate::services::drive::files::build_file_upload_url;
+    use crate::services::export;
+
+    // Read the file
+    let file_data = match std::fs::read(&args.path) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("Error reading file '{}': {}", args.path, e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    let filename = args
+        .name
+        .as_deref()
+        .unwrap_or_else(|| {
+            std::path::Path::new(&args.path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("upload")
+        });
+
+    // Build metadata
+    let mut metadata = serde_json::json!({
+        "name": filename,
+    });
+    if let Some(ref parent) = args.parent {
+        metadata["parents"] = serde_json::json!([parent]);
+    }
+
+    // Build multipart body
+    let boundary = "omega_google_upload_boundary";
+    let metadata_json = serde_json::to_string(&metadata).unwrap_or_default();
+
+    // Guess content type from extension
+    let content_type = export::guess_content_type_from_path(&args.path);
+
+    let mut body = Vec::new();
+    // Part 1: metadata
+    body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    body.extend_from_slice(b"Content-Type: application/json; charset=UTF-8\r\n\r\n");
+    body.extend_from_slice(metadata_json.as_bytes());
+    body.extend_from_slice(b"\r\n");
+    // Part 2: file content
+    body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
+    body.extend_from_slice(format!("Content-Type: {}\r\n\r\n", content_type).as_bytes());
+    body.extend_from_slice(&file_data);
+    body.extend_from_slice(b"\r\n");
+    body.extend_from_slice(format!("--{}--\r\n", boundary).as_bytes());
+
+    let url = build_file_upload_url();
+    let multipart_content_type = format!("multipart/related; boundary={}", boundary);
+
+    match crate::http::api::api_post_bytes::<crate::services::drive::types::DriveFile>(
+        &ctx.client,
+        &url,
+        &multipart_content_type,
+        body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
+        Ok(Some(file)) => {
+            if let Err(e) = ctx.write_output(&file) {
+                eprintln!("Error: {}", e);
+                return codes::GENERIC_ERROR;
+            }
+            codes::SUCCESS
+        }
+        Ok(None) => {
+            eprintln!(
+                "[dry-run] would upload '{}' ({} bytes)",
+                filename,
+                file_data.len()
+            );
+            codes::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            map_error_to_exit_code(&e)
+        }
+    }
+}
+
+/// Handle Gmail attachment download.
+///
+/// Downloads a single attachment from a message, base64url-decodes it,
+/// and writes the raw bytes to a file.
+async fn handle_gmail_attachment(
+    ctx: &crate::services::ServiceContext,
+    args: &gmail::GmailAttachmentArgs,
+) -> i32 {
+    use crate::services::gmail::message::build_attachment_url;
+
+    let url = build_attachment_url(&args.message_id, &args.attachment_id);
+
+    // The Gmail API returns the attachment as JSON with a base64url-encoded "data" field
+    let response: serde_json::Value = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
+
+    let data_b64 = match response.get("data").and_then(|v| v.as_str()) {
+        Some(d) => d,
+        None => {
+            eprintln!("Error: attachment response missing 'data' field");
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    // Base64url decode
+    use base64::Engine;
+    let decoded = match base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(data_b64) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("Error decoding attachment: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    // Determine output path
+    let filename = args.name.as_deref().unwrap_or("attachment");
+    let out_path = match &args.out {
+        Some(p) => p.clone(),
+        None => filename.to_string(),
+    };
+
+    // Write to file
+    if let Err(e) = std::fs::write(&out_path, &decoded) {
+        eprintln!("Error writing file '{}': {}", out_path, e);
+        return codes::GENERIC_ERROR;
+    }
+
+    eprintln!("Downloaded {} bytes to {}", decoded.len(), out_path);
+    codes::SUCCESS
 }
 
 /// Build a Drive file list URL with query, pageSize, and optional pageToken.

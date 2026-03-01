@@ -1,6 +1,6 @@
-# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4
+# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4 + RT-M5
 
-## Status: COMPLETE (RT-M4 Core Service Handlers)
+## Status: COMPLETE (RT-M5 File I/O)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -12,7 +12,47 @@ RT-M2 Review Fixes: All critical, major, and minor findings addressed.
 RT-M3 Execution Infrastructure: API helpers, pagination, ServiceContext -- all 89 tests passing.
 RT-M3 Review Fixes: All critical and major findings addressed.
 RT-M4 Core Service Handlers: Gmail, Calendar, Drive handlers converted to async with auth bootstrap and full API dispatch.
-**1331 unit tests + 113 integration tests passing (1444 total).** Zero failures. Zero clippy warnings.
+RT-M5 File I/O: Drive download/upload, Gmail attachment download, shared export module implemented.
+**1380 unit tests + 147 integration tests passing (1527 total).** Zero failures. Zero clippy warnings.
+
+### RT-M5: File I/O
+
+Implemented Drive binary download, Drive Workspace export, Drive multipart upload, Gmail attachment download, and shared export module.
+
+#### New Files
+
+| File | Functions | Tests |
+|------|-----------|-------|
+| `src/services/export.rs` | `format_to_mime`, `export_formats`, `is_google_workspace_type`, `default_export_format`, `guess_content_type_from_path` | 49 |
+| `tests/rt_m5_fileio_test.rs` | Integration tests for export module, URL builders, multipart body, base64url decode, content type guessing | 34 |
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `Cargo.toml` | Added `futures-util = "0.3"`, enabled `stream` feature on `reqwest` |
+| `src/services/mod.rs` | Added `pub mod export;` |
+| `src/http/api.rs` | Added `api_post_bytes<T>` function for multipart POST uploads |
+| `src/cli/mod.rs` | Replaced RT-M5 stubs with real handlers: `handle_drive_download`, `handle_drive_upload`, `handle_gmail_attachment`, `download_to_file` helper |
+
+#### Requirements Implemented
+
+| REQ | Priority | Description | Implementation |
+|-----|----------|-------------|----------------|
+| REQ-RT-026 | Must | Drive binary file download | `handle_drive_download` + `download_to_file` @ `src/cli/mod.rs` |
+| REQ-RT-027 | Must | Drive Workspace file export | `handle_drive_download` (export branch) @ `src/cli/mod.rs` |
+| REQ-RT-028 | Must | Drive simple upload | `handle_drive_upload` @ `src/cli/mod.rs` |
+| REQ-RT-030 | Must | Gmail attachment download | `handle_gmail_attachment` @ `src/cli/mod.rs` |
+| REQ-RT-031 | Should | Shared export function | `export` module @ `src/services/export.rs` |
+
+#### Test Results
+
+| Module | Tests | Status |
+|--------|-------|--------|
+| `services::export::tests` | 49 | PASS |
+| `rt_m5_fileio_test` (integration) | 34 | PASS |
+| **Full lib suite** | **1380** | **PASS** |
+| **Full integration suite** | **147** | **PASS** |
 
 ### RT-M3 Review Fixes
 
