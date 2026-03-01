@@ -1,3 +1,4 @@
+pub mod api;
 pub mod client;
 pub mod retry;
 pub mod circuit_breaker;

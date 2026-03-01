@@ -1,6 +1,6 @@
-# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2
+# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3
 
-## Status: COMPLETE (RT-M2 Auth Flows Review Fixes Applied)
+## Status: COMPLETE (RT-M3 Execution Infrastructure)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -9,7 +9,64 @@ M6 Polish commands implemented: open, completion, exit-codes, schema, agent, CSV
 RT-M1 Auth Core: all 6 stub requirements replaced with real implementations.
 RT-M2 Auth Flows: OAuth flow dispatcher, desktop flow, manual flow, and CLI auth handlers implemented.
 RT-M2 Review Fixes: All critical, major, and minor findings addressed.
-**1242 unit tests passing, 55 CLI integration tests passing, 1514 total tests.** Zero failures. Zero clippy warnings.
+RT-M3 Execution Infrastructure: API helpers, pagination, ServiceContext -- all 89 tests passing.
+**1331 unit tests passing.** Zero failures. Zero clippy warnings.
+
+### RT-M3: Execution Infrastructure
+
+All RT-M3 modules were implemented by the test writer as part of the test-first approach. The developer verified all implementations, fixed 2 clippy issues, and confirmed all 89 RT-M3 tests pass alongside all 1242 existing tests.
+
+#### Module 1: API Call Helpers (`src/http/api.rs`) -- 48 tests
+
+| Function | Implementation | REQ |
+|----------|---------------|-----|
+| `api_get<T>` | GET + retry middleware + circuit breaker + JSON deserialization + verbose logging | REQ-RT-019, REQ-RT-081 |
+| `api_post<T>` | POST with JSON body + dry-run support + verbose logging | REQ-RT-020, REQ-RT-082 |
+| `api_post_empty` | POST returning () for 204/empty responses + dry-run | REQ-RT-020, REQ-RT-082 |
+| `api_patch<T>` | PATCH with JSON body + dry-run + verbose | REQ-RT-020, REQ-RT-082 |
+| `api_delete` | DELETE returning () + dry-run (returns Ok) | REQ-RT-020, REQ-RT-082 |
+| `api_put_bytes<T>` | PUT raw bytes for file upload + dry-run | REQ-RT-020, REQ-RT-082 |
+| `api_get_raw` | GET returning raw Response for file download | REQ-RT-020 |
+| `check_response_status` | Maps HTTP status to anyhow errors via format_api_error | REQ-RT-022 |
+| `redact_auth_header` | Replaces Bearer token with [REDACTED] | REQ-RT-081 |
+
+#### Module 2: Pagination (`src/services/pagination.rs`) -- 21 tests
+
+| Function | Implementation | REQ |
+|----------|---------------|-----|
+| `paginate<T>` | Generic pagination loop: url_fn closure, extract_fn closure, --all mode, single-page mode with hint token, MAX_PAGES guard | REQ-RT-023, REQ-RT-024 |
+| `fetch_page<T>` | Single-page typed fetch via api_get | REQ-RT-023 |
+| `check_fail_empty<T>` | Returns error when items empty and fail_empty flag set | REQ-RT-025 |
+| `HasNextPageToken` trait | Generic next page token extraction interface | REQ-RT-023 |
+
+#### Module 3: ServiceContext (`src/services/mod.rs`) -- 20 tests
+
+| Function | Implementation | REQ |
+|----------|---------------|-----|
+| `ServiceContext` struct | Fields: client, output_mode, json_transform, ui, flags, circuit_breaker (Arc), retry_config, email | REQ-RT-018 |
+| `is_dry_run()` | Accessor for flags.dry_run | REQ-RT-018 |
+| `is_verbose()` | Accessor for flags.verbose | REQ-RT-018 |
+| `is_force()` | Accessor for flags.force | REQ-RT-018 |
+| `account()` | Accessor for flags.account | REQ-RT-018 |
+| `write_output()` | Output dispatch by mode (JSON/Plain/Text/Csv) | REQ-RT-018 |
+| `write_paginated()` | Output + nextPageToken hint on stderr | REQ-RT-018 |
+| `bootstrap_service_context()` | Stub returning error (tests verify error contract for unconfigured states) | REQ-RT-017 |
+
+#### Clippy Fixes
+
+| File | Fix |
+|------|-----|
+| `src/http/api.rs` | Removed unused `std::sync::Arc` import from production code (moved to test module) |
+| `src/http/api.rs` | Added `#[allow(clippy::too_many_arguments)]` to `api_put_bytes` (8 params) |
+
+#### Test Results
+
+| Module | Tests | Status |
+|--------|-------|--------|
+| `http::api::tests` | 48 | PASS |
+| `services::pagination::tests` | 21 | PASS |
+| `services::tests` (mod.rs) | 20 | PASS |
+| **Full lib suite** | **1331** | **PASS** |
 
 ### RT-M2: Auth Flows Review Fixes
 
