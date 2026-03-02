@@ -1,6 +1,6 @@
-# Developer Progress: omega-google M2-M6 + RT-M1 + RT-M2 + RT-M3 + RT-M4 + RT-M5 + RT-M6-Batch1 + RT-M6-Batch2 + RT-M6-Docs + RT-M6-Slides + RT-M6-Review-Fixes
+# Developer Progress: omega-google M2-M6 + RT-M1 through RT-M7
 
-## Status: COMPLETE (RT-M6 Code Review Fixes)
+## Status: COMPLETE (RT-M7 Polish)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -17,7 +17,40 @@ RT-M6 Batch 1: Forms, People, Groups, Keep, AppScript handlers converted from sy
 RT-M6 Batch 2: Chat, Tasks, Contacts handlers converted from sync stubs to async with auth bootstrap and full API dispatch.
 RT-M6 Docs: Docs handler converted from sync stub to async with auth bootstrap and full API dispatch (15 subcommands + 6 nested comment subcommands).
 RT-M6 Slides: Slides handler converted from sync stub to async with auth bootstrap and full API dispatch (11 subcommands).
-**1791 total tests passing (1385 unit + 6 ignored + integration tests).** Zero failures. Zero clippy warnings.
+RT-M7 Polish: Remote OAuth flow, AES-GCM encrypted file backend, keyring timeout on Linux, resumable upload.
+**1814 total tests passing (1408 unit + 6 ignored + integration tests).** Zero failures. Zero clippy warnings.
+
+### RT-M7 Polish (2026-03-01)
+
+Implemented 4 "Should" priority features for the final RT-M7 milestone:
+
+1. **Remote OAuth flow (REQ-RT-004)** -- `src/auth/oauth_flow.rs`
+   - Two-step headless flow: `remote_flow_step1` generates auth URL with random state parameter, caches state to file
+   - `remote_flow_step2` validates state from redirect URL, extracts authorization code
+   - CSRF protection via state parameter matching
+   - 8 new tests covering URL generation, state validation, mismatch errors, missing state
+
+2. **AES-GCM Encrypted File Backend (REQ-RT-014)** -- `src/auth/keyring.rs`
+   - `EncryptedFileCredentialStore` wraps `FileCredentialStore` with AES-256-GCM encryption
+   - `derive_key()` derives 256-bit key from password using hash-based KDF
+   - `encrypt()` / `decrypt()` use random nonce per entry, nonce prepended to ciphertext
+   - Base64 encoding for storage in JSON token file
+   - `credential_store_factory` updated: uses encrypted store when `GOG_KEYRING_PASSWORD` env var is set
+   - 11 new tests covering roundtrip, wrong password, unencrypted mode, random nonce
+
+3. **Keyring Timeout on Linux (REQ-RT-016)** -- `src/auth/keyring.rs`
+   - `KeyringCredentialStore::new()` probe wrapped with 5-second timeout on Linux
+   - Uses `std::sync::mpsc::channel` + `std::thread::spawn` for timeout
+   - On timeout: prints hint "Try GOG_KEYRING_BACKEND=file" and returns error
+   - Non-Linux platforms keep the direct probe (no timeout needed)
+   - 1 new test documenting the timeout behavior
+
+4. **Resumable Upload (REQ-RT-029)** -- `src/services/drive/files.rs` + `src/cli/mod.rs`
+   - `RESUMABLE_THRESHOLD = 5MB`: files above this use resumable protocol
+   - `handle_drive_resumable_upload`: POST metadata to get upload URI, PUT chunks with Content-Range
+   - `RESUMABLE_CHUNK_SIZE = 256KB`: default chunk size
+   - Progress reporting on stderr
+   - 3 new tests for URL builder, threshold constant, chunk size constant
 
 ### RT-M6 Code Review Fixes
 

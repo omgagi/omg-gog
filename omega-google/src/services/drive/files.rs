@@ -22,10 +22,22 @@ pub fn build_file_export_url(file_id: &str, mime_type: &str) -> String {
     )
 }
 
-/// Build URL for uploading a file.
+/// Build URL for uploading a file (simple multipart).
 pub fn build_file_upload_url() -> String {
     "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart".to_string()
 }
+
+/// Build URL for initiating a resumable upload session.
+pub fn build_resumable_upload_url() -> String {
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable".to_string()
+}
+
+/// Threshold in bytes above which resumable upload is used instead of simple multipart.
+/// Files larger than 5 MB use the resumable protocol (REQ-RT-029).
+pub const RESUMABLE_THRESHOLD: u64 = 5 * 1024 * 1024;
+
+/// Default chunk size for resumable uploads (256 KB).
+pub const RESUMABLE_CHUNK_SIZE: usize = 256 * 1024;
 
 /// Build URL for copying a file.
 pub fn build_file_copy_url(file_id: &str) -> String {
@@ -117,6 +129,33 @@ mod tests {
         let url = build_file_upload_url();
         assert!(url.contains("upload"));
         assert!(url.contains("files"));
+    }
+
+    // ---------------------------------------------------------------
+    // REQ-RT-029 (Should): Resumable upload URL
+    // ---------------------------------------------------------------
+
+    // Requirement: REQ-RT-029 (Should)
+    // Acceptance: Resumable upload URL uses uploadType=resumable
+    #[test]
+    fn req_rt_029_resumable_upload_url() {
+        let url = build_resumable_upload_url();
+        assert!(url.contains("uploadType=resumable"));
+        assert!(url.contains("upload/drive/v3/files"));
+    }
+
+    // Requirement: REQ-RT-029 (Should)
+    // Acceptance: RESUMABLE_THRESHOLD is 5MB
+    #[test]
+    fn req_rt_029_resumable_threshold_is_5mb() {
+        assert_eq!(RESUMABLE_THRESHOLD, 5 * 1024 * 1024);
+    }
+
+    // Requirement: REQ-RT-029 (Should)
+    // Acceptance: RESUMABLE_CHUNK_SIZE is 256KB
+    #[test]
+    fn req_rt_029_resumable_chunk_size() {
+        assert_eq!(RESUMABLE_CHUNK_SIZE, 256 * 1024);
     }
 
     // ---------------------------------------------------------------

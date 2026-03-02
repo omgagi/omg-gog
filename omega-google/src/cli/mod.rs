@@ -2688,17 +2688,18 @@ async fn download_to_file(
 
 /// Handle Drive upload.
 ///
-/// Reads a local file and uploads it via multipart POST with metadata.
+/// Reads a local file and uploads it. Files > 5MB use the resumable upload
+/// protocol (REQ-RT-029); smaller files use simple multipart.
 async fn handle_drive_upload(
     ctx: &crate::services::ServiceContext,
     args: &drive::DriveUploadArgs,
 ) -> i32 {
-    use crate::services::drive::files::build_file_upload_url;
+    use crate::services::drive::files::{build_file_upload_url, RESUMABLE_THRESHOLD};
     use crate::services::export;
 
-    // Read the file
-    let file_data = match std::fs::read(&args.path) {
-        Ok(d) => d,
+    // Check file size first without reading entire file into memory
+    let file_meta = match std::fs::metadata(&args.path) {
+        Ok(m) => m,
         Err(e) => {
             eprintln!("Error reading file '{}': {}", args.path, e);
             return codes::GENERIC_ERROR;
@@ -2752,12 +2753,30 @@ async fn handle_drive_upload(
         }
     }
 
-    // Build multipart body
-    let boundary = "omega_google_upload_boundary";
-    let metadata_json = serde_json::to_string(&metadata).unwrap_or_default();
-
     // Guess content type from extension
     let content_type = export::guess_content_type_from_path(&args.path);
+
+    // REQ-RT-029: Use resumable upload for files > 5MB
+    // Only read file into memory for small uploads; large files use streaming.
+    if file_meta.len() > RESUMABLE_THRESHOLD {
+        return handle_drive_resumable_upload(
+            ctx, filename, &args.path, &metadata, content_type,
+        )
+        .await;
+    }
+
+    // Only read entire file for small uploads
+    let file_data = match std::fs::read(&args.path) {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("Error reading file '{}': {}", args.path, e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    // Simple multipart upload for smaller files
+    let boundary = "omega_google_upload_boundary";
+    let metadata_json = serde_json::to_string(&metadata).unwrap_or_default();
 
     let mut body = Vec::new();
     // Part 1: metadata
@@ -2807,6 +2826,209 @@ async fn handle_drive_upload(
             map_error_to_exit_code(&e)
         }
     }
+}
+
+/// Handle Drive resumable upload for large files (> 5MB).
+///
+/// Follows the Google Drive resumable upload protocol (REQ-RT-029):
+/// 1. POST metadata to get an upload URI (Location header)
+/// 2. PUT data in chunks (256KB each) with Content-Range headers
+/// 3. Progress reporting on stderr
+async fn handle_drive_resumable_upload(
+    ctx: &crate::services::ServiceContext,
+    filename: &str,
+    file_path: &str,
+    metadata: &serde_json::Value,
+    content_type: &str,
+) -> i32 {
+    use crate::services::drive::files::{build_resumable_upload_url, RESUMABLE_CHUNK_SIZE};
+    use std::io::{Read, Seek, SeekFrom};
+
+    // Get total file size from metadata to avoid reading entire file into memory
+    let total = match std::fs::metadata(file_path) {
+        Ok(m) => m.len() as usize,
+        Err(e) => {
+            eprintln!("Error reading file '{}': {}", file_path, e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    if ctx.is_dry_run() {
+        eprintln!(
+            "[dry-run] would resumable-upload '{}' ({} bytes)",
+            filename,
+            total
+        );
+        return codes::SUCCESS;
+    }
+
+    // 1. Initiate resumable upload session
+    let initiate_url = build_resumable_upload_url();
+    let metadata_json = serde_json::to_string(metadata).unwrap_or_default();
+
+    if ctx.is_verbose() {
+        eprintln!("> POST {} (initiate resumable upload)", initiate_url);
+        eprintln!("> X-Upload-Content-Type: {}", content_type);
+        eprintln!("> X-Upload-Content-Length: {}", total);
+    }
+
+    let response = match ctx
+        .client
+        .post(&initiate_url)
+        .header("Content-Type", "application/json; charset=UTF-8")
+        .header("X-Upload-Content-Type", content_type)
+        .header("X-Upload-Content-Length", total.to_string())
+        .body(metadata_json)
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error initiating resumable upload: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        eprintln!(
+            "Error initiating resumable upload (HTTP {}): {}",
+            status.as_u16(),
+            body
+        );
+        return codes::GENERIC_ERROR;
+    }
+
+    let upload_uri = match response.headers().get("location") {
+        Some(uri) => match uri.to_str() {
+            Ok(s) => s.to_string(),
+            Err(_) => {
+                eprintln!("Error: invalid upload URI in response headers");
+                return codes::GENERIC_ERROR;
+            }
+        },
+        None => {
+            eprintln!("Error: no upload URI (Location header) in response");
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    if ctx.is_verbose() {
+        eprintln!("< Upload URI obtained, uploading in chunks...");
+    }
+
+    // Open the file for streaming chunk reads
+    let mut file = match std::fs::File::open(file_path) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Error opening file '{}': {}", file_path, e);
+            return codes::GENERIC_ERROR;
+        }
+    };
+
+    // 2. Upload in chunks, reading from file as needed
+    let chunk_size = RESUMABLE_CHUNK_SIZE;
+    let mut offset: usize = 0;
+
+    while offset < total {
+        let end = std::cmp::min(offset + chunk_size, total);
+        let chunk_len = end - offset;
+
+        // Seek to the current offset and read only this chunk
+        if let Err(e) = file.seek(SeekFrom::Start(offset as u64)) {
+            eprintln!("Error seeking in file: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+        let mut chunk = vec![0u8; chunk_len];
+        if let Err(e) = file.read_exact(&mut chunk) {
+            eprintln!("Error reading file chunk: {}", e);
+            return codes::GENERIC_ERROR;
+        }
+
+        let content_range = format!("bytes {}-{}/{}", offset, end - 1, total);
+
+        if ctx.is_verbose() {
+            eprintln!(
+                "> PUT chunk [{}-{}/{}] ({} bytes)",
+                offset,
+                end - 1,
+                total,
+                chunk.len()
+            );
+        }
+
+        let put_response = match ctx
+            .client
+            .put(&upload_uri)
+            .header("Content-Length", chunk.len().to_string())
+            .header("Content-Range", &content_range)
+            .body(chunk)
+            .send()
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("Error during resumable upload: {}", e);
+                return codes::GENERIC_ERROR;
+            }
+        };
+
+        let status = put_response.status();
+        if status.is_success() {
+            // Final chunk completed -- parse the response for file metadata
+            eprint!("\rUploading: 100%");
+            eprintln!();
+            let body = put_response.text().await.unwrap_or_default();
+            match serde_json::from_str::<crate::services::drive::types::DriveFile>(&body) {
+                Ok(file) => {
+                    eprintln!("Upload complete: {} bytes", total);
+                    if let Err(e) = ctx.write_output(&file) {
+                        eprintln!("Error: {}", e);
+                        return codes::GENERIC_ERROR;
+                    }
+                    return codes::SUCCESS;
+                }
+                Err(e) => {
+                    eprintln!("Upload complete ({} bytes) but failed to parse response: {}", total, e);
+                    return codes::SUCCESS;
+                }
+            }
+        } else if status.as_u16() == 308 {
+            // 308 Resume Incomplete -- parse Range header to determine actual bytes received
+            if let Some(range_hdr) = put_response.headers().get("range") {
+                if let Ok(range_str) = range_hdr.to_str() {
+                    // Format: "bytes=0-12345"
+                    if let Some(end_str) = range_str.strip_prefix("bytes=").and_then(|s| s.split('-').nth(1)) {
+                        if let Ok(received_end) = end_str.parse::<usize>() {
+                            offset = received_end + 1;
+                        } else {
+                            offset = end;
+                        }
+                    } else {
+                        offset = end;
+                    }
+                } else {
+                    offset = end;
+                }
+            } else {
+                offset = end;
+            }
+            let pct = (offset as f64 / total as f64) * 100.0;
+            eprint!("\rUploading: {:.0}%", pct);
+        } else {
+            let body = put_response.text().await.unwrap_or_default();
+            eprintln!(
+                "\nError during resumable upload chunk (HTTP {}): {}",
+                status.as_u16(),
+                body
+            );
+            return codes::GENERIC_ERROR;
+        }
+    }
+
+    eprintln!("\rUpload complete: {} bytes", total);
+    codes::SUCCESS
 }
 
 /// Handle Gmail attachment download.

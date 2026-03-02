@@ -43,7 +43,7 @@ pub async fn run_oauth_flow(
     match mode {
         FlowMode::Desktop => run_desktop_flow(creds, services, force_consent).await,
         FlowMode::Manual => run_manual_flow(creds, services, force_consent).await,
-        FlowMode::Remote => anyhow::bail!("Remote flow not yet implemented (RT-M7)"),
+        FlowMode::Remote => run_remote_flow(creds, services, force_consent).await,
     }
 }
 
@@ -197,14 +197,134 @@ pub(crate) async fn run_manual_flow(
     })
 }
 
-/// Remote flow: two-step headless flow (Should priority, RT-M7).
-#[allow(dead_code)]
+/// Remote flow: two-step headless flow (REQ-RT-004).
+///
+/// The remote flow is split across two CLI invocations:
+/// - Step 1 (`--remote --step 1`): generate auth URL with state, cache state
+/// - Step 2 (`--remote --step 2 --auth-url <url>`): validate state, extract code
+///
+/// When called via `run_oauth_flow`, this returns an error instructing the user
+/// to use the two-step process. The CLI handler should detect `--step` and call
+/// `remote_flow_step1` or `remote_flow_step2` directly.
 pub(crate) async fn run_remote_flow(
     _creds: &ClientCredentials,
     _services: &[Service],
     _force_consent: bool,
 ) -> anyhow::Result<OAuthFlowResult> {
-    anyhow::bail!("Remote OAuth flow not yet implemented")
+    anyhow::bail!(
+        "Remote flow requires --step 1 or --step 2. \
+         Use: omega-google auth add --remote --step 1"
+    )
+}
+
+/// Step 1 of remote flow: generate auth URL with state parameter and cache state.
+///
+/// Returns the auth URL (with `&state=<random>`) that the user should open
+/// in a browser on another machine.
+#[allow(dead_code)]
+pub(crate) fn remote_flow_step1(
+    creds: &ClientCredentials,
+    services: &[Service],
+    force_consent: bool,
+) -> anyhow::Result<String> {
+    // Generate random 32-character alphanumeric state parameter
+    let state: String = rand::Rng::sample_iter(rand::thread_rng(), &rand::distributions::Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect();
+
+    // Build auth URL with the manual redirect URI (OOB for remote)
+    let auth_url = oauth::build_auth_url(creds, services, MANUAL_REDIRECT_URI, force_consent)?;
+
+    // Append state parameter to URL
+    let auth_url_with_state = format!("{}&state={}", auth_url, state);
+
+    // Cache state to config directory
+    let config_dir = crate::config::ensure_dir()?;
+    let state_file = config_dir.join("remote_oauth_state");
+    std::fs::write(&state_file, &state)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&state_file, std::fs::Permissions::from_mode(0o600))?;
+    }
+
+    Ok(auth_url_with_state)
+}
+
+/// Step 1 variant that writes to a custom directory (for testing).
+#[allow(dead_code)]
+pub(crate) fn remote_flow_step1_with_dir(
+    creds: &ClientCredentials,
+    services: &[Service],
+    force_consent: bool,
+    state_dir: &std::path::Path,
+) -> anyhow::Result<String> {
+    let state: String = rand::Rng::sample_iter(rand::thread_rng(), &rand::distributions::Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect();
+
+    let auth_url = oauth::build_auth_url(creds, services, MANUAL_REDIRECT_URI, force_consent)?;
+    let auth_url_with_state = format!("{}&state={}", auth_url, state);
+
+    let state_file = state_dir.join("remote_oauth_state");
+    std::fs::write(&state_file, &state)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&state_file, std::fs::Permissions::from_mode(0o600))?;
+    }
+
+    Ok(auth_url_with_state)
+}
+
+/// Step 2 of remote flow: validate state parameter and extract authorization code.
+///
+/// Reads the cached state from the config directory, validates it against
+/// the state in the redirect URL, extracts the authorization code.
+#[allow(dead_code)]
+pub(crate) fn remote_flow_step2(auth_url: &str) -> anyhow::Result<OAuthFlowResult> {
+    let config_dir = crate::config::config_dir()?;
+    remote_flow_step2_with_dir(auth_url, &config_dir)
+}
+
+/// Step 2 variant that reads from a custom directory (for testing).
+#[allow(dead_code)]
+pub(crate) fn remote_flow_step2_with_dir(
+    auth_url: &str,
+    state_dir: &std::path::Path,
+) -> anyhow::Result<OAuthFlowResult> {
+    // Read cached state
+    let state_file = state_dir.join("remote_oauth_state");
+    let cached_state = std::fs::read_to_string(&state_file)
+        .map_err(|_| anyhow::anyhow!("No pending remote flow. Run --step 1 first."))?;
+
+    // Parse the redirect URL
+    let parsed = url::Url::parse(auth_url)
+        .map_err(|e| anyhow::anyhow!("Invalid URL: {}", e))?;
+    let params: std::collections::HashMap<String, String> =
+        parsed.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+
+    // Validate state parameter
+    if let Some(state) = params.get("state") {
+        if state != &cached_state {
+            anyhow::bail!("State parameter mismatch. Possible CSRF attack or stale flow.");
+        }
+    } else {
+        anyhow::bail!("No state parameter in URL. Expected state for CSRF validation.");
+    }
+
+    // Extract authorization code
+    let code = extract_code_from_url(auth_url)?;
+
+    // Clean up state file
+    let _ = std::fs::remove_file(&state_file);
+
+    Ok(OAuthFlowResult {
+        code,
+        redirect_uri: MANUAL_REDIRECT_URI.to_string(),
+    })
 }
 
 /// Try to open a URL in the system browser.
@@ -814,5 +934,182 @@ mod tests {
         // assign a port, eliminating port conflicts. If bind still fails,
         // the error should suggest --manual mode.
         assert!(true, "Port bind failure handling documented");
+    }
+
+    // =================================================================
+    // REQ-RT-004 (Should): Remote OAuth flow -- two-step headless
+    // =================================================================
+
+    // Requirement: REQ-RT-004 (Should)
+    // Acceptance: remote_flow_step1 generates URL with state parameter
+    #[test]
+    fn req_rt_004_step1_generates_url_with_state() {
+        let dir = tempfile::tempdir().unwrap();
+        let creds = ClientCredentials {
+            client_id: "test.apps.googleusercontent.com".to_string(),
+            client_secret: "GOCSPX-test".to_string(),
+        };
+        let services = vec![Service::Gmail];
+        let url = remote_flow_step1_with_dir(&creds, &services, false, dir.path())
+            .expect("step1 should succeed");
+        assert!(url.contains("state="), "URL should contain state parameter");
+        assert!(
+            url.contains("accounts.google.com"),
+            "URL should point to Google auth"
+        );
+        assert!(
+            url.contains("response_type=code"),
+            "URL should contain response_type=code"
+        );
+        // Verify state file was created
+        let state_file = dir.path().join("remote_oauth_state");
+        assert!(state_file.exists(), "State file should be created");
+        let state = std::fs::read_to_string(&state_file).unwrap();
+        assert_eq!(state.len(), 32, "State should be 32 alphanumeric chars");
+        assert!(
+            url.contains(&state),
+            "URL should contain the cached state"
+        );
+    }
+
+    // Requirement: REQ-RT-004 (Should)
+    // Acceptance: remote_flow_step2 validates state and extracts code
+    #[test]
+    fn req_rt_004_step2_validates_state_extracts_code() {
+        let dir = tempfile::tempdir().unwrap();
+        // Simulate step1: write a known state to the state file
+        let state = "abcdefghijklmnopqrstuvwxyz123456";
+        let state_file = dir.path().join("remote_oauth_state");
+        std::fs::write(&state_file, state).unwrap();
+
+        // Build a redirect URL with matching state and code
+        let redirect_url = format!(
+            "http://localhost/?code=4/0AX4XfWh_test_code&state={}",
+            state
+        );
+        let result = remote_flow_step2_with_dir(&redirect_url, dir.path());
+        assert!(result.is_ok(), "step2 should succeed: {:?}", result.err());
+        let flow_result = result.unwrap();
+        assert_eq!(flow_result.code, "4/0AX4XfWh_test_code");
+        assert_eq!(flow_result.redirect_uri, MANUAL_REDIRECT_URI);
+
+        // State file should be cleaned up
+        assert!(
+            !state_file.exists(),
+            "State file should be removed after step2"
+        );
+    }
+
+    // Requirement: REQ-RT-004 (Should)
+    // Acceptance: State mismatch returns error
+    #[test]
+    fn req_rt_004_step2_state_mismatch_returns_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let state_file = dir.path().join("remote_oauth_state");
+        std::fs::write(&state_file, "correct_state_value_here_32chars").unwrap();
+
+        let redirect_url =
+            "http://localhost/?code=4/test&state=wrong_state_value_not_matching";
+        let result = remote_flow_step2_with_dir(redirect_url, dir.path());
+        assert!(result.is_err(), "State mismatch should return error");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("mismatch") || err.contains("CSRF"),
+            "Error should mention mismatch or CSRF: {}",
+            err
+        );
+    }
+
+    // Requirement: REQ-RT-004 (Should)
+    // Acceptance: Missing state file returns error
+    #[test]
+    fn req_rt_004_step2_missing_state_file_returns_error() {
+        let dir = tempfile::tempdir().unwrap();
+        // No state file exists
+        let redirect_url = "http://localhost/?code=4/test&state=somestate";
+        let result = remote_flow_step2_with_dir(redirect_url, dir.path());
+        assert!(result.is_err(), "Missing state file should return error");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("No pending") || err.contains("step 1"),
+            "Error should mention running step 1: {}",
+            err
+        );
+    }
+
+    // Requirement: REQ-RT-004 (Should)
+    // Acceptance: Missing state parameter in redirect URL returns error
+    #[test]
+    fn req_rt_004_step2_no_state_in_url() {
+        let dir = tempfile::tempdir().unwrap();
+        let state_file = dir.path().join("remote_oauth_state");
+        std::fs::write(&state_file, "cached_state_value").unwrap();
+
+        let redirect_url = "http://localhost/?code=4/test";
+        let result = remote_flow_step2_with_dir(redirect_url, dir.path());
+        assert!(result.is_err(), "Missing state in URL should return error");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("No state") || err.contains("CSRF"),
+            "Error should mention missing state: {}",
+            err
+        );
+    }
+
+    // Requirement: REQ-RT-004 (Should)
+    // Acceptance: run_oauth_flow with Remote mode returns instructional error
+    #[tokio::test]
+    async fn req_rt_004_remote_mode_returns_step_instruction() {
+        let creds = ClientCredentials {
+            client_id: "test.apps.googleusercontent.com".to_string(),
+            client_secret: "GOCSPX-test".to_string(),
+        };
+        let services = vec![Service::Gmail];
+        let result = run_oauth_flow(&creds, &services, FlowMode::Remote, false).await;
+        assert!(result.is_err(), "Remote flow via run_oauth_flow should error");
+        let err = result.unwrap_err().to_string();
+        assert!(
+            err.contains("--step"),
+            "Error should mention --step: {}",
+            err
+        );
+    }
+
+    // Requirement: REQ-RT-004 (Should)
+    // Acceptance: Step1 with force_consent includes prompt=consent
+    #[test]
+    fn req_rt_004_step1_force_consent() {
+        let dir = tempfile::tempdir().unwrap();
+        let creds = ClientCredentials {
+            client_id: "test.apps.googleusercontent.com".to_string(),
+            client_secret: "GOCSPX-test".to_string(),
+        };
+        let services = vec![Service::Gmail];
+        let url = remote_flow_step1_with_dir(&creds, &services, true, dir.path())
+            .expect("step1 with force_consent should succeed");
+        assert!(
+            url.contains("prompt=consent"),
+            "URL should contain prompt=consent: {}",
+            url
+        );
+    }
+
+    // Requirement: REQ-RT-004 (Should)
+    // Edge: Step1 produces unique state each time
+    #[test]
+    fn req_rt_004_step1_unique_state_each_call() {
+        let dir1 = tempfile::tempdir().unwrap();
+        let dir2 = tempfile::tempdir().unwrap();
+        let creds = ClientCredentials {
+            client_id: "test.apps.googleusercontent.com".to_string(),
+            client_secret: "GOCSPX-test".to_string(),
+        };
+        let services = vec![Service::Gmail];
+        let url1 = remote_flow_step1_with_dir(&creds, &services, false, dir1.path()).unwrap();
+        let url2 = remote_flow_step1_with_dir(&creds, &services, false, dir2.path()).unwrap();
+        let state1 = std::fs::read_to_string(dir1.path().join("remote_oauth_state")).unwrap();
+        let state2 = std::fs::read_to_string(dir2.path().join("remote_oauth_state")).unwrap();
+        assert_ne!(state1, state2, "Each invocation should produce a unique state");
+        assert_ne!(url1, url2, "URLs should differ due to different states");
     }
 }
