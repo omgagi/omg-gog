@@ -10,6 +10,10 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 
+defaults:
+  run:
+    working-directory: omg-gog
+
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -39,6 +43,7 @@ jobs:
 
       - name: Install cross-compilation tools
         if: matrix.target == 'aarch64-unknown-linux-gnu'
+        working-directory: .
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
@@ -46,6 +51,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
+          workspaces: omg-gog
           key: ${{ matrix.target }}
 
       - name: Build
@@ -60,7 +66,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: dist/${{ matrix.artifact }}
+          path: omg-gog/dist/${{ matrix.artifact }}
 
   release:
     name: Create Release
@@ -72,6 +78,7 @@ jobs:
           path: artifacts
 
       - name: Collect binaries
+        working-directory: .
         run: |
           mkdir -p release
           find artifacts -type f -exec cp {} release/ \;
