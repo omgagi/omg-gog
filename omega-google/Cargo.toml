@@ -6,7 +6,7 @@ description = "Google Workspace CLI"
 license = "MIT"
 
 [[bin]]
-name = "omega-google"
+name = "omg-gog"
 path = "src/main.rs"
 
 [dependencies]

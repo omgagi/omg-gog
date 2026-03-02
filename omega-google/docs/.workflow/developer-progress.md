@@ -1,6 +1,6 @@
 # Developer Progress: omega-google M2-M6 + RT-M1 through RT-M7
 
-## Status: COMPLETE (RT-M7 Polish)
+## Status: COMPLETE (RT-M7 Polish + Bugfix: browser-opens-during-tests)
 
 All M2 service modules implemented and review fixes applied. M3 Docs service modules implemented.
 M4 Chat, Tasks, Classroom, Contacts, and People services implemented.
@@ -18,7 +18,8 @@ RT-M6 Batch 2: Chat, Tasks, Contacts handlers converted from sync stubs to async
 RT-M6 Docs: Docs handler converted from sync stub to async with auth bootstrap and full API dispatch (15 subcommands + 6 nested comment subcommands).
 RT-M6 Slides: Slides handler converted from sync stub to async with auth bootstrap and full API dispatch (11 subcommands).
 RT-M7 Polish: Remote OAuth flow, AES-GCM encrypted file backend, keyring timeout on Linux, resumable upload.
-**1814 total tests passing (1408 unit + 6 ignored + integration tests).** Zero failures. Zero clippy warnings.
+Bugfix: browser-opens-during-tests -- 3 fixes applied (open_browser guard, cli_test isolation, rt_m4 isolation).
+**1840 total tests passing (1409 unit + 6 ignored + integration tests).** Zero failures.
 
 ### RT-M7 Polish (2026-03-01)
 
