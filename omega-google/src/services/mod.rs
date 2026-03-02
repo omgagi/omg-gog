@@ -50,13 +50,19 @@ impl ServiceContext {
             OutputMode::Json => {
                 crate::output::write_json(&mut std::io::stdout(), value, &self.json_transform)
             }
-            OutputMode::Plain | OutputMode::Text | OutputMode::Csv => {
-                // Default: serialize as JSON. Service handlers should use
-                // write_plain/write_text/write_csv directly for proper formatting
-                // once they implement the PlainOutput and TextOutput traits (RT-M4).
-                let json_str = serde_json::to_string_pretty(value)?;
-                println!("{}", json_str);
-                Ok(())
+            OutputMode::Plain | OutputMode::Text => {
+                let json_value = serde_json::to_value(value)?;
+                let rows = crate::output::plain::json_to_plain_rows(&json_value);
+                crate::output::write_plain(&mut std::io::stdout(), &rows)
+            }
+            OutputMode::Csv => {
+                let json_value = serde_json::to_value(value)?;
+                let rows = crate::output::plain::json_to_plain_rows(&json_value);
+                if rows.is_empty() {
+                    return Ok(());
+                }
+                let (headers, data) = rows.split_first().unwrap();
+                crate::output::write_csv(&mut std::io::stdout(), headers, data)
             }
         }
     }
