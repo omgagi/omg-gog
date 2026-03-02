@@ -441,13 +441,13 @@ fn req_cli_008_error_formatting_contract() {
 #[tokio::test]
 async fn req_rt_008_auth_add_dispatches() {
     use std::ffi::OsString;
-    // auth add should be routed to the auth add handler.
-    // Without credentials configured, it should return an error code.
+    // Use empty config dir so handler fails before opening browser
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     let args: Vec<OsString> = vec!["auth".into(), "add".into()];
     let exit_code = cli::execute(args).await;
-    // Currently returns GENERIC_ERROR (1) since OAuth not implemented.
-    // When implemented, it should return AUTH_REQUIRED (4) if no creds,
-    // or SUCCESS (0) on a real flow.
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
+    // Returns CONFIG_ERROR or AUTH_REQUIRED since no credentials file exists
     assert!(
         exit_code != 2,
         "auth add should be a valid command (not usage error), got exit code {}",
@@ -460,8 +460,12 @@ async fn req_rt_008_auth_add_dispatches() {
 #[tokio::test]
 async fn req_rt_008_auth_add_manual_dispatches() {
     use std::ffi::OsString;
+    // Use empty config dir so handler fails before opening browser
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--manual".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
         "auth add --manual should be a valid command, got exit code {}",
@@ -474,8 +478,12 @@ async fn req_rt_008_auth_add_manual_dispatches() {
 #[tokio::test]
 async fn req_rt_008_auth_add_force_consent_dispatches() {
     use std::ffi::OsString;
+    // Use empty config dir so handler fails before opening browser
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--force-consent".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
         "auth add --force-consent should be a valid command, got exit code {}",
@@ -679,6 +687,9 @@ async fn req_rt_011_auth_list_empty_store() {
 #[tokio::test]
 async fn req_rt_008_auth_subcommands_all_reachable() {
     use std::ffi::OsString;
+    // Use empty config dir so `auth add` fails before opening browser
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     // Verify each auth subcommand is a valid clap parse (no usage error)
     let subcommands: Vec<Vec<OsString>> = vec![
         vec!["auth".into(), "add".into()],
@@ -702,6 +713,7 @@ async fn req_rt_008_auth_subcommands_all_reachable() {
             desc, exit_code
         );
     }
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
 }
 
 // Requirement: REQ-RT-009 (Must)
@@ -727,8 +739,12 @@ async fn req_rt_009_auth_remove_force_flag_parsed() {
 #[tokio::test]
 async fn req_rt_008_auth_add_remote_flag_parsed() {
     use std::ffi::OsString;
+    // Use empty config dir so handler fails before opening browser
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--remote".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
         "auth add --remote should be a valid command, got exit code {}",

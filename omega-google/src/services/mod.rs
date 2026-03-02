@@ -104,15 +104,84 @@ impl ServiceContext {
 /// 5. Check if refresh needed, refresh if so
 /// 6. Build authenticated reqwest::Client
 /// 7. Build ServiceContext
-///
-/// This is a placeholder for the developer to implement.
-/// The actual implementation will depend on the credential store and token refresh logic.
 pub async fn bootstrap_service_context(
-    _flags: &RootFlags,
+    flags: &RootFlags,
 ) -> anyhow::Result<ServiceContext> {
-    // TODO: Implement auth bootstrap
-    // This stub exists so tests can compile and verify the interface.
-    anyhow::bail!("bootstrap_service_context not yet implemented")
+    // 1. Load config
+    let cfg = crate::config::read_config()?;
+
+    // 2. Build credential store
+    let store = crate::auth::keyring::credential_store_factory(&cfg)?;
+
+    // 3. Resolve client name
+    let client_name = flags
+        .client
+        .as_deref()
+        .unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+
+    // 4. Resolve account
+    let email = crate::auth::resolve_account(
+        flags.account.as_deref(),
+        &cfg,
+        store.as_ref(),
+        client_name,
+    )?;
+
+    // 5. Load token from store
+    let mut token = store.get_token(client_name, &email)?;
+
+    // 6. Refresh if needed
+    if crate::auth::token::needs_refresh(&token) {
+        let creds = crate::config::read_client_credentials(client_name)?;
+        let bare_http = crate::http::client::build_client()?;
+        let resp = crate::auth::token::refresh_access_token(&bare_http, &creds, &token.refresh_token).await?;
+
+        token.access_token = Some(resp.access_token.clone());
+        if let Some(expires_in) = resp.expires_in {
+            token.expires_at = Some(chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64));
+        }
+        // Persist the refreshed token
+        store.set_token(client_name, &email, &token)?;
+    }
+
+    // 7. Build authenticated HTTP client
+    let access_token = token
+        .access_token
+        .as_deref()
+        .ok_or_else(|| anyhow::anyhow!(
+            "No access token available for {}. Re-authenticate with: omega-google auth add",
+            email
+        ))?;
+    let client = crate::http::client::build_authenticated_client(access_token)?;
+
+    // 8. Resolve output mode
+    let is_tty = crate::ui::Ui::is_tty_stdout();
+    let output_mode = crate::output::resolve_mode_full(flags.json, flags.plain, flags.csv, is_tty)?;
+
+    // 9. Build JSON transform
+    let json_transform = crate::output::JsonTransform {
+        results_only: flags.results_only,
+        select: flags
+            .select
+            .as_deref()
+            .map(|s| s.split(',').map(|f| f.trim().to_string()).collect())
+            .unwrap_or_default(),
+    };
+
+    // 10. Build UI
+    let color_mode: crate::ui::ColorMode = flags.color.parse().unwrap_or(crate::ui::ColorMode::Auto);
+    let ui = Ui::new(crate::ui::UiOptions { color: color_mode })?;
+
+    Ok(ServiceContext {
+        client,
+        output_mode,
+        json_transform,
+        ui,
+        flags: flags.clone(),
+        circuit_breaker: Arc::new(CircuitBreaker::new()),
+        retry_config: RetryConfig::default(),
+        email,
+    })
 }
 
 #[cfg(test)]
@@ -269,9 +338,9 @@ mod tests {
     #[tokio::test]
     async fn req_rt_017_bootstrap_function_exists() {
         let flags = RootFlags::default();
-        // The function exists and is callable. Currently returns error (stub).
+        // The function exists and is callable. Without auth setup, returns error.
         let result = bootstrap_service_context(&flags).await;
-        assert!(result.is_err(), "Stub should return error");
+        assert!(result.is_err(), "Should return error without configured account");
     }
 
     // Requirement: REQ-RT-017 (Must)
