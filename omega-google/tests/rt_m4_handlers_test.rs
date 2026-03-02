@@ -123,12 +123,17 @@ async fn req_rt_032_handle_gmail_is_async() {
     // This test verifies the dispatch works by calling execute() with gmail search args.
     // Since we have no auth, it should return AUTH_REQUIRED (4) instead of SUCCESS (0).
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec![
         "gmail".into(),
         "search".into(),
         "test query".into(),
     ];
     let exit = omega_google::cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     // Before M4: returns SUCCESS with stub message
     // After M4: returns AUTH_REQUIRED because no credentials are configured
     assert!(
@@ -1144,11 +1149,16 @@ async fn req_rt_038_gmail_drafts_list_response() {
 #[tokio::test]
 async fn req_rt_044_handle_calendar_is_async() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec![
         "calendar".into(),
         "events".into(),
     ];
     let exit = omega_google::cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     // Before M4: returns SUCCESS with stub message
     // After M4: returns AUTH_REQUIRED because no credentials
     assert!(
@@ -1844,11 +1854,16 @@ async fn req_rt_050_calendar_freebusy_post() {
 #[tokio::test]
 async fn req_rt_055_handle_drive_is_async() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec![
         "drive".into(),
         "ls".into(),
     ];
     let exit = omega_google::cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit == codes::AUTH_REQUIRED || exit == codes::SUCCESS,
         "Drive ls should return AUTH_REQUIRED or SUCCESS, got {}",
@@ -2495,6 +2510,9 @@ async fn req_rt_066_drive_copy_with_name_and_parent() {
 #[tokio::test]
 async fn req_rt_032_dispatch_command_gmail_async() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // Gmail URL command works without auth (existing behavior)
     let args: Vec<OsString> = vec![
         "gmail".into(),
@@ -2502,6 +2520,8 @@ async fn req_rt_032_dispatch_command_gmail_async() {
         "thread_123".into(),
     ];
     let exit = omega_google::cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(exit, codes::SUCCESS, "Gmail URL should succeed without auth");
 }
 
@@ -2510,6 +2530,9 @@ async fn req_rt_032_dispatch_command_gmail_async() {
 #[tokio::test]
 async fn req_rt_055_dispatch_command_drive_async() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // Drive URL command works without auth
     let args: Vec<OsString> = vec![
         "drive".into(),
@@ -2517,6 +2540,8 @@ async fn req_rt_055_dispatch_command_drive_async() {
         "file_123".into(),
     ];
     let exit = omega_google::cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(exit, codes::SUCCESS, "Drive URL should succeed without auth");
 }
 
@@ -2525,12 +2550,17 @@ async fn req_rt_055_dispatch_command_drive_async() {
 #[tokio::test]
 async fn req_rt_044_dispatch_command_calendar_async() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // Calendar time command works without auth
     let args: Vec<OsString> = vec![
         "calendar".into(),
         "time".into(),
     ];
     let exit = omega_google::cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(exit, codes::SUCCESS, "Calendar time should succeed without auth");
 }
 

@@ -441,11 +441,13 @@ fn req_cli_008_error_formatting_contract() {
 #[tokio::test]
 async fn req_rt_008_auth_add_dispatches() {
     use std::ffi::OsString;
-    // Use empty config dir so handler fails before opening browser
+    // Use empty config dir + file backend to isolate from real OS keychain
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "add".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     // Returns CONFIG_ERROR or AUTH_REQUIRED since no credentials file exists
     assert!(
@@ -460,11 +462,13 @@ async fn req_rt_008_auth_add_dispatches() {
 #[tokio::test]
 async fn req_rt_008_auth_add_manual_dispatches() {
     use std::ffi::OsString;
-    // Use empty config dir so handler fails before opening browser
+    // Use empty config dir + file backend to isolate from real OS keychain
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--manual".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
@@ -478,11 +482,13 @@ async fn req_rt_008_auth_add_manual_dispatches() {
 #[tokio::test]
 async fn req_rt_008_auth_add_force_consent_dispatches() {
     use std::ffi::OsString;
-    // Use empty config dir so handler fails before opening browser
+    // Use empty config dir + file backend to isolate from real OS keychain
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--force-consent".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
@@ -496,8 +502,13 @@ async fn req_rt_008_auth_add_force_consent_dispatches() {
 #[tokio::test]
 async fn req_rt_009_auth_remove_dispatches() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "remove".into(), "user@example.com".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     // Should be dispatched (not a usage error)
     assert!(
         exit_code != 2,
@@ -511,8 +522,13 @@ async fn req_rt_009_auth_remove_dispatches() {
 #[tokio::test]
 async fn req_rt_009_auth_remove_missing_email_usage_error() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "remove".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(
         exit_code, 2,
         "auth remove without email should be usage error (exit 2), got {}",
@@ -525,8 +541,13 @@ async fn req_rt_009_auth_remove_missing_email_usage_error() {
 #[tokio::test]
 async fn req_rt_010_auth_status_dispatches() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "status".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
         "auth status should be a valid command, got exit code {}",
@@ -539,8 +560,13 @@ async fn req_rt_010_auth_status_dispatches() {
 #[tokio::test]
 async fn req_rt_010_auth_status_json_dispatches() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["--json".into(), "auth".into(), "status".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
         "auth status --json should be a valid command, got exit code {}",
@@ -553,8 +579,13 @@ async fn req_rt_010_auth_status_json_dispatches() {
 #[tokio::test]
 async fn req_rt_011_auth_list_dispatches() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "list".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     // Currently returns SUCCESS (0) with "No authenticated accounts found"
     assert_eq!(
         exit_code, 0,
@@ -568,8 +599,13 @@ async fn req_rt_011_auth_list_dispatches() {
 #[tokio::test]
 async fn req_rt_011_auth_list_json_dispatches() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["--json".into(), "auth".into(), "list".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(
         exit_code, 0,
         "auth list --json should succeed (exit 0), got exit code {}",
@@ -582,10 +618,15 @@ async fn req_rt_011_auth_list_json_dispatches() {
 #[tokio::test]
 async fn req_rt_012_auth_tokens_delete_dispatches() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec![
         "auth".into(), "tokens".into(), "delete".into(), "user@example.com".into(),
     ];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
         "auth tokens delete should be a valid command, got exit code {}",
@@ -598,8 +639,13 @@ async fn req_rt_012_auth_tokens_delete_dispatches() {
 #[tokio::test]
 async fn req_rt_012_auth_tokens_delete_missing_email_usage_error() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "tokens".into(), "delete".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(
         exit_code, 2,
         "auth tokens delete without email should be usage error (exit 2), got {}",
@@ -612,8 +658,13 @@ async fn req_rt_012_auth_tokens_delete_missing_email_usage_error() {
 #[tokio::test]
 async fn req_rt_012_auth_tokens_list_dispatches() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "tokens".into(), "list".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(
         exit_code, 0,
         "auth tokens list should succeed (exit 0), got exit code {}",
@@ -630,8 +681,10 @@ async fn req_rt_008_auth_add_no_credentials_returns_error() {
     // Set config dir to a temp directory with no credentials
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "add".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     // Should return an error (not 0 success) since no credentials file exists
     // Currently returns 1 (GENERIC_ERROR). When implemented, should return
@@ -652,8 +705,10 @@ async fn req_rt_010_auth_status_shows_info() {
     // Set config dir to a temp directory
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "status".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     // Currently returns GENERIC_ERROR (1). When implemented, should show
     // config info and return SUCCESS (0) or AUTH_REQUIRED (4).
@@ -672,8 +727,10 @@ async fn req_rt_011_auth_list_empty_store() {
     use std::ffi::OsString;
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "list".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert_eq!(
         exit_code, 0,
@@ -687,9 +744,10 @@ async fn req_rt_011_auth_list_empty_store() {
 #[tokio::test]
 async fn req_rt_008_auth_subcommands_all_reachable() {
     use std::ffi::OsString;
-    // Use empty config dir so `auth add` fails before opening browser
+    // Use empty config dir + file backend to isolate from real OS keychain
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // Verify each auth subcommand is a valid clap parse (no usage error)
     let subcommands: Vec<Vec<OsString>> = vec![
         vec!["auth".into(), "add".into()],
@@ -704,16 +762,21 @@ async fn req_rt_008_auth_subcommands_all_reachable() {
         vec!["auth".into(), "alias".into(), "list".into()],
     ];
 
+    let mut results = Vec::new();
     for args in subcommands {
         let desc: Vec<String> = args.iter().map(|a| a.to_string_lossy().to_string()).collect();
         let exit_code = cli::execute(args).await;
+        results.push((desc, exit_code));
+    }
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
+    for (desc, exit_code) in results {
         assert!(
             exit_code != 2,
             "Command {:?} should not be a usage error (got exit code {})",
             desc, exit_code
         );
     }
-    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
 }
 
 // Requirement: REQ-RT-009 (Must)
@@ -722,11 +785,16 @@ async fn req_rt_008_auth_subcommands_all_reachable() {
 #[tokio::test]
 async fn req_rt_009_auth_remove_force_flag_parsed() {
     use std::ffi::OsString;
+    let tmp = tempfile::tempdir().unwrap();
+    std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // The --force flag is a root flag, should be parseable with auth remove
     let args: Vec<OsString> = vec![
         "--force".into(), "auth".into(), "remove".into(), "user@example.com".into(),
     ];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
+    std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,
         "auth remove with --force should be a valid command, got exit code {}",
@@ -739,11 +807,13 @@ async fn req_rt_009_auth_remove_force_flag_parsed() {
 #[tokio::test]
 async fn req_rt_008_auth_add_remote_flag_parsed() {
     use std::ffi::OsString;
-    // Use empty config dir so handler fails before opening browser
+    // Use empty config dir + file backend to isolate from real OS keychain
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+    std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec!["auth".into(), "add".into(), "--remote".into()];
     let exit_code = cli::execute(args).await;
+    std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
     assert!(
         exit_code != 2,

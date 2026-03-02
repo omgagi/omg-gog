@@ -555,13 +555,8 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
         return codes::GENERIC_ERROR;
     }
 
-    // Set as default account if it's the only one
-    let keys = store.keys().unwrap_or_default();
-    let matching: Vec<_> = keys.iter()
-        .filter_map(|k| crate::auth::parse_token_key(k))
-        .filter(|(c, _)| c == &client_name)
-        .collect();
-    if matching.len() == 1 {
+    // Set as default account if no default exists yet
+    if store.get_default_account(&client_name).unwrap_or(None).is_none() {
         let _ = store.set_default_account(&client_name, &email);
     }
 
@@ -660,7 +655,7 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
         }
     };
 
-    let tokens = match store.list_tokens() {
+    let mut tokens = match store.list_tokens() {
         Ok(t) => t,
         Err(e) => {
             eprintln!("Error listing tokens: {}", e);
@@ -670,6 +665,16 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
 
     // Get default account for the current client
     let default_account = store.get_default_account(&client_name).unwrap_or(None);
+
+    // If list_tokens returned empty (OS keyring can't enumerate), try fetching
+    // the default account directly so we can still show something.
+    if tokens.is_empty() {
+        if let Some(ref email) = default_account {
+            if let Ok(token) = store.get_token(&client_name, email) {
+                tokens.push(token);
+            }
+        }
+    }
 
     if flags.json {
         let json_accounts: Vec<serde_json::Value> = tokens.iter().map(|t| {

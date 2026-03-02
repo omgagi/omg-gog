@@ -337,9 +337,14 @@ mod tests {
     // Acceptance: bootstrap_service_context function signature exists
     #[tokio::test]
     async fn req_rt_017_bootstrap_function_exists() {
+        // Use empty config dir + file backend to isolate from real OS keychain
+        let tmp = tempfile::tempdir().unwrap();
+        std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+        std::env::set_var("GOG_KEYRING_BACKEND", "file");
         let flags = RootFlags::default();
-        // The function exists and is callable. Without auth setup, returns error.
         let result = bootstrap_service_context(&flags).await;
+        std::env::remove_var("GOG_KEYRING_BACKEND");
+        std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
         assert!(result.is_err(), "Should return error without configured account");
     }
 
@@ -347,9 +352,13 @@ mod tests {
     // Acceptance: bootstrap returns error when no account is configured
     #[tokio::test]
     async fn req_rt_017_bootstrap_no_account_returns_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+        std::env::set_var("GOG_KEYRING_BACKEND", "file");
         let flags = RootFlags::default();
         let result = bootstrap_service_context(&flags).await;
-        // Currently a stub; when implemented it should fail with auth guidance
+        std::env::remove_var("GOG_KEYRING_BACKEND");
+        std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
         assert!(result.is_err());
     }
 
@@ -357,11 +366,16 @@ mod tests {
     // Acceptance: bootstrap returns error when --account specified but not found
     #[tokio::test]
     async fn req_rt_017_bootstrap_missing_account_returns_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+        std::env::set_var("GOG_KEYRING_BACKEND", "file");
         let flags = RootFlags {
             account: Some("nonexistent@example.com".to_string()),
             ..Default::default()
         };
         let result = bootstrap_service_context(&flags).await;
+        std::env::remove_var("GOG_KEYRING_BACKEND");
+        std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
         assert!(result.is_err());
     }
 
@@ -463,24 +477,30 @@ mod tests {
     // ===================================================================
 
     // Requirement: REQ-RT-017 (Must)
-    // Failure mode: No credential file -> exit code 4 guidance
-    // (When bootstrap is implemented, it should return AuthRequired error)
+    // Failure mode: No credential file -> error with auth guidance
     #[tokio::test]
     async fn req_rt_017_failure_no_credentials_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+        std::env::set_var("GOG_KEYRING_BACKEND", "file");
         let flags = RootFlags::default();
         let result = bootstrap_service_context(&flags).await;
+        std::env::remove_var("GOG_KEYRING_BACKEND");
+        std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
         assert!(result.is_err());
-        // When implemented: the error message should mention "auth add" or "credentials"
     }
 
     // Requirement: REQ-RT-017 (Must)
-    // Failure mode: Ambiguous account (multiple accounts, no --account flag)
-    // This tests the expected error contract when bootstrap is implemented
+    // Failure mode: Ambiguous account (no accounts in empty store)
     #[tokio::test]
     async fn req_rt_017_failure_ambiguous_account() {
-        // No --account flag and (hypothetically) multiple stored accounts
+        let tmp = tempfile::tempdir().unwrap();
+        std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
+        std::env::set_var("GOG_KEYRING_BACKEND", "file");
         let flags = RootFlags::default();
         let result = bootstrap_service_context(&flags).await;
+        std::env::remove_var("GOG_KEYRING_BACKEND");
+        std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
         assert!(result.is_err());
     }
 

@@ -98,7 +98,7 @@ pub(crate) async fn run_desktop_flow(
         .await
         .map_err(|_| anyhow::anyhow!(
             "Timed out after {} seconds waiting for authorization. Try --manual mode.",
-            DESKTOP_FLOW_TIMEOUT_SECS
+            EFFECTIVE_TIMEOUT_SECS
         ))??;
 
     // 6. Read the HTTP request (simple parse -- just need the GET line)
@@ -329,31 +329,43 @@ pub(crate) fn remote_flow_step2_with_dir(
 
 /// Try to open a URL in the system browser.
 /// Returns true if the browser was launched successfully, false otherwise.
+///
+/// In test builds, this is a no-op that returns false to prevent browsers
+/// from opening during `cargo test`.
 fn open_browser(url: &str) -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(url)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .is_ok()
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(url)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .is_ok()
-    }
-
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[cfg(test)]
     {
         let _ = url;
-        false
+        return false;
+    }
+
+    #[cfg(not(test))]
+    {
+        #[cfg(target_os = "macos")]
+        {
+            return std::process::Command::new("open")
+                .arg(url)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .is_ok();
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            return std::process::Command::new("xdg-open")
+                .arg(url)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .is_ok();
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        {
+            let _ = url;
+            return false;
+        }
     }
 }
 
