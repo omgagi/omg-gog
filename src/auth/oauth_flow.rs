@@ -65,10 +65,14 @@ pub(crate) async fn run_desktop_flow(
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     // 1. Bind to 127.0.0.1:0 (OS-assigned port, localhost only)
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await
-        .map_err(|e| anyhow::anyhow!(
-            "Failed to bind local server: {}. Try --manual mode instead.", e
-        ))?;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "Failed to bind local server: {}. Try --manual mode instead.",
+                e
+            )
+        })?;
 
     let local_addr = listener.local_addr()?;
     let port = local_addr.port();
@@ -96,10 +100,12 @@ pub(crate) async fn run_desktop_flow(
     let timeout_duration = std::time::Duration::from_secs(EFFECTIVE_TIMEOUT_SECS);
     let (mut stream, _addr) = tokio::time::timeout(timeout_duration, listener.accept())
         .await
-        .map_err(|_| anyhow::anyhow!(
-            "Timed out after {} seconds waiting for authorization. Try --manual mode.",
-            EFFECTIVE_TIMEOUT_SECS
-        ))??;
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "Timed out after {} seconds waiting for authorization. Try --manual mode.",
+                EFFECTIVE_TIMEOUT_SECS
+            )
+        })??;
 
     // 6. Read the HTTP request (simple parse -- just need the GET line)
     let mut buf = vec![0u8; 4096];
@@ -145,10 +151,7 @@ pub(crate) async fn run_desktop_flow(
     eprintln!("Authorization received.");
 
     // 8. Return result
-    Ok(OAuthFlowResult {
-        code,
-        redirect_uri,
-    })
+    Ok(OAuthFlowResult { code, redirect_uri })
 }
 
 /// Manual flow: print auth URL to stderr, read redirect URL from stdin.
@@ -179,7 +182,8 @@ pub(crate) async fn run_manual_flow(
 
     // 4. Read a line from stdin
     let mut line = String::new();
-    std::io::stdin().read_line(&mut line)
+    std::io::stdin()
+        .read_line(&mut line)
         .map_err(|e| anyhow::anyhow!("Failed to read from stdin: {}", e))?;
     let line = line.trim();
 
@@ -228,10 +232,11 @@ pub(crate) fn remote_flow_step1(
     force_consent: bool,
 ) -> anyhow::Result<String> {
     // Generate random 32-character alphanumeric state parameter
-    let state: String = rand::Rng::sample_iter(rand::thread_rng(), &rand::distributions::Alphanumeric)
-        .take(32)
-        .map(char::from)
-        .collect();
+    let state: String =
+        rand::Rng::sample_iter(rand::thread_rng(), &rand::distributions::Alphanumeric)
+            .take(32)
+            .map(char::from)
+            .collect();
 
     // Build auth URL with the manual redirect URI (OOB for remote)
     let auth_url = oauth::build_auth_url(creds, services, MANUAL_REDIRECT_URI, force_consent)?;
@@ -260,10 +265,11 @@ pub(crate) fn remote_flow_step1_with_dir(
     force_consent: bool,
     state_dir: &std::path::Path,
 ) -> anyhow::Result<String> {
-    let state: String = rand::Rng::sample_iter(rand::thread_rng(), &rand::distributions::Alphanumeric)
-        .take(32)
-        .map(char::from)
-        .collect();
+    let state: String =
+        rand::Rng::sample_iter(rand::thread_rng(), &rand::distributions::Alphanumeric)
+            .take(32)
+            .map(char::from)
+            .collect();
 
     let auth_url = oauth::build_auth_url(creds, services, MANUAL_REDIRECT_URI, force_consent)?;
     let auth_url_with_state = format!("{}&state={}", auth_url, state);
@@ -301,10 +307,11 @@ pub(crate) fn remote_flow_step2_with_dir(
         .map_err(|_| anyhow::anyhow!("No pending remote flow. Run --step 1 first."))?;
 
     // Parse the redirect URL
-    let parsed = url::Url::parse(auth_url)
-        .map_err(|e| anyhow::anyhow!("Invalid URL: {}", e))?;
-    let params: std::collections::HashMap<String, String> =
-        parsed.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+    let parsed = url::Url::parse(auth_url).map_err(|e| anyhow::anyhow!("Invalid URL: {}", e))?;
+    let params: std::collections::HashMap<String, String> = parsed
+        .query_pairs()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
 
     // Validate state parameter
     if let Some(state) = params.get("state") {
@@ -343,28 +350,28 @@ fn open_browser(url: &str) -> bool {
     {
         #[cfg(target_os = "macos")]
         {
-            return std::process::Command::new("open")
+            std::process::Command::new("open")
                 .arg(url)
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .spawn()
-                .is_ok();
+                .is_ok()
         }
 
         #[cfg(target_os = "linux")]
         {
-            return std::process::Command::new("xdg-open")
+            std::process::Command::new("xdg-open")
                 .arg(url)
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .spawn()
-                .is_ok();
+                .is_ok()
         }
 
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
         {
             let _ = url;
-            return false;
+            false
         }
     }
 }
@@ -375,18 +382,16 @@ fn open_browser(url: &str) -> bool {
 /// Returns the code on success, or an error describing what went wrong.
 pub(crate) fn extract_code_from_url(url_str: &str) -> anyhow::Result<String> {
     // Parse the URL
-    let parsed = url::Url::parse(url_str)
-        .map_err(|e| anyhow::anyhow!("Invalid URL: {}", e))?;
+    let parsed = url::Url::parse(url_str).map_err(|e| anyhow::anyhow!("Invalid URL: {}", e))?;
 
     // Check for error parameter first
-    let params: std::collections::HashMap<String, String> =
-        parsed.query_pairs().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+    let params: std::collections::HashMap<String, String> = parsed
+        .query_pairs()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
 
     if let Some(error) = params.get("error") {
-        let description = params
-            .get("error_description")
-            .cloned()
-            .unwrap_or_default();
+        let description = params.get("error_description").cloned().unwrap_or_default();
         if description.is_empty() {
             anyhow::bail!("OAuth error: {}", error);
         } else {
@@ -582,7 +587,10 @@ mod tests {
         let result = extract_code_from_url(url);
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("access_denied"), "Should contain error type");
+        assert!(
+            err_msg.contains("access_denied"),
+            "Should contain error type"
+        );
         assert!(
             err_msg.contains("user") || err_msg.contains("consent"),
             "Should contain error description: {}",
@@ -611,7 +619,10 @@ mod tests {
     fn req_rt_002_extract_code_with_extra_params() {
         let url = "http://127.0.0.1:12345/?state=xyz&code=4/the_code&scope=email+openid";
         let result = extract_code_from_url(url);
-        assert!(result.is_ok(), "Should extract code despite extra parameters");
+        assert!(
+            result.is_ok(),
+            "Should extract code despite extra parameters"
+        );
         assert_eq!(result.unwrap(), "4/the_code");
     }
 
@@ -665,7 +676,10 @@ mod tests {
         let url = "http://127.0.0.1:12345/#code=abc";
         let result = extract_code_from_url(url);
         // Fragment-based code should not be found in query parameters
-        assert!(result.is_err(), "Fragment code should not be extracted from query params");
+        assert!(
+            result.is_err(),
+            "Fragment code should not be extracted from query params"
+        );
     }
 
     // Requirement: REQ-RT-002 (Must)
@@ -978,10 +992,7 @@ mod tests {
         assert!(state_file.exists(), "State file should be created");
         let state = std::fs::read_to_string(&state_file).unwrap();
         assert_eq!(state.len(), 32, "State should be 32 alphanumeric chars");
-        assert!(
-            url.contains(&state),
-            "URL should contain the cached state"
-        );
+        assert!(url.contains(&state), "URL should contain the cached state");
     }
 
     // Requirement: REQ-RT-004 (Should)
@@ -1020,8 +1031,7 @@ mod tests {
         let state_file = dir.path().join("remote_oauth_state");
         std::fs::write(&state_file, "correct_state_value_here_32chars").unwrap();
 
-        let redirect_url =
-            "http://localhost/?code=4/test&state=wrong_state_value_not_matching";
+        let redirect_url = "http://localhost/?code=4/test&state=wrong_state_value_not_matching";
         let result = remote_flow_step2_with_dir(redirect_url, dir.path());
         assert!(result.is_err(), "State mismatch should return error");
         let err = result.unwrap_err().to_string();
@@ -1078,7 +1088,10 @@ mod tests {
         };
         let services = vec![Service::Gmail];
         let result = run_oauth_flow(&creds, &services, FlowMode::Remote, false).await;
-        assert!(result.is_err(), "Remote flow via run_oauth_flow should error");
+        assert!(
+            result.is_err(),
+            "Remote flow via run_oauth_flow should error"
+        );
         let err = result.unwrap_err().to_string();
         assert!(
             err.contains("--step"),
@@ -1121,7 +1134,10 @@ mod tests {
         let url2 = remote_flow_step1_with_dir(&creds, &services, false, dir2.path()).unwrap();
         let state1 = std::fs::read_to_string(dir1.path().join("remote_oauth_state")).unwrap();
         let state2 = std::fs::read_to_string(dir2.path().join("remote_oauth_state")).unwrap();
-        assert_ne!(state1, state2, "Each invocation should produce a unique state");
+        assert_ne!(
+            state1, state2,
+            "Each invocation should produce a unique state"
+        );
         assert_ne!(url1, url2, "URLs should differ due to different states");
     }
 }
