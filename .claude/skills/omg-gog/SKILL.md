@@ -15,7 +15,7 @@ curl -fsSL https://omgagi.ai/tools/omg-gog/install.sh | sh
 To install a specific version:
 
 ```bash
-VERSION=v0.3.1 curl -fsSL https://omgagi.ai/tools/omg-gog/install.sh | sh
+VERSION=v0.4.0 curl -fsSL https://omgagi.ai/tools/omg-gog/install.sh | sh
 ```
 
 By default installs to `/usr/local/bin`. Override with `INSTALL_DIR`:
@@ -70,7 +70,7 @@ omg-gog --help
 
 | Service | Command | Alias | Summary |
 |---------|---------|-------|---------|
-| Auth | `omg-gog auth` | — | OAuth 2.0 flows, token storage, multi-account, aliasing |
+| Auth | `omg-gog auth` | — | OAuth 2.0 flows (desktop/manual/remote/web), token storage, multi-account, aliasing |
 | Config | `omg-gog config` | — | JSON5 config file management |
 | Gmail | `omg-gog gmail` | — | Threads, messages, labels, drafts, settings, watch, batch |
 | Calendar | `omg-gog calendar` | `cal` | Events, calendars, freebusy, RSVP, conflicts, special events |

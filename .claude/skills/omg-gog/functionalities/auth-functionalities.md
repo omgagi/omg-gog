@@ -1,14 +1,14 @@
 # Functionalities: Auth
 
 ## Overview
-Authentication and account management — OAuth 2.0 flows (desktop/manual/remote), token storage with 3 credential backends (file, OS keyring, encrypted file), service account JWT, multi-account management, and account aliasing.
+Authentication and account management — OAuth 2.0 flows (desktop/manual/remote/web), token storage with 3 credential backends (file, OS keyring, encrypted file), service account JWT, multi-account management, and account aliasing.
 
 ## CLI Commands
 
 | # | Command | Handler | Location | Description |
 |---|---------|---------|----------|-------------|
 | 1 | `auth credentials <path>` | `handle_auth_credentials` | src/cli/mod.rs:362 | Store OAuth client credentials JSON |
-| 2 | `auth add` | `handle_auth_add` | src/cli/mod.rs:406 | OAuth flow (desktop/manual/remote); `--services`, `--readonly`, `--drive-scope`, `--force-consent` |
+| 2 | `auth add` | `handle_auth_add` | src/cli/mod.rs:406 | OAuth flow (desktop/manual/remote/web); `--services`, `--readonly`, `--drive-scope`, `--force-consent`, `--web` |
 | 3 | `auth remove <email>` | `handle_auth_remove` | src/cli/mod.rs:587 | Delete stored account (with confirmation) |
 | 4 | `auth list` | `handle_auth_list` | src/cli/mod.rs:638 | List authenticated accounts |
 | 5 | `auth status` | `handle_auth_status` | src/cli/mod.rs:706 | Show config path, keyring, current account, token status |
@@ -29,7 +29,7 @@ Authentication and account management — OAuth 2.0 flows (desktop/manual/remote
 | 4 | FileCredentialStore | Struct | src/auth/keyring.rs | File-based token storage |
 | 5 | KeyringCredentialStore | Struct | src/auth/keyring.rs | OS keyring token storage (macOS Keychain, Linux secret-service) |
 | 6 | EncryptedFileCredentialStore | Struct | src/auth/keyring.rs | AES-GCM encrypted file storage |
-| 7 | FlowMode | Enum | src/auth/oauth.rs | Desktop, Manual, Remote |
+| 7 | FlowMode | Enum | src/auth/oauth.rs | Desktop, Manual, Remote, Web |
 | 8 | TokenResponse | Struct | src/auth/oauth.rs | OAuth token exchange response |
 | 9 | OAuthFlowResult | Struct | src/auth/oauth_flow.rs | Result of OAuth flow (email, token_data) |
 | 10 | ServiceAccountKey | Struct | src/auth/service_account.rs | Parsed service account JSON key file |
@@ -48,7 +48,7 @@ Authentication and account management — OAuth 2.0 flows (desktop/manual/remote
 | 4 | drive_scope_for_service | src/auth/scopes.rs | Return drive-scope OAuth scopes |
 | 5 | build_auth_url | src/auth/oauth.rs | Build Google OAuth authorization URL |
 | 6 | exchange_code | src/auth/oauth.rs | Exchange auth code for tokens |
-| 7 | run_oauth_flow | src/auth/oauth_flow.rs | Execute full OAuth flow (desktop with local HTTP server, manual OOB, remote) |
+| 7 | run_oauth_flow | src/auth/oauth_flow.rs | Execute full OAuth flow (desktop with local HTTP server, manual OOB, remote, web callback via omgagi.ai) |
 | 8 | needs_refresh | src/auth/token.rs | Check if token needs refresh |
 | 9 | refresh_access_token | src/auth/token.rs | Refresh expired access token |
 | 10 | serialize_token | src/auth/token.rs | Serialize token to JSON |

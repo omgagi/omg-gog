@@ -452,6 +452,8 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
         FlowMode::Manual
     } else if add_args.remote {
         FlowMode::Remote
+    } else if add_args.web {
+        FlowMode::Web
     } else {
         FlowMode::Desktop
     };

@@ -20,6 +20,8 @@ pub enum FlowMode {
     Manual,
     /// Remote/headless flow (--remote)
     Remote,
+    /// Web callback flow via omgagi.ai (--web)
+    Web,
 }
 
 /// Build the OAuth authorization URL for the given services.

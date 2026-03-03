@@ -248,6 +248,10 @@ pub struct AuthAddArgs {
     #[arg(long)]
     pub remote: bool,
 
+    /// Web callback flow (redirects to omgagi.ai)
+    #[arg(long)]
+    pub web: bool,
+
     /// Force re-consent even if token exists
     #[arg(long)]
     pub force_consent: bool,

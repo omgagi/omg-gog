@@ -32,6 +32,9 @@ const EFFECTIVE_TIMEOUT_SECS: u64 = DESKTOP_FLOW_TIMEOUT_SECS;
 /// Redirect URI used for the manual/OOB flow.
 pub const MANUAL_REDIRECT_URI: &str = "urn:ietf:wg:oauth:2.0:oob";
 
+/// Redirect URI used for the web callback flow (omgagi.ai).
+pub const WEB_REDIRECT_URI: &str = "https://omgagi.ai/oauth/callback/";
+
 /// Run the OAuth flow based on the selected mode.
 /// Returns the authorization code and redirect_uri on success.
 pub async fn run_oauth_flow(
@@ -44,6 +47,7 @@ pub async fn run_oauth_flow(
         FlowMode::Desktop => run_desktop_flow(creds, services, force_consent).await,
         FlowMode::Manual => run_manual_flow(creds, services, force_consent).await,
         FlowMode::Remote => run_remote_flow(creds, services, force_consent).await,
+        FlowMode::Web => run_web_flow(creds, services, force_consent).await,
     }
 }
 
@@ -198,6 +202,58 @@ pub(crate) async fn run_manual_flow(
     Ok(OAuthFlowResult {
         code,
         redirect_uri: MANUAL_REDIRECT_URI.to_string(),
+    })
+}
+
+/// Web callback flow: redirect via omgagi.ai, user copies code from web page.
+///
+/// 1. Build auth URL with redirect_uri = https://omgagi.ai/oauth/callback/
+/// 2. Print auth URL to stderr
+/// 3. Try to open browser
+/// 4. Prompt user to paste the authorization code shown on the web page
+/// 5. Return OAuthFlowResult { code, redirect_uri: WEB_REDIRECT_URI }
+pub(crate) async fn run_web_flow(
+    creds: &ClientCredentials,
+    services: &[Service],
+    force_consent: bool,
+) -> anyhow::Result<OAuthFlowResult> {
+    // 1. Build auth URL with web redirect
+    let auth_url = oauth::build_auth_url(creds, services, WEB_REDIRECT_URI, force_consent)?;
+
+    // 2. Print auth URL to stderr
+    eprintln!("Open this URL in your browser to authorize:");
+    eprintln!();
+    eprintln!("  {}", auth_url);
+    eprintln!();
+
+    // 3. Try to open browser
+    let browser_opened = open_browser(&auth_url);
+    if browser_opened {
+        eprintln!("Browser opened. After authorizing, copy the code from the web page.");
+    } else {
+        eprintln!("Could not open browser automatically. Please open the URL above.");
+    }
+
+    // 4. Prompt for the authorization code
+    eprintln!();
+    eprint!("Paste the authorization code: ");
+
+    let mut line = String::new();
+    std::io::stdin()
+        .read_line(&mut line)
+        .map_err(|e| anyhow::anyhow!("Failed to read from stdin: {}", e))?;
+    let code = line.trim().to_string();
+
+    if code.is_empty() {
+        anyhow::bail!(
+            "No authorization code provided. Please run the command again and paste the code."
+        );
+    }
+
+    // 5. Return result
+    Ok(OAuthFlowResult {
+        code,
+        redirect_uri: WEB_REDIRECT_URI.to_string(),
     })
 }
 
