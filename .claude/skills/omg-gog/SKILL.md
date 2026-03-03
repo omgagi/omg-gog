@@ -15,7 +15,7 @@ curl -fsSL https://omgagi.ai/tools/omg-gog/install.sh | sh
 To install a specific version:
 
 ```bash
-VERSION=v0.3.0 curl -fsSL https://omgagi.ai/tools/omg-gog/install.sh | sh
+VERSION=v0.3.1 curl -fsSL https://omgagi.ai/tools/omg-gog/install.sh | sh
 ```
 
 By default installs to `/usr/local/bin`. Override with `INSTALL_DIR`:

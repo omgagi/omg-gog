@@ -7,6 +7,67 @@
 
 use base64::Engine;
 
+/// RFC 2047 encode a header value if it contains non-ASCII characters.
+/// Uses Base64 variant: =?UTF-8?B?<base64>?=
+/// Pure-ASCII strings are returned unchanged.
+fn encode_rfc2047(value: &str) -> String {
+    if value.is_ascii() {
+        return value.to_string();
+    }
+    // RFC 2047 encoded-words have a 75-char line limit. Each encoded word:
+    //   =?UTF-8?B?...?=  (prefix=10, suffix=2 → 12 overhead, leaving 63 for base64)
+    // 63 base64 chars → 47 raw bytes per chunk. We split on UTF-8 char boundaries.
+    const MAX_RAW_BYTES: usize = 45; // conservative to stay within 75-char limit
+    let bytes = value.as_bytes();
+    let mut words = Vec::new();
+    let mut pos = 0;
+    while pos < bytes.len() {
+        let mut end = (pos + MAX_RAW_BYTES).min(bytes.len());
+        // Don't split in the middle of a UTF-8 character
+        while end < bytes.len() && (bytes[end] & 0b1100_0000) == 0b1000_0000 {
+            end -= 1;
+        }
+        if end == pos {
+            // Edge case: single char wider than budget (shouldn't happen at 45 bytes)
+            end = pos + 1;
+            while end < bytes.len() && (bytes[end] & 0b1100_0000) == 0b1000_0000 {
+                end += 1;
+            }
+        }
+        let chunk = &bytes[pos..end];
+        let b64 = base64::engine::general_purpose::STANDARD.encode(chunk);
+        words.push(format!("=?UTF-8?B?{}?=", b64));
+        pos = end;
+    }
+    words.join("\r\n ")
+}
+
+/// RFC 2047 encode a header value containing an address with optional display name.
+/// Encodes only the display name portion, preserving the email in angle brackets.
+fn encode_address_header(address: &str) -> String {
+    // Pattern: "Display Name <email@example.com>" or just "email@example.com"
+    if let Some(bracket_start) = address.rfind('<') {
+        let display_name = address[..bracket_start].trim();
+        let email_part = &address[bracket_start..]; // includes <...>
+        if display_name.is_empty() || display_name.is_ascii() {
+            return address.to_string();
+        }
+        format!("{} {}", encode_rfc2047(display_name), email_part)
+    } else {
+        // Plain email address, no display name to encode
+        address.to_string()
+    }
+}
+
+/// Encode a comma-separated list of addresses.
+fn encode_address_list(addresses: &[String]) -> String {
+    addresses
+        .iter()
+        .map(|a| encode_address_header(a))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// Parameters for constructing a MIME email message.
 #[derive(Debug, Clone, Default)]
 pub struct MimeMessageParams {
@@ -36,18 +97,18 @@ pub struct MimeAttachment {
 pub fn build_mime_message(params: &MimeMessageParams) -> String {
     let mut headers = Vec::new();
 
-    headers.push(format!("From: {}", params.from));
+    headers.push(format!("From: {}", encode_address_header(&params.from)));
     if !params.to.is_empty() {
-        headers.push(format!("To: {}", params.to.join(", ")));
+        headers.push(format!("To: {}", encode_address_list(&params.to)));
     }
     if !params.cc.is_empty() {
-        headers.push(format!("Cc: {}", params.cc.join(", ")));
+        headers.push(format!("Cc: {}", encode_address_list(&params.cc)));
     }
     if !params.bcc.is_empty() {
-        headers.push(format!("Bcc: {}", params.bcc.join(", ")));
+        headers.push(format!("Bcc: {}", encode_address_list(&params.bcc)));
     }
     if let Some(ref reply_to) = params.reply_to {
-        headers.push(format!("Reply-To: {}", reply_to));
+        headers.push(format!("Reply-To: {}", encode_address_header(reply_to)));
     }
     if let Some(ref in_reply_to) = params.in_reply_to {
         headers.push(format!("In-Reply-To: {}", in_reply_to));
@@ -55,7 +116,7 @@ pub fn build_mime_message(params: &MimeMessageParams) -> String {
     if let Some(ref references) = params.references {
         headers.push(format!("References: {}", references));
     }
-    headers.push(format!("Subject: {}", params.subject));
+    headers.push(format!("Subject: {}", encode_rfc2047(&params.subject)));
     headers.push("MIME-Version: 1.0".to_string());
 
     let has_attachments = !params.attachments.is_empty();
@@ -397,5 +458,102 @@ mod tests {
     #[test]
     fn req_gmail_010_guess_content_type_no_ext() {
         assert_eq!(guess_content_type("Makefile"), "application/octet-stream");
+    }
+
+    // ---------------------------------------------------------------
+    // REQ-GMAIL-010 (Must): RFC 2047 header encoding
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn rfc2047_ascii_passthrough() {
+        assert_eq!(encode_rfc2047("Hello World"), "Hello World");
+    }
+
+    #[test]
+    fn rfc2047_emoji_subject() {
+        let encoded = encode_rfc2047("\u{1F44B} Hello");
+        assert!(encoded.starts_with("=?UTF-8?B?"));
+        assert!(encoded.ends_with("?="));
+        // Decode to verify round-trip
+        let b64 = &encoded[10..encoded.len() - 2];
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(b64)
+            .unwrap();
+        assert_eq!(std::str::from_utf8(&decoded).unwrap(), "\u{1F44B} Hello");
+    }
+
+    #[test]
+    fn rfc2047_em_dash() {
+        let encoded = encode_rfc2047("Hello \u{2014} World");
+        assert!(encoded.contains("=?UTF-8?B?"));
+        // Verify round-trip by decoding all encoded words
+        let decoded = decode_rfc2047_words(&encoded);
+        assert_eq!(decoded, "Hello \u{2014} World");
+    }
+
+    #[test]
+    fn rfc2047_mixed_emoji_and_dash() {
+        let subject = "\u{1F44B} Hello from OMEGA \u{2014} Sent autonomously via omg-gog";
+        let encoded = encode_rfc2047(subject);
+        assert!(!encoded.contains('\u{1F44B}'), "raw emoji must not appear in header");
+        assert!(!encoded.contains('\u{2014}'), "raw em-dash must not appear in header");
+        let decoded = decode_rfc2047_words(&encoded);
+        assert_eq!(decoded, subject);
+    }
+
+    #[test]
+    fn mime_message_encodes_non_ascii_subject() {
+        let params = MimeMessageParams {
+            from: "sender@example.com".to_string(),
+            to: vec!["to@example.com".to_string()],
+            subject: "\u{1F44B} Test".to_string(),
+            body_text: Some("body".to_string()),
+            ..Default::default()
+        };
+        let mime = build_mime_message(&params);
+        assert!(mime.contains("Subject: =?UTF-8?B?"), "subject must be RFC 2047 encoded");
+        assert!(!mime.contains("Subject: \u{1F44B}"), "raw emoji must not be in Subject header");
+    }
+
+    #[test]
+    fn address_header_encodes_non_ascii_display_name() {
+        let encoded = encode_address_header("Ren\u{00e9} <rene@example.com>");
+        assert!(encoded.contains("=?UTF-8?B?"));
+        assert!(encoded.contains("<rene@example.com>"));
+    }
+
+    #[test]
+    fn address_header_ascii_passthrough() {
+        let addr = "John Doe <john@example.com>";
+        assert_eq!(encode_address_header(addr), addr);
+    }
+
+    /// Helper: decode RFC 2047 encoded words back to a string for test verification.
+    fn decode_rfc2047_words(input: &str) -> String {
+        let mut result = String::new();
+        let mut remaining = input;
+        while let Some(start) = remaining.find("=?UTF-8?B?") {
+            // Text before encoded word (skip folding whitespace between encoded words)
+            let prefix = &remaining[..start];
+            if !result.is_empty() && prefix.trim().is_empty() {
+                // Skip whitespace between consecutive encoded words per RFC 2047
+            } else {
+                result.push_str(prefix);
+            }
+            let after_prefix = &remaining[start + 10..];
+            if let Some(end) = after_prefix.find("?=") {
+                let b64 = &after_prefix[..end];
+                if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64) {
+                    if let Ok(s) = std::str::from_utf8(&bytes) {
+                        result.push_str(s);
+                    }
+                }
+                remaining = &after_prefix[end + 2..];
+            } else {
+                break;
+            }
+        }
+        result.push_str(remaining);
+        result
     }
 }
