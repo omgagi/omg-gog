@@ -52,7 +52,11 @@ pub fn build_metadata_url(spreadsheet_id: &str) -> String {
 pub fn build_metadata_url_with_fields(spreadsheet_id: &str, fields: Option<&str>) -> String {
     let base = build_metadata_url(spreadsheet_id);
     match fields {
-        Some(f) => format!("{}?fields={}", base, utf8_percent_encode(f, NON_ALPHANUMERIC)),
+        Some(f) => format!(
+            "{}?fields={}",
+            base,
+            utf8_percent_encode(f, NON_ALPHANUMERIC)
+        ),
         None => base,
     }
 }
@@ -124,17 +128,15 @@ mod tests {
     #[test]
     fn req_sheets_008_metadata_url_basic() {
         let url = build_metadata_url("abc123");
-        assert_eq!(
-            url,
-            "https://sheets.googleapis.com/v4/spreadsheets/abc123"
-        );
+        assert_eq!(url, "https://sheets.googleapis.com/v4/spreadsheets/abc123");
     }
 
     // Requirement: REQ-SHEETS-008 (Must)
     // Acceptance: Metadata URL with fields
     #[test]
     fn req_sheets_008_metadata_url_with_fields() {
-        let url = build_metadata_url_with_fields("abc123", Some("properties.title,sheets.properties"));
+        let url =
+            build_metadata_url_with_fields("abc123", Some("properties.title,sheets.properties"));
         assert!(url.contains("spreadsheets/abc123"));
         assert!(url.contains("?fields="));
     }

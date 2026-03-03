@@ -1,10 +1,10 @@
-pub mod scopes;
+pub mod account;
+pub mod keyring;
 pub mod oauth;
 pub mod oauth_flow;
-pub mod token;
-pub mod keyring;
+pub mod scopes;
 pub mod service_account;
-pub mod account;
+pub mod token;
 
 use serde::{Deserialize, Serialize};
 
@@ -88,7 +88,10 @@ impl std::fmt::Debug for TokenData {
             .field("scopes", &self.scopes)
             .field("created_at", &self.created_at)
             .field("refresh_token", &"[REDACTED]")
-            .field("access_token", &self.access_token.as_ref().map(|_| "[REDACTED]"))
+            .field(
+                "access_token",
+                &self.access_token.as_ref().map(|_| "[REDACTED]"),
+            )
             .field("expires_at", &self.expires_at)
             .finish()
     }
@@ -218,7 +221,9 @@ pub fn resolve_account(
         return Ok(matching[0].1.clone());
     }
 
-    anyhow::bail!("no account specified; use --account, set GOG_ACCOUNT, or run 'omega-google auth login'")
+    anyhow::bail!(
+        "no account specified; use --account, set GOG_ACCOUNT, or run 'omega-google auth login'"
+    )
 }
 
 /// Parse a keyring token key into (client, email).
@@ -286,7 +291,10 @@ mod tests {
             access_token: Some("ya29.access_token_here".to_string()),
             expires_at: None,
         };
-        assert_eq!(token.access_token.as_deref(), Some("ya29.access_token_here"));
+        assert_eq!(
+            token.access_token.as_deref(),
+            Some("ya29.access_token_here")
+        );
     }
 
     // Requirement: REQ-RT-007 (Must)
@@ -400,12 +408,18 @@ mod tests {
         };
         let debug_str = format!("{:?}", token);
         // Verify Debug output does NOT contain actual token values
-        assert!(!debug_str.contains("secret_refresh"),
-            "Debug output must not contain the actual refresh_token value");
-        assert!(!debug_str.contains("secret_access"),
-            "Debug output must not contain the actual access_token value");
+        assert!(
+            !debug_str.contains("secret_refresh"),
+            "Debug output must not contain the actual refresh_token value"
+        );
+        assert!(
+            !debug_str.contains("secret_access"),
+            "Debug output must not contain the actual access_token value"
+        );
         // Verify it contains the redaction markers instead
-        assert!(debug_str.contains("[REDACTED]"),
-            "Debug output should contain [REDACTED] markers");
+        assert!(
+            debug_str.contains("[REDACTED]"),
+            "Debug output should contain [REDACTED] markers"
+        );
     }
 }

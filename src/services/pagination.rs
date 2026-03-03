@@ -47,7 +47,10 @@ pub async fn paginate<T>(
     loop {
         page_num += 1;
         if page_num > MAX_PAGES {
-            eprintln!("Warning: reached maximum page limit ({}), stopping pagination", MAX_PAGES);
+            eprintln!(
+                "Warning: reached maximum page limit ({}), stopping pagination",
+                MAX_PAGES
+            );
             break;
         }
 
@@ -75,7 +78,11 @@ pub async fn paginate<T>(
     }
 
     // Return items and the next page token (for hint printing)
-    let hint_token = if params.all_pages { None } else { last_next_token };
+    let hint_token = if params.all_pages {
+        None
+    } else {
+        last_next_token
+    };
     Ok((all_items, hint_token))
 }
 
@@ -91,7 +98,16 @@ pub async fn paginate_with_progress<T>(
     url_fn: impl Fn(Option<&str>) -> String,
     extract_fn: impl Fn(serde_json::Value) -> anyhow::Result<(Vec<T>, Option<String>)>,
 ) -> anyhow::Result<(Vec<T>, Option<String>)> {
-    paginate(client, breaker, retry_config, true, params, url_fn, extract_fn).await
+    paginate(
+        client,
+        breaker,
+        retry_config,
+        true,
+        params,
+        url_fn,
+        extract_fn,
+    )
+    .await
 }
 
 /// Check if results are empty and fail_empty is set.
@@ -551,7 +567,10 @@ mod tests {
 
         // After pagination, check fail_empty
         let result = check_fail_empty(&items, params.fail_empty);
-        assert!(result.is_err(), "Should fail on empty results with --fail-empty");
+        assert!(
+            result.is_err(),
+            "Should fail on empty results with --fail-empty"
+        );
     }
 
     // Requirement: REQ-RT-025 (Must)
@@ -652,9 +671,16 @@ mod tests {
         )
         .await;
 
-        assert!(result.is_err(), "Error on page 2 should propagate immediately");
+        assert!(
+            result.is_err(),
+            "Error on page 2 should propagate immediately"
+        );
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("500"), "Error should contain status 500: {}", err_msg);
+        assert!(
+            err_msg.contains("500"),
+            "Error should contain status 500: {}",
+            err_msg
+        );
     }
 
     // Requirement: REQ-RT-023 (Must)
@@ -706,7 +732,11 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(items, vec!["found-it"], "Should accumulate items from all pages");
+        assert_eq!(
+            items,
+            vec!["found-it"],
+            "Should accumulate items from all pages"
+        );
     }
 
     // ===================================================================
@@ -916,7 +946,10 @@ mod tests {
             &params,
             move |pt| {
                 if let Some(token) = pt {
-                    format!("{}/api/list?maxResults={}&pageToken={}", base_url, max, token)
+                    format!(
+                        "{}/api/list?maxResults={}&pageToken={}",
+                        base_url, max, token
+                    )
                 } else {
                     format!("{}/api/list?maxResults={}", base_url, max)
                 }
@@ -957,7 +990,9 @@ mod tests {
         let config = no_retry_config();
         let url = format!("{}/api/typed", server.url());
 
-        let resp: ListResp = fetch_page(&client, &url, &breaker, &config, false).await.unwrap();
+        let resp: ListResp = fetch_page(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
         assert_eq!(resp.items, vec!["typed"]);
         assert_eq!(resp.next_page_token, Some("next".to_string()));
         mock.assert_async().await;

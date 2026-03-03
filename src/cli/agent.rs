@@ -173,10 +173,7 @@ pub fn build_schema(cmd: &clap::Command, include_hidden: bool) -> CommandSchema 
         .map(|s| build_schema(s, include_hidden))
         .collect();
 
-    let aliases: Vec<String> = cmd
-        .get_all_aliases()
-        .map(|a| a.to_string())
-        .collect();
+    let aliases: Vec<String> = cmd.get_all_aliases().map(|a| a.to_string()).collect();
 
     CommandSchema {
         name: cmd.get_name().to_string(),
@@ -189,10 +186,7 @@ pub fn build_schema(cmd: &clap::Command, include_hidden: bool) -> CommandSchema 
 }
 
 /// Generate the full CLI schema, optionally filtered to a specific command.
-pub fn generate_schema(
-    command_filter: Option<&str>,
-    include_hidden: bool,
-) -> serde_json::Value {
+pub fn generate_schema(command_filter: Option<&str>, include_hidden: bool) -> serde_json::Value {
     let cmd = <super::root::Cli as clap::CommandFactory>::command();
 
     let schema = if let Some(filter) = command_filter {
@@ -209,9 +203,8 @@ pub fn generate_schema(
         build_schema(&cmd, include_hidden)
     };
 
-    serde_json::to_value(&schema).unwrap_or_else(|e| {
-        serde_json::json!({ "error": format!("serialization error: {}", e) })
-    })
+    serde_json::to_value(&schema)
+        .unwrap_or_else(|e| serde_json::json!({ "error": format!("serialization error: {}", e) }))
 }
 
 /// Find a subcommand by name (case-insensitive, supports aliases).
@@ -245,10 +238,16 @@ mod tests {
         assert!(codes_present.contains(&3), "should contain EMPTY_RESULTS=3");
         assert!(codes_present.contains(&4), "should contain AUTH_REQUIRED=4");
         assert!(codes_present.contains(&5), "should contain NOT_FOUND=5");
-        assert!(codes_present.contains(&6), "should contain PERMISSION_DENIED=6");
+        assert!(
+            codes_present.contains(&6),
+            "should contain PERMISSION_DENIED=6"
+        );
         assert!(codes_present.contains(&7), "should contain RATE_LIMITED=7");
         assert!(codes_present.contains(&8), "should contain RETRYABLE=8");
-        assert!(codes_present.contains(&10), "should contain CONFIG_ERROR=10");
+        assert!(
+            codes_present.contains(&10),
+            "should contain CONFIG_ERROR=10"
+        );
         assert!(codes_present.contains(&130), "should contain CANCELLED=130");
     }
 
@@ -258,7 +257,11 @@ mod tests {
     fn req_agent_001_exit_code_entries_complete() {
         let table = exit_code_table();
         for entry in &table {
-            assert!(!entry.name.is_empty(), "code {} should have a name", entry.code);
+            assert!(
+                !entry.name.is_empty(),
+                "code {} should have a name",
+                entry.code
+            );
             assert!(
                 !entry.description.is_empty(),
                 "code {} should have a description",
@@ -348,8 +351,14 @@ mod tests {
 
         assert!(arg_names.contains(&"json"), "should include --json flag");
         assert!(arg_names.contains(&"plain"), "should include --plain flag");
-        assert!(arg_names.contains(&"verbose"), "should include --verbose flag");
-        assert!(arg_names.contains(&"account"), "should include --account flag");
+        assert!(
+            arg_names.contains(&"verbose"),
+            "should include --verbose flag"
+        );
+        assert!(
+            arg_names.contains(&"account"),
+            "should include --account flag"
+        );
     }
 
     // Requirement: REQ-AGENT-002 (Must)

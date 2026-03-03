@@ -3,8 +3,8 @@
 //! Tests cover REQ-OUTPUT-001 through REQ-OUTPUT-005 (Must priority).
 //! Validates JSON transforms, field selection, output mode resolution, and plain formatting.
 
-use omega_google::output::*;
 use omega_google::output::transform;
+use omega_google::output::*;
 use serde_json::json;
 
 // ---------------------------------------------------------------
@@ -49,7 +49,10 @@ fn req_output_001_text_when_piped() {
 #[test]
 fn req_output_001_json_plain_conflict() {
     let result = resolve_mode(true, true, true);
-    assert!(result.is_err(), "should error when both --json and --plain are set");
+    assert!(
+        result.is_err(),
+        "should error when both --json and --plain are set"
+    );
 }
 
 // ---------------------------------------------------------------
@@ -203,7 +206,10 @@ fn req_output_003_select_dot_path() {
         "file": {"id": "f1", "metadata": {"name": "doc.txt"}},
         "owner": "me"
     });
-    let result = transform::select_fields(input, &["file.id".to_string(), "file.metadata.name".to_string()]);
+    let result = transform::select_fields(
+        input,
+        &["file.id".to_string(), "file.metadata.name".to_string()],
+    );
     let obj = result.as_object().unwrap();
     assert_eq!(obj["file.id"], "f1");
     assert_eq!(obj["file.metadata.name"], "doc.txt");
@@ -282,7 +288,10 @@ fn req_output_003_path_empty() {
 #[test]
 fn req_output_003_path_whitespace() {
     // Should trim whitespace from path segments
-    assert_eq!(transform::get_at_path(&json!({"id": 1}), " id "), Some(json!(1)));
+    assert_eq!(
+        transform::get_at_path(&json!({"id": 1}), " id "),
+        Some(json!(1))
+    );
 }
 
 // Requirement: REQ-OUTPUT-003 (Must)
@@ -320,7 +329,10 @@ fn req_output_001_json_pretty_printed() {
     let mut buf = Vec::new();
     let _ = write_json(&mut buf, &value, &JsonTransform::default());
     let output = String::from_utf8(buf).unwrap();
-    assert!(output.contains("  "), "JSON should be pretty-printed with indentation");
+    assert!(
+        output.contains("  "),
+        "JSON should be pretty-printed with indentation"
+    );
 }
 
 // Requirement: REQ-OUTPUT-001 (Must)
@@ -383,14 +395,15 @@ fn req_output_001_plain_tab_separated() {
 // Acceptance: Plain output has no colors
 #[test]
 fn req_output_001_plain_no_ansi() {
-    let rows = vec![
-        vec!["test".to_string(), "value".to_string()],
-    ];
+    let rows = vec![vec!["test".to_string(), "value".to_string()]];
     let mut buf = Vec::new();
     let _ = write_plain(&mut buf, &rows);
     let output = String::from_utf8(buf).unwrap();
     // Should not contain ANSI escape codes
-    assert!(!output.contains("\x1b["), "plain output should not contain ANSI codes");
+    assert!(
+        !output.contains("\x1b["),
+        "plain output should not contain ANSI codes"
+    );
 }
 
 // ---------------------------------------------------------------
@@ -403,8 +416,16 @@ fn req_output_001_plain_no_ansi() {
 fn req_output_002_meta_keys_defined() {
     let meta = transform::META_KEYS;
     let expected = vec![
-        "nextPageToken", "next_cursor", "has_more", "count",
-        "query", "dry_run", "dryRun", "op", "action", "note",
+        "nextPageToken",
+        "next_cursor",
+        "has_more",
+        "count",
+        "query",
+        "dry_run",
+        "dryRun",
+        "op",
+        "action",
+        "note",
     ];
     for key in &expected {
         assert!(meta.contains(key), "META_KEYS should contain '{}'", key);
@@ -417,12 +438,27 @@ fn req_output_002_meta_keys_defined() {
 fn req_output_002_result_keys_defined() {
     let keys = transform::KNOWN_RESULT_KEYS;
     let expected = vec![
-        "files", "threads", "messages", "labels", "events",
-        "calendars", "courses", "topics", "announcements",
-        "contacts", "people", "tasks", "groups", "spaces",
+        "files",
+        "threads",
+        "messages",
+        "labels",
+        "events",
+        "calendars",
+        "courses",
+        "topics",
+        "announcements",
+        "contacts",
+        "people",
+        "tasks",
+        "groups",
+        "spaces",
     ];
     for key in &expected {
-        assert!(keys.contains(key), "KNOWN_RESULT_KEYS should contain '{}'", key);
+        assert!(
+            keys.contains(key),
+            "KNOWN_RESULT_KEYS should contain '{}'",
+            key
+        );
     }
 }
 
@@ -438,7 +474,10 @@ fn req_output_005_json_no_ansi() {
     let mut buf = Vec::new();
     let _ = write_json(&mut buf, &value, &JsonTransform::default());
     let output = String::from_utf8(buf).unwrap();
-    assert!(!output.contains("\x1b["), "JSON output must not contain ANSI escape codes");
+    assert!(
+        !output.contains("\x1b["),
+        "JSON output must not contain ANSI escape codes"
+    );
 }
 
 // ---------------------------------------------------------------
@@ -484,7 +523,14 @@ fn req_output_001_plain_empty_rows() {
 #[test]
 fn req_output_003_select_all_missing() {
     let input = json!({"id": "1"});
-    let result = transform::select_fields(input, &["nonexistent1".to_string(), "nonexistent2".to_string()]);
+    let result = transform::select_fields(
+        input,
+        &["nonexistent1".to_string(), "nonexistent2".to_string()],
+    );
     let obj = result.as_object().unwrap();
-    assert_eq!(obj.len(), 0, "all missing fields should result in empty object");
+    assert_eq!(
+        obj.len(),
+        0,
+        "all missing fields should result in empty object"
+    );
 }

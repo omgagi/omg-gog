@@ -1,7 +1,7 @@
 //! Document content retrieval: URL builders and text extraction.
 
-use super::DOCS_BASE_URL;
 use super::types::{Body, StructuralElement, Tab};
+use super::DOCS_BASE_URL;
 
 /// Build URL for getting a document by ID.
 pub fn build_doc_get_url(doc_id: &str) -> String {
@@ -63,8 +63,8 @@ pub fn extract_tab_text(tab: &Tab) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::types::*;
+    use super::*;
     use std::collections::HashMap;
 
     // ---------------------------------------------------------------

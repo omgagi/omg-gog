@@ -14,11 +14,10 @@ pub use super::PlainOutput;
 /// Objects become key-value rows; arrays of objects become header + data rows.
 pub fn json_to_plain_rows(value: &serde_json::Value) -> Vec<Vec<String>> {
     match value {
-        serde_json::Value::Object(map) => {
-            map.iter()
-                .map(|(k, v)| vec![k.clone(), value_to_string(v)])
-                .collect()
-        }
+        serde_json::Value::Object(map) => map
+            .iter()
+            .map(|(k, v)| vec![k.clone(), value_to_string(v)])
+            .collect(),
         serde_json::Value::Array(arr) => {
             if arr.is_empty() {
                 return vec![];
@@ -30,19 +29,13 @@ pub fn json_to_plain_rows(value: &serde_json::Value) -> Vec<Vec<String>> {
                 for item in arr {
                     let row: Vec<String> = headers
                         .iter()
-                        .map(|h| {
-                            item.get(h)
-                                .map(value_to_string)
-                                .unwrap_or_default()
-                        })
+                        .map(|h| item.get(h).map(value_to_string).unwrap_or_default())
                         .collect();
                     rows.push(row);
                 }
                 rows
             } else {
-                arr.iter()
-                    .map(|v| vec![value_to_string(v)])
-                    .collect()
+                arr.iter().map(|v| vec![value_to_string(v)]).collect()
             }
         }
         other => vec![vec![value_to_string(other)]],

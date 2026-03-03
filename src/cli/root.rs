@@ -1,24 +1,24 @@
 // Root flag definitions, env resolution
 
-use clap::{Parser, Subcommand, Args};
-use super::gmail::GmailArgs;
+use super::agent::AgentArgs;
+use super::appscript::AppScriptArgs;
 use super::calendar::CalendarArgs;
-use super::drive::DriveArgs;
-use super::docs::DocsArgs;
-use super::sheets::SheetsArgs;
-use super::slides::SlidesArgs;
-use super::forms::FormsArgs;
 use super::chat::ChatArgs;
-use super::tasks::TasksArgs;
 use super::classroom::ClassroomArgs;
+use super::completion::CompletionArgs;
 use super::contacts::ContactsArgs;
-use super::people::PeopleArgs;
+use super::docs::DocsArgs;
+use super::drive::DriveArgs;
+use super::forms::FormsArgs;
+use super::gmail::GmailArgs;
 use super::groups::GroupsArgs;
 use super::keep::KeepArgs;
-use super::appscript::AppScriptArgs;
 use super::open::OpenArgs;
-use super::completion::CompletionArgs;
-use super::agent::AgentArgs;
+use super::people::PeopleArgs;
+use super::sheets::SheetsArgs;
+use super::slides::SlidesArgs;
+use super::tasks::TasksArgs;
+use clap::{Args, Parser, Subcommand};
 
 /// omega-google: Google Workspace CLI
 #[derive(Parser, Debug)]
@@ -26,7 +26,7 @@ use super::agent::AgentArgs;
     name = "omega-google",
     version,
     about = "Google Workspace CLI",
-    disable_help_subcommand = false,
+    disable_help_subcommand = false
 )]
 pub struct Cli {
     #[command(flatten)]
@@ -68,7 +68,13 @@ pub struct RootFlags {
     pub verbose: bool,
 
     /// Dry run: show what would happen without executing
-    #[arg(long, short = 'n', global = true, env = "GOG_DRY_RUN", alias = "dryrun")]
+    #[arg(
+        long,
+        short = 'n',
+        global = true,
+        env = "GOG_DRY_RUN",
+        alias = "dryrun"
+    )]
     pub dry_run: bool,
 
     /// Skip confirmation prompts
@@ -88,7 +94,12 @@ pub struct RootFlags {
     pub results_only: bool,
 
     /// Restrict available commands (comma-separated list)
-    #[arg(long, global = true, env = "GOG_ENABLE_COMMANDS", alias = "enable-cmds")]
+    #[arg(
+        long,
+        global = true,
+        env = "GOG_ENABLE_COMMANDS",
+        alias = "enable-cmds"
+    )]
     pub enable_commands: Option<String>,
 }
 

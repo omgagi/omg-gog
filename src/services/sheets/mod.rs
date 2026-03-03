@@ -1,12 +1,12 @@
 //! Google Sheets service module.
 //! Provides types, A1 notation parsing, and URL/body builders for the Sheets API.
 
-pub mod types;
 pub mod a1;
-pub mod read;
-pub mod write;
 pub mod format;
+pub mod read;
 pub mod structure;
+pub mod types;
+pub mod write;
 
 /// Google Sheets API v4 base URL.
 pub const SHEETS_BASE_URL: &str = "https://sheets.googleapis.com/v4";

@@ -118,7 +118,10 @@ mod tests {
         let group: Group = serde_json::from_str(json_str).unwrap();
         assert_eq!(group.name, Some("groups/abc123".to_string()));
         assert_eq!(group.display_name, Some("Engineering".to_string()));
-        assert_eq!(group.description, Some("Engineering team group".to_string()));
+        assert_eq!(
+            group.description,
+            Some("Engineering team group".to_string())
+        );
         let key = group.group_key.unwrap();
         assert_eq!(key.id, Some("engineering@example.com".to_string()));
         let labels = group.labels.unwrap();
@@ -221,9 +224,15 @@ mod tests {
             "createTime": "2024-01-15T10:30:00Z"
         }"#;
         let membership: Membership = serde_json::from_str(json_str).unwrap();
-        assert_eq!(membership.name, Some("groups/abc123/memberships/mem456".to_string()));
+        assert_eq!(
+            membership.name,
+            Some("groups/abc123/memberships/mem456".to_string())
+        );
         assert_eq!(membership.type_, Some("USER".to_string()));
-        assert_eq!(membership.create_time, Some("2024-01-15T10:30:00Z".to_string()));
+        assert_eq!(
+            membership.create_time,
+            Some("2024-01-15T10:30:00Z".to_string())
+        );
 
         let key = membership.preferred_member_key.unwrap();
         assert_eq!(key.id, Some("user@example.com".to_string()));
@@ -255,7 +264,10 @@ mod tests {
         }"#;
         let resp: MembershipListResponse = serde_json::from_str(json_str).unwrap();
         assert_eq!(resp.memberships.len(), 2);
-        assert_eq!(resp.memberships[0].name, Some("groups/aaa/memberships/m1".to_string()));
+        assert_eq!(
+            resp.memberships[0].name,
+            Some("groups/aaa/memberships/m1".to_string())
+        );
         assert_eq!(resp.next_page_token, Some("page2".to_string()));
     }
 

@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, Utc, Duration};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 
 /// Parse flexible date/time input matching gogcli conventions.
 /// Accepted formats:
@@ -123,7 +123,15 @@ pub fn is_relative(input: &str) -> bool {
 /// Check if the input looks like a weekday reference.
 pub fn is_weekday_ref(input: &str) -> bool {
     let lower = input.trim().to_lowercase();
-    let weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    let weekdays = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    ];
     // "monday", "next monday", "last monday"
     for wd in &weekdays {
         if lower == *wd || lower == format!("next {}", wd) || lower == format!("last {}", wd) {
@@ -280,7 +288,7 @@ mod tests {
         assert!(is_relative("today"));
         assert!(is_relative("tomorrow"));
         assert!(is_relative("yesterday"));
-        assert!(is_relative("NOW"));  // case insensitive
+        assert!(is_relative("NOW")); // case insensitive
         assert!(!is_relative("monday"));
         assert!(!is_relative("2024-01-01"));
     }

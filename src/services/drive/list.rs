@@ -56,7 +56,11 @@ pub fn looks_like_drive_query_language(query: &str) -> bool {
         return true;
     }
     // Field comparison patterns: field = 'value', field != 'value', field > 'value', etc.
-    if query.contains(" = ") || query.contains(" != ") || query.contains(" > ") || query.contains(" < ") {
+    if query.contains(" = ")
+        || query.contains(" != ")
+        || query.contains(" > ")
+        || query.contains(" < ")
+    {
         return true;
     }
     // contains operator: name contains 'text', fullText contains 'text'
@@ -64,7 +68,11 @@ pub fn looks_like_drive_query_language(query: &str) -> bool {
         return true;
     }
     // Membership pattern: 'id' in parents
-    if query.contains(" in parents") || query.contains(" in owners") || query.contains(" in writers") || query.contains(" in readers") {
+    if query.contains(" in parents")
+        || query.contains(" in owners")
+        || query.contains(" in writers")
+        || query.contains(" in readers")
+    {
         return true;
     }
     // trashed predicate
@@ -90,7 +98,8 @@ pub fn has_trashed_predicate(query: &str) -> bool {
             i += 1;
             continue;
         }
-        if !in_quote && i + trashed_bytes.len() <= bytes.len()
+        if !in_quote
+            && i + trashed_bytes.len() <= bytes.len()
             && &bytes[i..i + trashed_bytes.len()] == trashed_bytes
         {
             // Check character after "trashed" is whitespace or operator
@@ -104,7 +113,9 @@ pub fn has_trashed_predicate(query: &str) -> bool {
                 j += 1;
             }
             // Check for operator: =, !=, <, >
-            if j < bytes.len() && (bytes[j] == b'=' || bytes[j] == b'!' || bytes[j] == b'<' || bytes[j] == b'>') {
+            if j < bytes.len()
+                && (bytes[j] == b'=' || bytes[j] == b'!' || bytes[j] == b'<' || bytes[j] == b'>')
+            {
                 return true;
             }
         }
@@ -218,9 +229,13 @@ mod tests {
     // Acceptance: Detects field comparison patterns
     #[test]
     fn req_drive_002_detects_field_comparison() {
-        assert!(looks_like_drive_query_language("mimeType = 'application/pdf'"));
+        assert!(looks_like_drive_query_language(
+            "mimeType = 'application/pdf'"
+        ));
         assert!(looks_like_drive_query_language("name != 'test'"));
-        assert!(looks_like_drive_query_language("modifiedTime > '2024-01-01'"));
+        assert!(looks_like_drive_query_language(
+            "modifiedTime > '2024-01-01'"
+        ));
     }
 
     // Requirement: REQ-DRIVE-002 (Must)

@@ -9,15 +9,13 @@ use crate::services::drive::types::*;
 pub fn format_to_mime(format: &str) -> Option<&'static str> {
     match format.to_lowercase().as_str() {
         "pdf" => Some("application/pdf"),
-        "docx" | "doc" => Some(
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ),
-        "xlsx" | "xls" => Some(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        ),
-        "pptx" | "ppt" => Some(
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        ),
+        "docx" | "doc" => {
+            Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        }
+        "xlsx" | "xls" => Some("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        "pptx" | "ppt" => {
+            Some("application/vnd.openxmlformats-officedocument.presentationml.presentation")
+        }
         "csv" => Some("text/csv"),
         "txt" | "text" => Some("text/plain"),
         "png" => Some("image/png"),
@@ -98,17 +96,11 @@ pub fn guess_content_type_from_path(path: &str) -> &'static str {
         Some("xml") => "application/xml",
         Some("zip") => "application/zip",
         Some("doc") => "application/msword",
-        Some("docx") => {
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        }
+        Some("docx") => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         Some("xls") => "application/vnd.ms-excel",
-        Some("xlsx") => {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        }
+        Some("xlsx") => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         Some("ppt") => "application/vnd.ms-powerpoint",
-        Some("pptx") => {
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        }
+        Some("pptx") => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         Some("svg") => "image/svg+xml",
         _ => "application/octet-stream",
     }
@@ -245,7 +237,10 @@ mod tests {
     #[test]
     fn req_rt_031_format_to_mime_case_insensitive() {
         assert_eq!(format_to_mime("PDF"), Some("application/pdf"));
-        assert_eq!(format_to_mime("Docx"), Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document"));
+        assert_eq!(
+            format_to_mime("Docx"),
+            Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        );
     }
 
     // ===================================================================
@@ -311,10 +306,16 @@ mod tests {
     #[test]
     fn req_rt_031_export_formats_extensions() {
         let doc_formats = export_formats(MIME_GOOGLE_DOC);
-        let pdf_entry = doc_formats.iter().find(|(name, _, _)| *name == "pdf").unwrap();
+        let pdf_entry = doc_formats
+            .iter()
+            .find(|(name, _, _)| *name == "pdf")
+            .unwrap();
         assert_eq!(pdf_entry.2, ".pdf");
 
-        let docx_entry = doc_formats.iter().find(|(name, _, _)| *name == "docx").unwrap();
+        let docx_entry = doc_formats
+            .iter()
+            .find(|(name, _, _)| *name == "docx")
+            .unwrap();
         assert_eq!(docx_entry.2, ".docx");
     }
 
@@ -410,7 +411,10 @@ mod tests {
     // Acceptance: PDF file detected
     #[test]
     fn req_rt_028_guess_content_type_pdf() {
-        assert_eq!(guess_content_type_from_path("report.pdf"), "application/pdf");
+        assert_eq!(
+            guess_content_type_from_path("report.pdf"),
+            "application/pdf"
+        );
     }
 
     // Requirement: REQ-RT-028 (Must)
@@ -461,7 +465,10 @@ mod tests {
     // Acceptance: JSON file detected
     #[test]
     fn req_rt_028_guess_content_type_json() {
-        assert_eq!(guess_content_type_from_path("config.json"), "application/json");
+        assert_eq!(
+            guess_content_type_from_path("config.json"),
+            "application/json"
+        );
     }
 
     // Requirement: REQ-RT-028 (Must)
@@ -475,7 +482,10 @@ mod tests {
     // Acceptance: ZIP file detected
     #[test]
     fn req_rt_028_guess_content_type_zip() {
-        assert_eq!(guess_content_type_from_path("archive.zip"), "application/zip");
+        assert_eq!(
+            guess_content_type_from_path("archive.zip"),
+            "application/zip"
+        );
     }
 
     // Requirement: REQ-RT-028 (Must)
@@ -512,8 +522,14 @@ mod tests {
     // Acceptance: Legacy Office formats detected
     #[test]
     fn req_rt_028_guess_content_type_legacy_office() {
-        assert_eq!(guess_content_type_from_path("document.doc"), "application/msword");
-        assert_eq!(guess_content_type_from_path("spreadsheet.xls"), "application/vnd.ms-excel");
+        assert_eq!(
+            guess_content_type_from_path("document.doc"),
+            "application/msword"
+        );
+        assert_eq!(
+            guess_content_type_from_path("spreadsheet.xls"),
+            "application/vnd.ms-excel"
+        );
         assert_eq!(
             guess_content_type_from_path("presentation.ppt"),
             "application/vnd.ms-powerpoint"

@@ -9,7 +9,13 @@ pub fn build_focus_time_event(
     end: &EventDateTime,
 ) -> serde_json::Value {
     let mut body = super::events::build_event_create_body(
-        summary, start, end, None, None, &[], Some("focusTime"),
+        summary,
+        start,
+        end,
+        None,
+        None,
+        &[],
+        Some("focusTime"),
     );
     body["transparency"] = serde_json::json!("opaque");
     body
@@ -22,7 +28,13 @@ pub fn build_ooo_event(
     end: &EventDateTime,
 ) -> serde_json::Value {
     super::events::build_event_create_body(
-        summary, start, end, None, None, &[], Some("outOfOffice"),
+        summary,
+        start,
+        end,
+        None,
+        None,
+        &[],
+        Some("outOfOffice"),
     )
 }
 

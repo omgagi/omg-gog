@@ -1,5 +1,5 @@
-pub mod mode;
 pub mod json;
+pub mod mode;
 pub mod plain;
 pub mod text;
 pub mod transform;
@@ -50,8 +50,16 @@ pub fn resolve_mode(json_flag: bool, plain_flag: bool, is_tty: bool) -> anyhow::
 
 /// Resolve output mode with CSV support.
 /// When GOG_AUTO_JSON is truthy and stdout is not a TTY, defaults to JSON.
-pub fn resolve_mode_full(json_flag: bool, plain_flag: bool, csv_flag: bool, is_tty: bool) -> anyhow::Result<OutputMode> {
-    let exclusive_count = [json_flag, plain_flag, csv_flag].iter().filter(|&&f| f).count();
+pub fn resolve_mode_full(
+    json_flag: bool,
+    plain_flag: bool,
+    csv_flag: bool,
+    is_tty: bool,
+) -> anyhow::Result<OutputMode> {
+    let exclusive_count = [json_flag, plain_flag, csv_flag]
+        .iter()
+        .filter(|&&f| f)
+        .count();
     if exclusive_count > 1 {
         anyhow::bail!("--json, --plain, and --csv are mutually exclusive");
     }
@@ -78,9 +86,24 @@ pub fn write_csv(
     headers: &[String],
     rows: &[Vec<String>],
 ) -> anyhow::Result<()> {
-    writeln!(writer, "{}", headers.iter().map(|h| csv_escape(h)).collect::<Vec<_>>().join(","))?;
+    writeln!(
+        writer,
+        "{}",
+        headers
+            .iter()
+            .map(|h| csv_escape(h))
+            .collect::<Vec<_>>()
+            .join(",")
+    )?;
     for row in rows {
-        writeln!(writer, "{}", row.iter().map(|f| csv_escape(f)).collect::<Vec<_>>().join(","))?;
+        writeln!(
+            writer,
+            "{}",
+            row.iter()
+                .map(|f| csv_escape(f))
+                .collect::<Vec<_>>()
+                .join(",")
+        )?;
     }
     Ok(())
 }
@@ -116,10 +139,7 @@ pub fn write_json<T: Serialize>(
 }
 
 /// Write plain/TSV output.
-pub fn write_plain(
-    writer: &mut impl std::io::Write,
-    rows: &[Vec<String>],
-) -> anyhow::Result<()> {
+pub fn write_plain(writer: &mut impl std::io::Write, rows: &[Vec<String>]) -> anyhow::Result<()> {
     for row in rows {
         writeln!(writer, "{}", row.join("\t"))?;
     }

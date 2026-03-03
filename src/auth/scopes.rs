@@ -15,9 +15,7 @@ pub fn scopes_for_service(service: Service) -> Vec<String> {
             "https://www.googleapis.com/auth/gmail.settings.basic".into(),
             "https://www.googleapis.com/auth/gmail.settings.sharing".into(),
         ],
-        Service::Calendar => vec![
-            "https://www.googleapis.com/auth/calendar".into(),
-        ],
+        Service::Calendar => vec!["https://www.googleapis.com/auth/calendar".into()],
         Service::Chat => vec![
             "https://www.googleapis.com/auth/chat.spaces".into(),
             "https://www.googleapis.com/auth/chat.messages".into(),
@@ -36,9 +34,7 @@ pub fn scopes_for_service(service: Service) -> Vec<String> {
             "https://www.googleapis.com/auth/classroom.guardianlinks.students".into(),
             "https://www.googleapis.com/auth/classroom.push-notifications".into(),
         ],
-        Service::Drive => vec![
-            "https://www.googleapis.com/auth/drive".into(),
-        ],
+        Service::Drive => vec!["https://www.googleapis.com/auth/drive".into()],
         Service::Docs => vec![
             "https://www.googleapis.com/auth/drive".into(),
             "https://www.googleapis.com/auth/documents".into(),
@@ -52,12 +48,8 @@ pub fn scopes_for_service(service: Service) -> Vec<String> {
             "https://www.googleapis.com/auth/contacts.other.readonly".into(),
             "https://www.googleapis.com/auth/directory.readonly".into(),
         ],
-        Service::Tasks => vec![
-            "https://www.googleapis.com/auth/tasks".into(),
-        ],
-        Service::People => vec![
-            "profile".into(),
-        ],
+        Service::Tasks => vec!["https://www.googleapis.com/auth/tasks".into()],
+        Service::People => vec!["profile".into()],
         Service::Sheets => vec![
             "https://www.googleapis.com/auth/drive".into(),
             "https://www.googleapis.com/auth/spreadsheets".into(),
@@ -71,12 +63,10 @@ pub fn scopes_for_service(service: Service) -> Vec<String> {
             "https://www.googleapis.com/auth/script.deployments".into(),
             "https://www.googleapis.com/auth/script.processes".into(),
         ],
-        Service::Groups => vec![
-            "https://www.googleapis.com/auth/cloud-identity.groups.readonly".into(),
-        ],
-        Service::Keep => vec![
-            "https://www.googleapis.com/auth/keep.readonly".into(),
-        ],
+        Service::Groups => {
+            vec!["https://www.googleapis.com/auth/cloud-identity.groups.readonly".into()]
+        }
+        Service::Keep => vec!["https://www.googleapis.com/auth/keep.readonly".into()],
     }
 }
 
@@ -94,7 +84,10 @@ fn resolve_drive_scope(opts: &ScopeOptions) -> String {
 }
 
 /// Returns scopes for a service with options (readonly, drive scope mode).
-pub fn scopes_for_service_with_options(service: Service, opts: &ScopeOptions) -> anyhow::Result<Vec<String>> {
+pub fn scopes_for_service_with_options(
+    service: Service,
+    opts: &ScopeOptions,
+) -> anyhow::Result<Vec<String>> {
     if !opts.readonly && opts.drive_scope == DriveScopeMode::Full {
         // No options that change anything -- return defaults
         return Ok(scopes_for_service(service));
@@ -138,7 +131,8 @@ pub fn scopes_for_service_with_options(service: Service, opts: &ScopeOptions) ->
                     "https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly".into(),
                     "https://www.googleapis.com/auth/classroom.topics.readonly".into(),
                     "https://www.googleapis.com/auth/classroom.announcements.readonly".into(),
-                    "https://www.googleapis.com/auth/classroom.guardianlinks.students.readonly".into(),
+                    "https://www.googleapis.com/auth/classroom.guardianlinks.students.readonly"
+                        .into(),
                     "https://www.googleapis.com/auth/classroom.push-notifications".into(),
                 ]
             } else {
@@ -266,8 +260,12 @@ mod tests {
     fn req_auth_016_gmail_default_scopes() {
         let scopes = scopes_for_service(Service::Gmail);
         assert!(scopes.contains(&"https://www.googleapis.com/auth/gmail.modify".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/gmail.settings.basic".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/gmail.settings.sharing".to_string()));
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/gmail.settings.basic".to_string())
+        );
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/gmail.settings.sharing".to_string())
+        );
         assert_eq!(scopes.len(), 3);
     }
 
@@ -287,7 +285,9 @@ mod tests {
         assert!(scopes.contains(&"https://www.googleapis.com/auth/chat.spaces".to_string()));
         assert!(scopes.contains(&"https://www.googleapis.com/auth/chat.messages".to_string()));
         assert!(scopes.contains(&"https://www.googleapis.com/auth/chat.memberships".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/chat.users.readstate.readonly".to_string()));
+        assert!(scopes.contains(
+            &"https://www.googleapis.com/auth/chat.users.readstate.readonly".to_string()
+        ));
         assert_eq!(scopes.len(), 4);
     }
 
@@ -299,7 +299,8 @@ mod tests {
         assert_eq!(scopes.len(), 10);
         assert!(scopes.contains(&"https://www.googleapis.com/auth/classroom.courses".to_string()));
         assert!(scopes.contains(&"https://www.googleapis.com/auth/classroom.rosters".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/classroom.profile.emails".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/classroom.profile.emails".to_string()));
     }
 
     // Requirement: REQ-AUTH-016 (Must)
@@ -336,7 +337,9 @@ mod tests {
     fn req_auth_016_contacts_default_scopes() {
         let scopes = scopes_for_service(Service::Contacts);
         assert!(scopes.contains(&"https://www.googleapis.com/auth/contacts".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/contacts.other.readonly".to_string()));
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/contacts.other.readonly".to_string())
+        );
         assert!(scopes.contains(&"https://www.googleapis.com/auth/directory.readonly".to_string()));
         assert_eq!(scopes.len(), 3);
     }
@@ -373,7 +376,8 @@ mod tests {
     fn req_auth_016_forms_default_scopes() {
         let scopes = scopes_for_service(Service::Forms);
         assert!(scopes.contains(&"https://www.googleapis.com/auth/forms.body".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/forms.responses.readonly".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/forms.responses.readonly".to_string()));
         assert_eq!(scopes.len(), 2);
     }
 
@@ -393,7 +397,10 @@ mod tests {
     #[test]
     fn req_auth_016_groups_default_scope() {
         let scopes = scopes_for_service(Service::Groups);
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/cloud-identity.groups.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/cloud-identity.groups.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
@@ -401,7 +408,10 @@ mod tests {
     #[test]
     fn req_auth_016_keep_default_scope() {
         let scopes = scopes_for_service(Service::Keep);
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/keep.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/keep.readonly"]
+        );
     }
 
     // ---------------------------------------------------------------
@@ -412,45 +422,74 @@ mod tests {
     // Acceptance: Gmail readonly variant
     #[test]
     fn req_auth_016_gmail_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Gmail, &opts).unwrap();
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/gmail.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/gmail.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Calendar readonly variant
     #[test]
     fn req_auth_016_calendar_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Calendar, &opts).unwrap();
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/calendar.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/calendar.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Chat readonly variants
     #[test]
     fn req_auth_016_chat_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Chat, &opts).unwrap();
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/chat.spaces.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/chat.messages.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/chat.memberships.readonly".to_string()));
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/chat.spaces.readonly".to_string())
+        );
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/chat.messages.readonly".to_string())
+        );
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/chat.memberships.readonly".to_string()));
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Drive readonly scope
     #[test]
     fn req_auth_016_drive_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Drive, &opts).unwrap();
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/drive.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/drive.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Docs readonly variant uses both drive.readonly and documents.readonly
     #[test]
     fn req_auth_016_docs_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Docs, &opts).unwrap();
         assert!(scopes.contains(&"https://www.googleapis.com/auth/drive.readonly".to_string()));
         assert!(scopes.contains(&"https://www.googleapis.com/auth/documents.readonly".to_string()));
@@ -460,19 +499,30 @@ mod tests {
     // Acceptance: Tasks readonly variant
     #[test]
     fn req_auth_016_tasks_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Tasks, &opts).unwrap();
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/tasks.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/tasks.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Contacts readonly variant
     #[test]
     fn req_auth_016_contacts_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Contacts, &opts).unwrap();
         assert!(scopes.contains(&"https://www.googleapis.com/auth/contacts.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/contacts.other.readonly".to_string()));
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/contacts.other.readonly".to_string())
+        );
         assert!(scopes.contains(&"https://www.googleapis.com/auth/directory.readonly".to_string()));
     }
 
@@ -480,7 +530,10 @@ mod tests {
     // Acceptance: People has no distinct readonly (profile is already read-only)
     #[test]
     fn req_auth_016_people_readonly_same_as_default() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::People, &opts).unwrap();
         assert_eq!(scopes, vec!["profile"]);
     }
@@ -510,7 +563,10 @@ mod tests {
             drive_scope: DriveScopeMode::Readonly,
         };
         let scopes = scopes_for_service_with_options(Service::Drive, &opts).unwrap();
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/drive.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/drive.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
@@ -522,7 +578,10 @@ mod tests {
             drive_scope: DriveScopeMode::Full,
         };
         let scopes = scopes_for_service_with_options(Service::Drive, &opts).unwrap();
-        assert_eq!(scopes, vec!["https://www.googleapis.com/auth/drive.readonly"]);
+        assert_eq!(
+            scopes,
+            vec!["https://www.googleapis.com/auth/drive.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
@@ -569,7 +628,10 @@ mod tests {
         let opts = ScopeOptions::default();
         // Docs and Sheets both request drive scope -- should be deduplicated
         let scopes = scopes_for_manage(&[Service::Docs, Service::Sheets], &opts).unwrap();
-        let drive_count = scopes.iter().filter(|s| *s == "https://www.googleapis.com/auth/drive").count();
+        let drive_count = scopes
+            .iter()
+            .filter(|s| *s == "https://www.googleapis.com/auth/drive")
+            .count();
         assert_eq!(drive_count, 1, "drive scope should appear exactly once");
         // Scopes should be sorted
         let mut sorted = scopes.clone();
@@ -581,10 +643,15 @@ mod tests {
     // Acceptance: AppScript readonly variants
     #[test]
     fn req_auth_016_appscript_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::AppScript, &opts).unwrap();
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/script.projects.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/script.deployments.readonly".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/script.projects.readonly".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/script.deployments.readonly".to_string()));
         assert_eq!(scopes.len(), 2);
     }
 
@@ -592,54 +659,84 @@ mod tests {
     // Acceptance: Groups and Keep have no readonly variants (already readonly)
     #[test]
     fn req_auth_016_groups_keep_no_readonly_change() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let groups_scopes = scopes_for_service_with_options(Service::Groups, &opts).unwrap();
         let keep_scopes = scopes_for_service_with_options(Service::Keep, &opts).unwrap();
-        assert_eq!(groups_scopes, vec!["https://www.googleapis.com/auth/cloud-identity.groups.readonly"]);
-        assert_eq!(keep_scopes, vec!["https://www.googleapis.com/auth/keep.readonly"]);
+        assert_eq!(
+            groups_scopes,
+            vec!["https://www.googleapis.com/auth/cloud-identity.groups.readonly"]
+        );
+        assert_eq!(
+            keep_scopes,
+            vec!["https://www.googleapis.com/auth/keep.readonly"]
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Forms readonly variant
     #[test]
     fn req_auth_016_forms_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Forms, &opts).unwrap();
         assert!(scopes.contains(&"https://www.googleapis.com/auth/forms.body.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/forms.responses.readonly".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/forms.responses.readonly".to_string()));
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Slides readonly variant
     #[test]
     fn req_auth_016_slides_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Slides, &opts).unwrap();
         assert!(scopes.contains(&"https://www.googleapis.com/auth/drive.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/presentations.readonly".to_string()));
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/presentations.readonly".to_string())
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Sheets readonly variant
     #[test]
     fn req_auth_016_sheets_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Sheets, &opts).unwrap();
         assert!(scopes.contains(&"https://www.googleapis.com/auth/drive.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/spreadsheets.readonly".to_string()));
+        assert!(
+            scopes.contains(&"https://www.googleapis.com/auth/spreadsheets.readonly".to_string())
+        );
     }
 
     // Requirement: REQ-AUTH-016 (Must)
     // Acceptance: Classroom readonly variants (10 readonly scopes)
     #[test]
     fn req_auth_016_classroom_readonly() {
-        let opts = ScopeOptions { readonly: true, ..Default::default() };
+        let opts = ScopeOptions {
+            readonly: true,
+            ..Default::default()
+        };
         let scopes = scopes_for_service_with_options(Service::Classroom, &opts).unwrap();
         assert_eq!(scopes.len(), 10);
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/classroom.courses.readonly".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/classroom.rosters.readonly".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/classroom.courses.readonly".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/classroom.rosters.readonly".to_string()));
         // profile.emails and profile.photos do NOT have readonly variants
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/classroom.profile.emails".to_string()));
-        assert!(scopes.contains(&"https://www.googleapis.com/auth/classroom.profile.photos".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/classroom.profile.emails".to_string()));
+        assert!(scopes
+            .contains(&"https://www.googleapis.com/auth/classroom.profile.photos".to_string()));
     }
 }

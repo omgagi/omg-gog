@@ -384,12 +384,17 @@ pub struct AutoForwarding {
 
 /// Extract a header value by name (case-insensitive) from a MessagePart.
 pub fn header_value(part: &MessagePart, name: &str) -> Option<String> {
-    part.headers.iter().find(|h| h.name.eq_ignore_ascii_case(name)).map(|h| h.value.clone())
+    part.headers
+        .iter()
+        .find(|h| h.name.eq_ignore_ascii_case(name))
+        .map(|h| h.value.clone())
 }
 
 /// Check if a list of header names contains a given name (case-insensitive).
 pub fn has_header_name(header_names: &[String], name: &str) -> bool {
-    header_names.iter().any(|h| h.trim().eq_ignore_ascii_case(name))
+    header_names
+        .iter()
+        .any(|h| h.trim().eq_ignore_ascii_case(name))
 }
 
 /// Generate a Gmail web URL for a thread ID.
@@ -560,18 +565,36 @@ mod tests {
             mime_type: Some("text/plain".to_string()),
             filename: None,
             headers: vec![
-                Header { name: "From".to_string(), value: "sender@example.com".to_string() },
-                Header { name: "Subject".to_string(), value: "Test".to_string() },
-                Header { name: "date".to_string(), value: "Mon, 01 Jan 2024".to_string() },
+                Header {
+                    name: "From".to_string(),
+                    value: "sender@example.com".to_string(),
+                },
+                Header {
+                    name: "Subject".to_string(),
+                    value: "Test".to_string(),
+                },
+                Header {
+                    name: "date".to_string(),
+                    value: "Mon, 01 Jan 2024".to_string(),
+                },
             ],
             body: None,
             parts: vec![],
             extra: HashMap::new(),
         };
-        assert_eq!(header_value(&part, "from"), Some("sender@example.com".to_string()));
-        assert_eq!(header_value(&part, "FROM"), Some("sender@example.com".to_string()));
+        assert_eq!(
+            header_value(&part, "from"),
+            Some("sender@example.com".to_string())
+        );
+        assert_eq!(
+            header_value(&part, "FROM"),
+            Some("sender@example.com".to_string())
+        );
         assert_eq!(header_value(&part, "subject"), Some("Test".to_string()));
-        assert_eq!(header_value(&part, "Date"), Some("Mon, 01 Jan 2024".to_string()));
+        assert_eq!(
+            header_value(&part, "Date"),
+            Some("Mon, 01 Jan 2024".to_string())
+        );
     }
 
     // Requirement: REQ-GMAIL-006 (Must)
@@ -594,7 +617,11 @@ mod tests {
     // Acceptance: has_header_name works case-insensitively
     #[test]
     fn req_gmail_006_has_header_name() {
-        let names = vec!["From".to_string(), "Subject".to_string(), "Date".to_string()];
+        let names = vec![
+            "From".to_string(),
+            "Subject".to_string(),
+            "Date".to_string(),
+        ];
         assert!(has_header_name(&names, "from"));
         assert!(has_header_name(&names, "SUBJECT"));
         assert!(!has_header_name(&names, "CC"));
@@ -618,10 +645,7 @@ mod tests {
     // Edge case: Empty thread ID
     #[test]
     fn req_gmail_008_thread_url_empty() {
-        assert_eq!(
-            thread_url(""),
-            "https://mail.google.com/mail/u/0/#all/"
-        );
+        assert_eq!(thread_url(""), "https://mail.google.com/mail/u/0/#all/");
     }
 
     // ---------------------------------------------------------------
@@ -799,7 +823,10 @@ mod tests {
         let json = serde_json::to_string(&af).unwrap();
         let parsed: AutoForwarding = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.enabled, Some(true));
-        assert_eq!(parsed.email_address, Some("forward@example.com".to_string()));
+        assert_eq!(
+            parsed.email_address,
+            Some("forward@example.com".to_string())
+        );
     }
 
     // ---------------------------------------------------------------

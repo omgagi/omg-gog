@@ -1,24 +1,24 @@
-pub mod root;
-pub mod desire_paths;
-pub mod exit_codes;
-pub mod gmail;
+pub mod agent;
+pub mod appscript;
 pub mod calendar;
-pub mod drive;
-pub mod docs;
-pub mod sheets;
-pub mod slides;
-pub mod forms;
 pub mod chat;
-pub mod tasks;
 pub mod classroom;
+pub mod completion;
 pub mod contacts;
-pub mod people;
+pub mod desire_paths;
+pub mod docs;
+pub mod drive;
+pub mod exit_codes;
+pub mod forms;
+pub mod gmail;
 pub mod groups;
 pub mod keep;
-pub mod appscript;
 pub mod open;
-pub mod completion;
-pub mod agent;
+pub mod people;
+pub mod root;
+pub mod sheets;
+pub mod slides;
+pub mod tasks;
 
 use std::ffi::OsString;
 
@@ -28,8 +28,7 @@ use crate::error::exit::codes;
 
 /// Safely serialize a value to pretty-printed JSON, returning an error JSON string on failure.
 fn to_json_pretty(val: &impl serde::Serialize) -> String {
-    serde_json::to_string_pretty(val)
-        .unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e))
+    serde_json::to_string_pretty(val).unwrap_or_else(|e| format!("{{\"error\": \"{}\"}}", e))
 }
 
 /// Map an anyhow error to the correct exit code using OmegaError downcasting.
@@ -182,7 +181,9 @@ fn handle_version(flags: &root::RootFlags) -> i32 {
 fn handle_config(args: root::ConfigArgs, flags: &root::RootFlags) -> i32 {
     match args.command {
         root::ConfigCommand::Get(get_args) => handle_config_get(&get_args.key, flags),
-        root::ConfigCommand::Set(set_args) => handle_config_set(&set_args.key, &set_args.value, flags),
+        root::ConfigCommand::Set(set_args) => {
+            handle_config_set(&set_args.key, &set_args.value, flags)
+        }
         root::ConfigCommand::Unset(unset_args) => handle_config_unset(&unset_args.key, flags),
         root::ConfigCommand::List => handle_config_list(flags),
         root::ConfigCommand::Keys => handle_config_keys(flags),
@@ -237,7 +238,10 @@ fn handle_config_set(key: &str, value: &str, _flags: &root::RootFlags) -> i32 {
         "keyring_backend" => cfg.keyring_backend = Some(value.to_string()),
         "default_timezone" => cfg.default_timezone = Some(value.to_string()),
         _ => {
-            eprintln!("Error: unknown config key '{}'. Use 'config keys' to see valid keys.", key);
+            eprintln!(
+                "Error: unknown config key '{}'. Use 'config keys' to see valid keys.",
+                key
+            );
             return codes::USAGE_ERROR;
         }
     }
@@ -265,7 +269,10 @@ fn handle_config_unset(key: &str, _flags: &root::RootFlags) -> i32 {
         "account_clients" => cfg.account_clients = None,
         "client_domains" => cfg.client_domains = None,
         _ => {
-            eprintln!("Error: unknown config key '{}'. Use 'config keys' to see valid keys.", key);
+            eprintln!(
+                "Error: unknown config key '{}'. Use 'config keys' to see valid keys.",
+                key
+            );
             return codes::USAGE_ERROR;
         }
     }
@@ -289,13 +296,19 @@ fn handle_config_list(flags: &root::RootFlags) -> i32 {
     if flags.json {
         let json_val = match serde_json::to_value(&cfg) {
             Ok(v) => v,
-            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return codes::GENERIC_ERROR;
+            }
         };
         println!("{}", to_json_pretty(&json_val));
     } else {
         let json_val = match serde_json::to_value(&cfg) {
             Ok(v) => v,
-            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return codes::GENERIC_ERROR;
+            }
         };
         if let Some(obj) = json_val.as_object() {
             for (k, v) in obj {
@@ -316,7 +329,10 @@ fn handle_config_keys(flags: &root::RootFlags) -> i32 {
     if flags.json {
         let json_val = match serde_json::to_value(&keys) {
             Ok(v) => v,
-            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return codes::GENERIC_ERROR;
+            }
         };
         println!("{}", to_json_pretty(&json_val));
     } else {
@@ -348,7 +364,9 @@ fn handle_config_path(flags: &root::RootFlags) -> i32 {
 /// Handle the `auth` command and its subcommands.
 async fn handle_auth(args: root::AuthArgs, flags: &root::RootFlags) -> i32 {
     match args.command {
-        root::AuthCommand::Credentials(cred_args) => handle_auth_credentials(&cred_args.path, flags),
+        root::AuthCommand::Credentials(cred_args) => {
+            handle_auth_credentials(&cred_args.path, flags)
+        }
         root::AuthCommand::Add(add_args) => handle_auth_add(add_args, flags).await,
         root::AuthCommand::Remove(remove_args) => handle_auth_remove(&remove_args.email, flags),
         root::AuthCommand::List => handle_auth_list(flags),
@@ -392,7 +410,10 @@ fn handle_auth_credentials(path: &str, _flags: &root::RootFlags) -> i32 {
 
     match crate::config::write_client_credentials(crate::config::DEFAULT_CLIENT_NAME, &creds) {
         Ok(()) => {
-            eprintln!("Credentials stored for client '{}'.", crate::config::DEFAULT_CLIENT_NAME);
+            eprintln!(
+                "Credentials stored for client '{}'.",
+                crate::config::DEFAULT_CLIENT_NAME
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -408,14 +429,20 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
     use crate::auth::oauth_flow::run_oauth_flow;
 
     // 1. Determine client name
-    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = flags
+        .client
+        .as_deref()
+        .unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
     let client_name = crate::config::normalize_client_name(client_name);
 
     // 2. Load client credentials from config dir
     let creds = match crate::config::read_client_credentials(&client_name) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Error: {}. Run 'omega-google auth credentials <path>' first.", e);
+            eprintln!(
+                "Error: {}. Run 'omega-google auth credentials <path>' first.",
+                e
+            );
             return codes::CONFIG_ERROR;
         }
     };
@@ -432,7 +459,11 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
     // 4. Collect services -- filter by --services flag or default to user services
     let services = if let Some(ref svc_list) = add_args.services {
         let mut parsed = Vec::new();
-        for name in svc_list.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        for name in svc_list
+            .split(',')
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+        {
             match crate::auth::parse_service(name) {
                 Ok(s) => parsed.push(s),
                 Err(e) => {
@@ -458,7 +489,10 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
             Some("file") => crate::auth::DriveScopeMode::File,
             Some("full") | None => crate::auth::DriveScopeMode::Full,
             Some(other) => {
-                eprintln!("Error: unknown drive scope '{}'. Use: full, readonly, file", other);
+                eprintln!(
+                    "Error: unknown drive scope '{}'. Use: full, readonly, file",
+                    other
+                );
                 return codes::USAGE_ERROR;
             }
         },
@@ -487,7 +521,9 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
         &creds,
         &flow_result.code,
         &flow_result.redirect_uri,
-    ).await {
+    )
+    .await
+    {
         Ok(t) => t,
         Err(e) => {
             eprintln!("Error: token exchange failed: {}", e);
@@ -504,14 +540,15 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
         }
     };
 
-    let scopes: Vec<String> = token_response.scope
+    let scopes: Vec<String> = token_response
+        .scope
         .map(|s| s.split_whitespace().map(|x| x.to_string()).collect())
         .unwrap_or_default();
 
     let now = chrono::Utc::now();
-    let expires_at = token_response.expires_in.map(|secs| {
-        now + chrono::Duration::seconds(secs as i64)
-    });
+    let expires_at = token_response
+        .expires_in
+        .map(|secs| now + chrono::Duration::seconds(secs as i64));
 
     // We need the email from the token info. For now, fetch it from the access token.
     let email = match fetch_email_from_token(&http_client, &token_response.access_token).await {
@@ -556,7 +593,11 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
     }
 
     // Set as default account if no default exists yet
-    if store.get_default_account(&client_name).unwrap_or(None).is_none() {
+    if store
+        .get_default_account(&client_name)
+        .unwrap_or(None)
+        .is_none()
+    {
         let _ = store.set_default_account(&client_name, &email);
     }
 
@@ -565,7 +606,10 @@ async fn handle_auth_add(add_args: root::AuthAddArgs, flags: &root::RootFlags) -
 }
 
 /// Fetch the authenticated user's email from Google's userinfo endpoint.
-async fn fetch_email_from_token(http_client: &reqwest::Client, access_token: &str) -> anyhow::Result<String> {
+async fn fetch_email_from_token(
+    http_client: &reqwest::Client,
+    access_token: &str,
+) -> anyhow::Result<String> {
     let resp = http_client
         .get("https://www.googleapis.com/oauth2/v2/userinfo")
         .bearer_auth(access_token)
@@ -593,7 +637,10 @@ fn handle_auth_remove(email: &str, flags: &root::RootFlags) -> i32 {
         }
     };
 
-    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = flags
+        .client
+        .as_deref()
+        .unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
     let client_name = crate::config::normalize_client_name(client_name);
 
     let store = match crate::auth::keyring::credential_store_factory(&cfg) {
@@ -644,7 +691,10 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
         }
     };
 
-    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = flags
+        .client
+        .as_deref()
+        .unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
     let client_name = crate::config::normalize_client_name(client_name);
 
     let store = match crate::auth::keyring::credential_store_factory(&cfg) {
@@ -677,26 +727,37 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
     }
 
     if flags.json {
-        let json_accounts: Vec<serde_json::Value> = tokens.iter().map(|t| {
-            let is_default = default_account.as_deref() == Some(&t.email) && t.client == client_name;
-            serde_json::json!({
-                "email": t.email,
-                "client": t.client,
-                "services": t.services,
-                "scopes": t.scopes,
-                "created_at": t.created_at.to_rfc3339(),
-                "is_default": is_default,
+        let json_accounts: Vec<serde_json::Value> = tokens
+            .iter()
+            .map(|t| {
+                let is_default =
+                    default_account.as_deref() == Some(&t.email) && t.client == client_name;
+                serde_json::json!({
+                    "email": t.email,
+                    "client": t.client,
+                    "services": t.services,
+                    "scopes": t.scopes,
+                    "created_at": t.created_at.to_rfc3339(),
+                    "is_default": is_default,
+                })
             })
-        }).collect();
+            .collect();
         println!("{}", to_json_pretty(&json_accounts));
     } else if tokens.is_empty() {
         eprintln!("No authenticated accounts found. Use 'omega-google auth add' to add one.");
     } else {
         for t in &tokens {
-            let is_default = default_account.as_deref() == Some(&t.email) && t.client == client_name;
+            let is_default =
+                default_account.as_deref() == Some(&t.email) && t.client == client_name;
             let marker = if is_default { "* " } else { "  " };
             let services_str: Vec<String> = t.services.iter().map(|s| format!("{:?}", s)).collect();
-            println!("{}{}\t{}\t{}", marker, t.email, t.client, services_str.join(","));
+            println!(
+                "{}{}\t{}\t{}",
+                marker,
+                t.email,
+                t.client,
+                services_str.join(",")
+            );
         }
     }
     codes::SUCCESS
@@ -710,9 +771,15 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
 
     let cfg = crate::config::read_config().unwrap_or_default();
 
-    let keyring_backend = cfg.keyring_backend.clone().unwrap_or_else(|| "auto".to_string());
+    let keyring_backend = cfg
+        .keyring_backend
+        .clone()
+        .unwrap_or_else(|| "auto".to_string());
 
-    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = flags
+        .client
+        .as_deref()
+        .unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
     let client_name = crate::config::normalize_client_name(client_name);
 
     // Check if credential file exists
@@ -725,22 +792,19 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
     // Try to get the current account
     let store = crate::auth::keyring::credential_store_factory(&cfg).ok();
     let current_account = store.as_ref().and_then(|s| {
-        crate::auth::resolve_account(
-            flags.account.as_deref(),
-            &cfg,
-            s.as_ref(),
-            &client_name,
-        ).ok()
+        crate::auth::resolve_account(flags.account.as_deref(), &cfg, s.as_ref(), &client_name).ok()
     });
 
     // Load token details if we have a current account
     let token_details = current_account.as_ref().and_then(|email| {
-        store.as_ref().and_then(|s| {
-            s.get_token(&client_name, email).ok()
-        })
+        store
+            .as_ref()
+            .and_then(|s| s.get_token(&client_name, email).ok())
     });
 
-    let needs_refresh = token_details.as_ref().map(crate::auth::token::needs_refresh);
+    let needs_refresh = token_details
+        .as_ref()
+        .map(crate::auth::token::needs_refresh);
 
     if flags.json {
         let mut json_val = serde_json::json!({
@@ -763,13 +827,17 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
         println!("Keyring backend:   {}", keyring_backend);
         println!("Client:            {}", client_name);
         println!("Credentials file:  {}", cred_path.display());
-        println!("Credentials found: {}", if cred_exists { "yes" } else { "no" });
+        println!(
+            "Credentials found: {}",
+            if cred_exists { "yes" } else { "no" }
+        );
         match &current_account {
             Some(acct) => println!("Current account:   {}", acct),
             None => println!("Current account:   (none)"),
         }
         if let Some(ref td) = token_details {
-            let services_str: Vec<String> = td.services.iter().map(|s| format!("{:?}", s)).collect();
+            let services_str: Vec<String> =
+                td.services.iter().map(|s| format!("{:?}", s)).collect();
             println!("Services:          {}", services_str.join(", "));
             println!("Scopes:            {}", td.scopes.join(", "));
             println!("Created:           {}", td.created_at.to_rfc3339());
@@ -789,13 +857,21 @@ fn handle_auth_services(flags: &root::RootFlags) -> i32 {
     if flags.json {
         let json_val = match serde_json::to_value(&services) {
             Ok(v) => v,
-            Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return codes::GENERIC_ERROR;
+            }
         };
         println!("{}", to_json_pretty(&json_val));
     } else {
         for si in &services {
             let user_marker = if si.user { "user" } else { "admin" };
-            println!("{:?}\t{}\t{}", si.service, user_marker, si.scopes.join(", "));
+            println!(
+                "{:?}\t{}\t{}",
+                si.service,
+                user_marker,
+                si.scopes.join(", ")
+            );
         }
     }
     codes::SUCCESS
@@ -804,7 +880,9 @@ fn handle_auth_services(flags: &root::RootFlags) -> i32 {
 fn handle_auth_tokens(args: root::AuthTokensArgs, flags: &root::RootFlags) -> i32 {
     match args.command {
         root::AuthTokensCommand::List => handle_auth_tokens_list(flags),
-        root::AuthTokensCommand::Delete(del_args) => handle_auth_tokens_delete(&del_args.email, flags),
+        root::AuthTokensCommand::Delete(del_args) => {
+            handle_auth_tokens_delete(&del_args.email, flags)
+        }
     }
 }
 
@@ -834,8 +912,9 @@ fn handle_auth_tokens_list(flags: &root::RootFlags) -> i32 {
     };
 
     if flags.json {
-        let json_keys: Vec<serde_json::Value> = keys.iter().map(|k| {
-            match crate::auth::parse_token_key(k) {
+        let json_keys: Vec<serde_json::Value> = keys
+            .iter()
+            .map(|k| match crate::auth::parse_token_key(k) {
                 Some((client, email)) => serde_json::json!({
                     "key": k,
                     "client": client,
@@ -844,8 +923,8 @@ fn handle_auth_tokens_list(flags: &root::RootFlags) -> i32 {
                 None => serde_json::json!({
                     "key": k,
                 }),
-            }
-        }).collect();
+            })
+            .collect();
         println!("{}", to_json_pretty(&json_keys));
     } else if keys.is_empty() {
         eprintln!("No tokens found.");
@@ -869,7 +948,10 @@ fn handle_auth_tokens_delete(email: &str, flags: &root::RootFlags) -> i32 {
         }
     };
 
-    let client_name = flags.client.as_deref().unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
+    let client_name = flags
+        .client
+        .as_deref()
+        .unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
     let client_name = crate::config::normalize_client_name(client_name);
 
     let store = match crate::auth::keyring::credential_store_factory(&cfg) {
@@ -939,7 +1021,10 @@ fn handle_auth_alias(args: root::AuthAliasArgs, flags: &root::RootFlags) -> i32 
             if flags.json {
                 let json_val = match serde_json::to_value(&aliases) {
                     Ok(v) => v,
-                    Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        return codes::GENERIC_ERROR;
+                    }
                 };
                 println!("{}", to_json_pretty(&json_val));
             } else if aliases.is_empty() {
@@ -991,11 +1076,18 @@ async fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
             eprintln!("Error: at least one thread ID is required");
             return codes::USAGE_ERROR;
         }
-        let urls: Vec<String> = url_args.thread_ids.iter().map(|id| thread_url(id)).collect();
+        let urls: Vec<String> = url_args
+            .thread_ids
+            .iter()
+            .map(|id| thread_url(id))
+            .collect();
         if flags.json {
             let json_val = match serde_json::to_value(&urls) {
                 Ok(v) => v,
-                Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return codes::GENERIC_ERROR;
+                }
             };
             println!("{}", to_json_pretty(&json_val));
         } else {
@@ -1017,27 +1109,13 @@ async fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
 
     // Dispatch to subcommand handlers
     match args.command {
-        GmailCommand::Search(ref search_args) => {
-            handle_gmail_search(&ctx, search_args).await
-        }
-        GmailCommand::Messages(ref msg_args) => {
-            handle_gmail_messages(&ctx, msg_args).await
-        }
-        GmailCommand::Thread(ref thread_args) => {
-            handle_gmail_thread(&ctx, thread_args).await
-        }
-        GmailCommand::Get(ref get_args) => {
-            handle_gmail_message_get(&ctx, get_args).await
-        }
-        GmailCommand::Send(ref send_args) => {
-            handle_gmail_send(&ctx, send_args).await
-        }
-        GmailCommand::Labels(ref labels_args) => {
-            handle_gmail_labels(&ctx, labels_args).await
-        }
-        GmailCommand::Attachment(ref att_args) => {
-            handle_gmail_attachment(&ctx, att_args).await
-        }
+        GmailCommand::Search(ref search_args) => handle_gmail_search(&ctx, search_args).await,
+        GmailCommand::Messages(ref msg_args) => handle_gmail_messages(&ctx, msg_args).await,
+        GmailCommand::Thread(ref thread_args) => handle_gmail_thread(&ctx, thread_args).await,
+        GmailCommand::Get(ref get_args) => handle_gmail_message_get(&ctx, get_args).await,
+        GmailCommand::Send(ref send_args) => handle_gmail_send(&ctx, send_args).await,
+        GmailCommand::Labels(ref labels_args) => handle_gmail_labels(&ctx, labels_args).await,
+        GmailCommand::Attachment(ref att_args) => handle_gmail_attachment(&ctx, att_args).await,
         _ => {
             eprintln!("Command not yet implemented");
             codes::GENERIC_ERROR
@@ -1255,10 +1333,7 @@ async fn handle_gmail_message_get(
     } else {
         Some(args.format.as_str())
     };
-    let url = crate::services::gmail::message::build_message_get_url(
-        &args.message_id,
-        format_str,
-    );
+    let url = crate::services::gmail::message::build_message_get_url(&args.message_id, format_str);
     let message: crate::services::gmail::types::Message = match crate::http::api::api_get(
         &ctx.client,
         &url,
@@ -1433,7 +1508,9 @@ async fn handle_gmail_labels(
                     delete_args.label_id
                 );
                 let mut input = String::new();
-                if std::io::stdin().read_line(&mut input).is_err() || input.trim().to_lowercase() != "y" {
+                if std::io::stdin().read_line(&mut input).is_err()
+                    || input.trim().to_lowercase() != "y"
+                {
                     eprintln!("Cancelled.");
                     return codes::CANCELLED;
                 }
@@ -1442,8 +1519,7 @@ async fn handle_gmail_labels(
                 return codes::USAGE_ERROR;
             }
 
-            let url =
-                crate::services::gmail::labels::build_label_delete_url(&delete_args.label_id);
+            let url = crate::services::gmail::labels::build_label_delete_url(&delete_args.label_id);
 
             match crate::http::api::api_delete(
                 &ctx.client,
@@ -1468,22 +1544,21 @@ async fn handle_gmail_labels(
         gmail::GmailLabelsCommand::Get(get_args) => {
             let url = crate::services::gmail::labels::build_label_get_url(&get_args.label);
 
-            let label: crate::services::gmail::types::Label =
-                match crate::http::api::api_get(
-                    &ctx.client,
-                    &url,
-                    &ctx.circuit_breaker,
-                    &ctx.retry_config,
-                    ctx.is_verbose(),
-                )
-                .await
-                {
-                    Ok(l) => l,
-                    Err(e) => {
-                        eprintln!("Error: {}", e);
-                        return map_error_to_exit_code(&e);
-                    }
-                };
+            let label: crate::services::gmail::types::Label = match crate::http::api::api_get(
+                &ctx.client,
+                &url,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+            )
+            .await
+            {
+                Ok(l) => l,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return map_error_to_exit_code(&e);
+                }
+            };
 
             if let Err(e) = ctx.write_output(&label) {
                 eprintln!("Error: {}", e);
@@ -1581,9 +1656,7 @@ async fn handle_calendar(args: calendar::CalendarArgs, flags: &root::RootFlags) 
         CalendarCommand::Events(ref events_args) => {
             handle_calendar_events_list(&ctx, events_args).await
         }
-        CalendarCommand::Event(ref get_args) => {
-            handle_calendar_event_get(&ctx, get_args).await
-        }
+        CalendarCommand::Event(ref get_args) => handle_calendar_event_get(&ctx, get_args).await,
         CalendarCommand::Create(ref create_args) => {
             handle_calendar_event_create(&ctx, create_args).await
         }
@@ -1596,9 +1669,7 @@ async fn handle_calendar(args: calendar::CalendarArgs, flags: &root::RootFlags) 
         CalendarCommand::Calendars(ref cal_args) => {
             handle_calendar_calendars_list(&ctx, cal_args).await
         }
-        CalendarCommand::Freebusy(ref fb_args) => {
-            handle_calendar_freebusy(&ctx, fb_args).await
-        }
+        CalendarCommand::Freebusy(ref fb_args) => handle_calendar_freebusy(&ctx, fb_args).await,
         _ => {
             eprintln!("Command not yet implemented");
             codes::GENERIC_ERROR
@@ -1830,7 +1901,9 @@ async fn handle_calendar_event_update(
         body.insert("end".to_string(), serde_json::json!({"dateTime": to}));
     }
     if !args.add_attendee.is_empty() {
-        let attendees: Vec<serde_json::Value> = args.add_attendee.iter()
+        let attendees: Vec<serde_json::Value> = args
+            .add_attendee
+            .iter()
             .map(|email| serde_json::json!({"email": email}))
             .collect();
         body.insert("attendees".to_string(), serde_json::json!(attendees));
@@ -1971,15 +2044,14 @@ async fn handle_calendar_freebusy(
     ctx: &crate::services::ServiceContext,
     args: &calendar::CalendarFreeBusyArgs,
 ) -> i32 {
-    let calendars: Vec<String> = args.calendar_ids
+    let calendars: Vec<String> = args
+        .calendar_ids
         .split(',')
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .collect();
     let req = crate::services::calendar::freebusy::build_freebusy_request(
-        &calendars,
-        &args.from,
-        &args.to,
+        &calendars, &args.from, &args.to,
     );
     let url = crate::services::calendar::freebusy::build_freebusy_url();
     let body = match serde_json::to_value(&req) {
@@ -2035,7 +2107,10 @@ async fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
         if flags.json {
             let json_val = match serde_json::to_value(&urls) {
                 Ok(v) => v,
-                Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    return codes::GENERIC_ERROR;
+                }
             };
             println!("{}", to_json_pretty(&json_val));
         } else {
@@ -2264,10 +2339,7 @@ async fn handle_drive_delete(
 ) -> i32 {
     // Confirmation for destructive operation
     if !ctx.is_force() && !ctx.flags.no_input {
-        eprint!(
-            "Are you sure you want to delete '{}'? [y/N] ",
-            args.file_id
-        );
+        eprint!("Are you sure you want to delete '{}'? [y/N] ", args.file_id);
         let mut input = String::new();
         if std::io::stdin().read_line(&mut input).is_err() || input.trim().to_lowercase() != "y" {
             eprintln!("Cancelled.");
@@ -2335,8 +2407,10 @@ async fn handle_drive_move(
     args: &drive::DriveMoveArgs,
 ) -> i32 {
     // First, get the file to find current parents (request parents field)
-    let get_url = format!("{}?fields=parents",
-        crate::services::drive::files::build_file_get_url(&args.file_id));
+    let get_url = format!(
+        "{}?fields=parents",
+        crate::services::drive::files::build_file_get_url(&args.file_id)
+    );
     let file: crate::services::drive::types::DriveFile = match crate::http::api::api_get(
         &ctx.client,
         &get_url,
@@ -2358,7 +2432,9 @@ async fn handle_drive_move(
     let url = format!(
         "{}/files/{}?addParents={}&removeParents={}",
         crate::services::drive::types::DRIVE_BASE_URL,
-        args.file_id, args.parent, old_parents
+        args.file_id,
+        args.parent,
+        old_parents
     );
     let body = serde_json::json!({});
 
@@ -2456,8 +2532,7 @@ async fn handle_drive_share(
         }
     };
 
-    let url =
-        crate::services::drive::permissions::build_create_permission_url(&args.file_id);
+    let url = crate::services::drive::permissions::build_create_permission_url(&args.file_id);
 
     match crate::http::api::api_post::<crate::services::drive::types::Permission>(
         &ctx.client,
@@ -2496,8 +2571,7 @@ async fn handle_drive_permissions_list(
     ctx: &crate::services::ServiceContext,
     args: &drive::DrivePermissionsArgs,
 ) -> i32 {
-    let url =
-        crate::services::drive::permissions::build_list_permissions_url(&args.file_id);
+    let url = crate::services::drive::permissions::build_list_permissions_url(&args.file_id);
 
     let response: crate::services::drive::types::PermissionListResponse =
         match crate::http::api::api_get(
@@ -2711,15 +2785,12 @@ async fn handle_drive_upload(
         }
     };
 
-    let filename = args
-        .name
-        .as_deref()
-        .unwrap_or_else(|| {
-            std::path::Path::new(&args.path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("upload")
-        });
+    let filename = args.name.as_deref().unwrap_or_else(|| {
+        std::path::Path::new(&args.path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("upload")
+    });
 
     // Build metadata
     let mut metadata = serde_json::json!({
@@ -2764,10 +2835,8 @@ async fn handle_drive_upload(
     // REQ-RT-029: Use resumable upload for files > 5MB
     // Only read file into memory for small uploads; large files use streaming.
     if file_meta.len() > RESUMABLE_THRESHOLD {
-        return handle_drive_resumable_upload(
-            ctx, filename, &args.path, &metadata, content_type,
-        )
-        .await;
+        return handle_drive_resumable_upload(ctx, filename, &args.path, &metadata, content_type)
+            .await;
     }
 
     // Only read entire file for small uploads
@@ -2861,8 +2930,7 @@ async fn handle_drive_resumable_upload(
     if ctx.is_dry_run() {
         eprintln!(
             "[dry-run] would resumable-upload '{}' ({} bytes)",
-            filename,
-            total
+            filename, total
         );
         return codes::SUCCESS;
     }
@@ -2995,7 +3063,10 @@ async fn handle_drive_resumable_upload(
                     return codes::SUCCESS;
                 }
                 Err(e) => {
-                    eprintln!("Upload complete ({} bytes) but failed to parse response: {}", total, e);
+                    eprintln!(
+                        "Upload complete ({} bytes) but failed to parse response: {}",
+                        total, e
+                    );
                     return codes::SUCCESS;
                 }
             }
@@ -3004,7 +3075,10 @@ async fn handle_drive_resumable_upload(
             if let Some(range_hdr) = put_response.headers().get("range") {
                 if let Ok(range_str) = range_hdr.to_str() {
                     // Format: "bytes=0-12345"
-                    if let Some(end_str) = range_str.strip_prefix("bytes=").and_then(|s| s.split('-').nth(1)) {
+                    if let Some(end_str) = range_str
+                        .strip_prefix("bytes=")
+                        .and_then(|s| s.split('-').nth(1))
+                    {
                         if let Ok(received_end) = end_str.parse::<usize>() {
                             offset = received_end + 1;
                         } else {
@@ -3118,8 +3192,7 @@ fn build_drive_list_url(
     all_drives: bool,
 ) -> String {
     let base = &format!("{}/files", crate::services::drive::types::DRIVE_BASE_URL);
-    let encoded_query: String =
-        url::form_urlencoded::byte_serialize(query.as_bytes()).collect();
+    let encoded_query: String = url::form_urlencoded::byte_serialize(query.as_bytes()).collect();
     let mut params = vec![
         format!("q={}", encoded_query),
         format!("pageSize={}", max),
@@ -3180,10 +3253,15 @@ async fn handle_docs_export(
     args: &docs::DocsExportArgs,
 ) -> i32 {
     use crate::services::docs::export::resolve_export_mime;
-    use crate::services::drive::files::{build_file_export_url, build_file_get_url, resolve_download_path};
+    use crate::services::drive::files::{
+        build_file_export_url, build_file_get_url, resolve_download_path,
+    };
 
     // 1. Get file metadata
-    let metadata_url = format!("{}?fields=id,name,mimeType,size", build_file_get_url(&args.doc_id));
+    let metadata_url = format!(
+        "{}?fields=id,name,mimeType,size",
+        build_file_get_url(&args.doc_id)
+    );
     let file: crate::services::drive::types::DriveFile = match crate::http::api::api_get(
         &ctx.client,
         &metadata_url,
@@ -3225,10 +3303,7 @@ async fn handle_docs_export(
 }
 
 /// Handle Docs info: get document metadata.
-async fn handle_docs_info(
-    ctx: &crate::services::ServiceContext,
-    args: &docs::DocsInfoArgs,
-) -> i32 {
+async fn handle_docs_info(ctx: &crate::services::ServiceContext, args: &docs::DocsInfoArgs) -> i32 {
     let url = crate::services::docs::content::build_doc_get_url(&args.doc_id);
 
     let doc: crate::services::docs::types::Document = match crate::http::api::api_get(
@@ -3295,11 +3370,8 @@ async fn handle_docs_create(
 }
 
 /// Handle Docs copy: copy a document via Drive API.
-async fn handle_docs_copy(
-    ctx: &crate::services::ServiceContext,
-    args: &docs::DocsCopyArgs,
-) -> i32 {
-    use crate::services::docs::export::{build_doc_copy_url, build_doc_copy_body};
+async fn handle_docs_copy(ctx: &crate::services::ServiceContext, args: &docs::DocsCopyArgs) -> i32 {
+    use crate::services::docs::export::{build_doc_copy_body, build_doc_copy_url};
 
     let url = build_doc_copy_url(&args.doc_id);
     let body = build_doc_copy_body(&args.title, args.parent.as_deref());
@@ -3323,7 +3395,10 @@ async fn handle_docs_copy(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would copy document '{}' as '{}'", args.doc_id, args.title);
+            eprintln!(
+                "[dry-run] would copy document '{}' as '{}'",
+                args.doc_id, args.title
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -3334,10 +3409,7 @@ async fn handle_docs_copy(
 }
 
 /// Handle Docs cat: extract and print plain text from a document.
-async fn handle_docs_cat(
-    ctx: &crate::services::ServiceContext,
-    args: &docs::DocsCatArgs,
-) -> i32 {
+async fn handle_docs_cat(ctx: &crate::services::ServiceContext, args: &docs::DocsCatArgs) -> i32 {
     use crate::services::docs::content::*;
 
     let include_tabs = args.all_tabs || args.tab.is_some();
@@ -3445,7 +3517,10 @@ async fn handle_docs_list_tabs(
             if let Some(ref props) = tab.tab_properties {
                 let id = props.tab_id.as_deref().unwrap_or("-");
                 let title = props.title.as_deref().unwrap_or("Untitled");
-                let index = props.index.map(|i| i.to_string()).unwrap_or_else(|| "-".to_string());
+                let index = props
+                    .index
+                    .map(|i| i.to_string())
+                    .unwrap_or_else(|| "-".to_string());
                 println!("{}\t{}\t{}", id, title, index);
             }
         }
@@ -3488,7 +3563,8 @@ async fn handle_docs_comments_get(
     ctx: &crate::services::ServiceContext,
     args: &docs::DocsCommentsGetArgs,
 ) -> i32 {
-    let url = crate::services::docs::comments::build_comment_get_url(&args.file_id, &args.comment_id);
+    let url =
+        crate::services::docs::comments::build_comment_get_url(&args.file_id, &args.comment_id);
 
     let result: serde_json::Value = match crate::http::api::api_get(
         &ctx.client,
@@ -3555,7 +3631,8 @@ async fn handle_docs_comments_reply(
     ctx: &crate::services::ServiceContext,
     args: &docs::DocsCommentsReplyArgs,
 ) -> i32 {
-    let url = crate::services::docs::comments::build_comment_reply_url(&args.file_id, &args.comment_id);
+    let url =
+        crate::services::docs::comments::build_comment_reply_url(&args.file_id, &args.comment_id);
     let body = crate::services::docs::comments::build_comment_reply_body(&args.content);
 
     match crate::http::api::api_post::<serde_json::Value>(
@@ -3577,7 +3654,10 @@ async fn handle_docs_comments_reply(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would reply to comment '{}' on '{}'", args.comment_id, args.file_id);
+            eprintln!(
+                "[dry-run] would reply to comment '{}' on '{}'",
+                args.comment_id, args.file_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -3592,7 +3672,8 @@ async fn handle_docs_comments_resolve(
     ctx: &crate::services::ServiceContext,
     args: &docs::DocsCommentsResolveArgs,
 ) -> i32 {
-    let url = crate::services::docs::comments::build_comment_resolve_url(&args.file_id, &args.comment_id);
+    let url =
+        crate::services::docs::comments::build_comment_resolve_url(&args.file_id, &args.comment_id);
     let body = crate::services::docs::comments::build_comment_resolve_body();
 
     match crate::http::api::api_patch::<serde_json::Value>(
@@ -3614,7 +3695,10 @@ async fn handle_docs_comments_resolve(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would resolve comment '{}' on '{}'", args.comment_id, args.file_id);
+            eprintln!(
+                "[dry-run] would resolve comment '{}' on '{}'",
+                args.comment_id, args.file_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -3634,7 +3718,8 @@ async fn handle_docs_comments_delete(
         return codes::USAGE_ERROR;
     }
 
-    let url = crate::services::docs::comments::build_comment_delete_url(&args.file_id, &args.comment_id);
+    let url =
+        crate::services::docs::comments::build_comment_delete_url(&args.file_id, &args.comment_id);
 
     match crate::http::api::api_delete(
         &ctx.client,
@@ -3665,7 +3750,9 @@ async fn handle_docs_write(
     args: &docs::DocsWriteArgs,
 ) -> i32 {
     use crate::services::docs::content::build_doc_get_url;
-    use crate::services::docs::edit::{build_batch_update_url, build_replace_content_body, build_insert_text_body};
+    use crate::services::docs::edit::{
+        build_batch_update_url, build_insert_text_body, build_replace_content_body,
+    };
 
     // Determine content: from --file or from positional args
     let content = if let Some(ref file_path) = args.file {
@@ -3739,7 +3826,11 @@ async fn handle_docs_write(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would write {} bytes to document '{}'", content.len(), args.doc_id);
+            eprintln!(
+                "[dry-run] would write {} bytes to document '{}'",
+                content.len(),
+                args.doc_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -3804,7 +3895,12 @@ async fn handle_docs_insert(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would insert {} bytes at index {} in '{}'", content.len(), index, args.doc_id);
+            eprintln!(
+                "[dry-run] would insert {} bytes at index {} in '{}'",
+                content.len(),
+                index,
+                args.doc_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -3848,7 +3944,10 @@ async fn handle_docs_delete(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would delete range [{}, {}) in '{}'", args.start, args.end, args.doc_id);
+            eprintln!(
+                "[dry-run] would delete range [{}, {}) in '{}'",
+                args.start, args.end, args.doc_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -3887,7 +3986,10 @@ async fn handle_docs_find_replace(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would replace '{}' with '{}' in '{}'", args.find, args.replace, args.doc_id);
+            eprintln!(
+                "[dry-run] would replace '{}' with '{}' in '{}'",
+                args.find, args.replace, args.doc_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -3961,10 +4063,7 @@ async fn handle_docs_update(
 }
 
 /// Handle Docs edit: find/replace with --find and --replace flags.
-async fn handle_docs_edit(
-    ctx: &crate::services::ServiceContext,
-    args: &docs::DocsEditArgs,
-) -> i32 {
+async fn handle_docs_edit(ctx: &crate::services::ServiceContext, args: &docs::DocsEditArgs) -> i32 {
     use crate::services::docs::edit::{build_batch_update_url, build_replace_all_text_body};
 
     let batch_url = build_batch_update_url(&args.doc_id);
@@ -3989,7 +4088,10 @@ async fn handle_docs_edit(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would replace '{}' with '{}' in '{}'", args.find, args.replace, args.doc_id);
+            eprintln!(
+                "[dry-run] would replace '{}' with '{}' in '{}'",
+                args.find, args.replace, args.doc_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -4000,10 +4102,7 @@ async fn handle_docs_edit(
 }
 
 /// Handle Docs sed: sed-like find/replace using sed expressions.
-async fn handle_docs_sed(
-    ctx: &crate::services::ServiceContext,
-    args: &docs::DocsSedArgs,
-) -> i32 {
+async fn handle_docs_sed(ctx: &crate::services::ServiceContext, args: &docs::DocsSedArgs) -> i32 {
     use crate::services::docs::edit::build_batch_update_url;
     use crate::services::docs::sedmat::{parse_sed_expression, parse_sed_file};
 
@@ -4093,7 +4192,11 @@ async fn handle_docs_sed(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would apply {} sed expression(s) to '{}'", all_exprs.len(), args.doc_id);
+            eprintln!(
+                "[dry-run] would apply {} sed expression(s) to '{}'",
+                all_exprs.len(),
+                args.doc_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -4111,7 +4214,9 @@ async fn handle_docs_clear(
     if !ctx.is_force() && !ctx.flags.no_input {
         eprint!("Are you sure you want to clear the entire document? [y/N] ");
         let mut input = String::new();
-        if std::io::stdin().read_line(&mut input).is_err() || !input.trim().eq_ignore_ascii_case("y") {
+        if std::io::stdin().read_line(&mut input).is_err()
+            || !input.trim().eq_ignore_ascii_case("y")
+        {
             eprintln!("Aborted.");
             return codes::SUCCESS;
         }
@@ -4279,7 +4384,7 @@ async fn handle_sheets_update(
     args: &sheets::SheetsUpdateArgs,
 ) -> i32 {
     use crate::services::sheets::clean_range;
-    use crate::services::sheets::write::{build_values_update_url, build_values_body};
+    use crate::services::sheets::write::{build_values_body, build_values_update_url};
 
     let range = clean_range(&args.range);
     let url = build_values_update_url(&args.spreadsheet_id, &range, &args.input);
@@ -4313,7 +4418,10 @@ async fn handle_sheets_update(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would update range '{}' in spreadsheet '{}'", range, args.spreadsheet_id);
+            eprintln!(
+                "[dry-run] would update range '{}' in spreadsheet '{}'",
+                range, args.spreadsheet_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -4366,7 +4474,10 @@ async fn handle_sheets_append(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would append to range '{}' in spreadsheet '{}'", range, args.spreadsheet_id);
+            eprintln!(
+                "[dry-run] would append to range '{}' in spreadsheet '{}'",
+                range, args.spreadsheet_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -4473,7 +4584,10 @@ async fn handle_sheets_clear(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would clear range '{}' in spreadsheet '{}'", range, args.spreadsheet_id);
+            eprintln!(
+                "[dry-run] would clear range '{}' in spreadsheet '{}'",
+                range, args.spreadsheet_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -4504,18 +4618,14 @@ async fn handle_sheets_format(
     // Default sheet_id to 0 when no sheet name is given
     let sheet_id: i64 = 0;
 
-    let request = match build_format_request(
-        sheet_id,
-        &parsed,
-        &args.format_json,
-        &args.format_fields,
-    ) {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            return codes::USAGE_ERROR;
-        }
-    };
+    let request =
+        match build_format_request(sheet_id, &parsed, &args.format_json, &args.format_fields) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                return codes::USAGE_ERROR;
+            }
+        };
 
     let body = serde_json::json!({ "requests": [request] });
     let url = build_batch_update_url(&args.spreadsheet_id);
@@ -4539,7 +4649,10 @@ async fn handle_sheets_format(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would format range '{}' in spreadsheet '{}'", range_str, args.spreadsheet_id);
+            eprintln!(
+                "[dry-run] would format range '{}' in spreadsheet '{}'",
+                range_str, args.spreadsheet_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -4624,7 +4737,9 @@ async fn handle_sheets_create(
     ctx: &crate::services::ServiceContext,
     args: &sheets::SheetsCreateArgs,
 ) -> i32 {
-    use crate::services::sheets::structure::{build_create_spreadsheet_body, build_create_spreadsheet_url};
+    use crate::services::sheets::structure::{
+        build_create_spreadsheet_body, build_create_spreadsheet_url,
+    };
 
     let sheet_names: Vec<String> = args
         .sheets
@@ -4669,7 +4784,7 @@ async fn handle_sheets_copy(
     ctx: &crate::services::ServiceContext,
     args: &sheets::SheetsCopyArgs,
 ) -> i32 {
-    use crate::services::sheets::structure::{build_copy_spreadsheet_url, build_copy_body};
+    use crate::services::sheets::structure::{build_copy_body, build_copy_spreadsheet_url};
 
     let url = build_copy_spreadsheet_url(&args.spreadsheet_id);
     let body = build_copy_body(&args.title, args.parent.as_deref());
@@ -4693,7 +4808,10 @@ async fn handle_sheets_copy(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would copy spreadsheet '{}' as '{}'", args.spreadsheet_id, args.title);
+            eprintln!(
+                "[dry-run] would copy spreadsheet '{}' as '{}'",
+                args.spreadsheet_id, args.title
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -4708,8 +4826,8 @@ async fn handle_sheets_export(
     ctx: &crate::services::ServiceContext,
     args: &sheets::SheetsExportArgs,
 ) -> i32 {
-    use crate::services::sheets::structure::{build_export_url, resolve_export_mime};
     use crate::services::drive::files::resolve_download_path;
+    use crate::services::sheets::structure::{build_export_url, resolve_export_mime};
 
     // Determine export MIME and output path
     let export_mime = resolve_export_mime(&args.format);
@@ -4754,7 +4872,9 @@ async fn handle_slides(args: slides::SlidesArgs, flags: &root::RootFlags) -> i32
         SlidesCommand::Export(ref a) => handle_slides_export(&ctx, a).await,
         SlidesCommand::Info(ref a) => handle_slides_info(&ctx, a).await,
         SlidesCommand::Create(ref a) => handle_slides_create(&ctx, a).await,
-        SlidesCommand::CreateFromMarkdown(ref a) => handle_slides_create_from_markdown(&ctx, a).await,
+        SlidesCommand::CreateFromMarkdown(ref a) => {
+            handle_slides_create_from_markdown(&ctx, a).await
+        }
         SlidesCommand::Copy(ref a) => handle_slides_copy(&ctx, a).await,
         SlidesCommand::ListSlides(ref a) => handle_slides_list_slides(&ctx, a).await,
         SlidesCommand::AddSlide(ref a) => handle_slides_add_slide(&ctx, a).await,
@@ -4770,11 +4890,16 @@ async fn handle_slides_export(
     ctx: &crate::services::ServiceContext,
     args: &slides::SlidesExportArgs,
 ) -> i32 {
+    use crate::services::drive::files::{
+        build_file_export_url, build_file_get_url, resolve_download_path,
+    };
     use crate::services::slides::export::resolve_export_mime;
-    use crate::services::drive::files::{build_file_export_url, build_file_get_url, resolve_download_path};
 
     // 1. Get file metadata
-    let metadata_url = format!("{}?fields=id,name,mimeType,size", build_file_get_url(&args.presentation_id));
+    let metadata_url = format!(
+        "{}?fields=id,name,mimeType,size",
+        build_file_get_url(&args.presentation_id)
+    );
     let file: crate::services::drive::types::DriveFile = match crate::http::api::api_get(
         &ctx.client,
         &metadata_url,
@@ -4820,7 +4945,8 @@ async fn handle_slides_info(
     ctx: &crate::services::ServiceContext,
     args: &slides::SlidesInfoArgs,
 ) -> i32 {
-    let url = crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
+    let url =
+        crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
 
     let pres: crate::services::slides::types::Presentation = match crate::http::api::api_get(
         &ctx.client,
@@ -4878,7 +5004,10 @@ async fn handle_slides_create(
                 codes::SUCCESS
             }
             Ok(None) => {
-                eprintln!("[dry-run] would create presentation '{}' from template '{}'", args.title, template_id);
+                eprintln!(
+                    "[dry-run] would create presentation '{}' from template '{}'",
+                    args.title, template_id
+                );
                 codes::SUCCESS
             }
             Err(e) => {
@@ -4889,7 +5018,8 @@ async fn handle_slides_create(
     } else {
         // Create a blank presentation via the Slides API
         let url = format!("{}/presentations", crate::services::slides::SLIDES_BASE_URL);
-        let body = crate::services::slides::presentations::build_create_presentation_body(&args.title);
+        let body =
+            crate::services::slides::presentations::build_create_presentation_body(&args.title);
 
         match crate::http::api::api_post::<crate::services::slides::types::Presentation>(
             &ctx.client,
@@ -4926,7 +5056,7 @@ async fn handle_slides_create_from_markdown(
     ctx: &crate::services::ServiceContext,
     args: &slides::SlidesCreateFromMarkdownArgs,
 ) -> i32 {
-    use crate::services::slides::markdown::{parse_markdown_to_slides, build_slides_from_markdown};
+    use crate::services::slides::markdown::{build_slides_from_markdown, parse_markdown_to_slides};
 
     // Read markdown content from --content or --content-file
     let markdown = if let Some(ref content) = args.content {
@@ -4953,7 +5083,11 @@ async fn handle_slides_create_from_markdown(
     let title = args.title.as_deref().unwrap_or("Untitled Presentation");
 
     if ctx.is_dry_run() {
-        eprintln!("[dry-run] would create presentation '{}' with {} slides from markdown", title, slides.len());
+        eprintln!(
+            "[dry-run] would create presentation '{}' with {} slides from markdown",
+            title,
+            slides.len()
+        );
         return codes::SUCCESS;
     }
 
@@ -4961,27 +5095,28 @@ async fn handle_slides_create_from_markdown(
     let create_url = format!("{}/presentations", crate::services::slides::SLIDES_BASE_URL);
     let create_body = crate::services::slides::presentations::build_create_presentation_body(title);
 
-    let pres: crate::services::slides::types::Presentation = match crate::http::api::api_post::<crate::services::slides::types::Presentation>(
-        &ctx.client,
-        &create_url,
-        &create_body,
-        &ctx.circuit_breaker,
-        &ctx.retry_config,
-        ctx.is_verbose(),
-        false,
-    )
-    .await
-    {
-        Ok(Some(p)) => p,
-        Ok(None) => {
-            eprintln!("Error: unexpected empty response when creating presentation");
-            return codes::GENERIC_ERROR;
-        }
-        Err(e) => {
-            eprintln!("Error creating presentation: {}", e);
-            return map_error_to_exit_code(&e);
-        }
-    };
+    let pres: crate::services::slides::types::Presentation =
+        match crate::http::api::api_post::<crate::services::slides::types::Presentation>(
+            &ctx.client,
+            &create_url,
+            &create_body,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+            false,
+        )
+        .await
+        {
+            Ok(Some(p)) => p,
+            Ok(None) => {
+                eprintln!("Error: unexpected empty response when creating presentation");
+                return codes::GENERIC_ERROR;
+            }
+            Err(e) => {
+                eprintln!("Error creating presentation: {}", e);
+                return map_error_to_exit_code(&e);
+            }
+        };
 
     let pres_id = match pres.presentation_id {
         Some(ref id) => id.clone(),
@@ -5053,7 +5188,10 @@ async fn handle_slides_copy(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would copy presentation '{}' as '{}'", args.presentation_id, args.title);
+            eprintln!(
+                "[dry-run] would copy presentation '{}' as '{}'",
+                args.presentation_id, args.title
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -5068,7 +5206,8 @@ async fn handle_slides_list_slides(
     ctx: &crate::services::ServiceContext,
     args: &slides::SlidesListSlidesArgs,
 ) -> i32 {
-    let url = crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
+    let url =
+        crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
 
     let pres: crate::services::slides::types::Presentation = match crate::http::api::api_get(
         &ctx.client,
@@ -5087,17 +5226,22 @@ async fn handle_slides_list_slides(
     };
 
     // Build a simple list of slide IDs and titles
-    let slide_list: Vec<serde_json::Value> = pres.slides.iter().enumerate().map(|(i, s)| {
-        let slide_id = s.object_id.as_deref().unwrap_or("unknown");
-        // Extract title from first text element if available
-        let title = crate::services::slides::slides_ops::extract_slide_text(&s.page_elements);
-        let title_str = title.trim().lines().next().unwrap_or("").to_string();
-        serde_json::json!({
-            "index": i,
-            "objectId": slide_id,
-            "title": title_str
+    let slide_list: Vec<serde_json::Value> = pres
+        .slides
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let slide_id = s.object_id.as_deref().unwrap_or("unknown");
+            // Extract title from first text element if available
+            let title = crate::services::slides::slides_ops::extract_slide_text(&s.page_elements);
+            let title_str = title.trim().lines().next().unwrap_or("").to_string();
+            serde_json::json!({
+                "index": i,
+                "objectId": slide_id,
+                "title": title_str
+            })
         })
-    }).collect();
+        .collect();
 
     let output = serde_json::json!({
         "presentationId": pres.presentation_id,
@@ -5117,7 +5261,8 @@ async fn handle_slides_add_slide(
     ctx: &crate::services::ServiceContext,
     args: &slides::SlidesAddSlideArgs,
 ) -> i32 {
-    let batch_url = crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
+    let batch_url =
+        crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
     let request = crate::services::slides::slides_ops::build_add_slide_request(
         args.layout_id.as_deref(),
         args.index,
@@ -5144,7 +5289,10 @@ async fn handle_slides_add_slide(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would add slide to presentation '{}'", args.presentation_id);
+            eprintln!(
+                "[dry-run] would add slide to presentation '{}'",
+                args.presentation_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -5164,7 +5312,8 @@ async fn handle_slides_delete_slide(
         return codes::USAGE_ERROR;
     }
 
-    let batch_url = crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
+    let batch_url =
+        crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
     let request = crate::services::slides::slides_ops::build_delete_slide_request(&args.slide_id);
 
     let body = serde_json::json!({ "requests": [request] });
@@ -5188,7 +5337,10 @@ async fn handle_slides_delete_slide(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would delete slide '{}' from presentation '{}'", args.slide_id, args.presentation_id);
+            eprintln!(
+                "[dry-run] would delete slide '{}' from presentation '{}'",
+                args.slide_id, args.presentation_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -5203,7 +5355,8 @@ async fn handle_slides_read_slide(
     ctx: &crate::services::ServiceContext,
     args: &slides::SlidesReadSlideArgs,
 ) -> i32 {
-    let url = crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
+    let url =
+        crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
 
     let pres: crate::services::slides::types::Presentation = match crate::http::api::api_get(
         &ctx.client,
@@ -5222,9 +5375,10 @@ async fn handle_slides_read_slide(
     };
 
     // Find the slide by ID
-    let slide = pres.slides.iter().find(|s| {
-        s.object_id.as_deref() == Some(&args.slide_id)
-    });
+    let slide = pres
+        .slides
+        .iter()
+        .find(|s| s.object_id.as_deref() == Some(&args.slide_id));
 
     match slide {
         Some(s) => {
@@ -5272,7 +5426,8 @@ async fn handle_slides_update_notes(
     };
 
     // First, get the presentation to find the notes object ID
-    let pres_url = crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
+    let pres_url =
+        crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
 
     let pres: crate::services::slides::types::Presentation = match crate::http::api::api_get(
         &ctx.client,
@@ -5291,9 +5446,10 @@ async fn handle_slides_update_notes(
     };
 
     // Find the slide
-    let slide = pres.slides.iter().find(|s| {
-        s.object_id.as_deref() == Some(&args.slide_id)
-    });
+    let slide = pres
+        .slides
+        .iter()
+        .find(|s| s.object_id.as_deref() == Some(&args.slide_id));
 
     let slide = match slide {
         Some(s) => s,
@@ -5313,8 +5469,10 @@ async fn handle_slides_update_notes(
     };
 
     // Build and send batchUpdate
-    let batch_url = crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
-    let requests = crate::services::slides::notes::build_update_notes_request(&notes_obj_id, &notes_text);
+    let batch_url =
+        crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
+    let requests =
+        crate::services::slides::notes::build_update_notes_request(&notes_obj_id, &notes_text);
     let body = serde_json::json!({ "requests": requests });
 
     match crate::http::api::api_post::<crate::services::slides::types::BatchUpdateResponse>(
@@ -5352,7 +5510,8 @@ async fn handle_slides_replace_slide(
     args: &slides::SlidesReplaceSlideArgs,
 ) -> i32 {
     // Get the presentation to access page size for full-bleed
-    let pres_url = crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
+    let pres_url =
+        crate::services::slides::presentations::build_presentation_get_url(&args.presentation_id);
 
     let pres: crate::services::slides::types::Presentation = match crate::http::api::api_get(
         &ctx.client,
@@ -5376,7 +5535,8 @@ async fn handle_slides_replace_slide(
         pres.page_size.as_ref(),
     );
 
-    let batch_url = crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
+    let batch_url =
+        crate::services::slides::presentations::build_batch_update_url(&args.presentation_id);
     let body = serde_json::json!({ "requests": [request] });
 
     match crate::http::api::api_post::<crate::services::slides::types::BatchUpdateResponse>(
@@ -5398,7 +5558,10 @@ async fn handle_slides_replace_slide(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would replace slide '{}' with image", args.slide_id);
+            eprintln!(
+                "[dry-run] would replace slide '{}' with image",
+                args.slide_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -5424,12 +5587,12 @@ async fn handle_forms(args: forms::FormsArgs, flags: &root::RootFlags) -> i32 {
     match args.command {
         FormsCommand::Get(ref a) => handle_forms_get(&ctx, a).await,
         FormsCommand::Create(ref a) => handle_forms_create(&ctx, a).await,
-        FormsCommand::Responses(ref a) => {
-            match a.command {
-                forms::FormsResponsesCommand::List(ref la) => handle_forms_responses_list(&ctx, la).await,
-                forms::FormsResponsesCommand::Get(ref ga) => handle_forms_responses_get(&ctx, ga).await,
+        FormsCommand::Responses(ref a) => match a.command {
+            forms::FormsResponsesCommand::List(ref la) => {
+                handle_forms_responses_list(&ctx, la).await
             }
-        }
+            forms::FormsResponsesCommand::Get(ref ga) => handle_forms_responses_get(&ctx, ga).await,
+        },
     }
 }
 
@@ -5468,10 +5631,8 @@ async fn handle_forms_create(
     args: &forms::FormsCreateArgs,
 ) -> i32 {
     let url = crate::services::forms::build_form_create_url();
-    let body = crate::services::forms::build_form_create_body(
-        &args.title,
-        args.description.as_deref(),
-    );
+    let body =
+        crate::services::forms::build_form_create_body(&args.title, args.description.as_deref());
 
     match crate::http::api::api_post::<crate::services::forms::types::Form>(
         &ctx.client,
@@ -5570,7 +5731,9 @@ async fn handle_forms_responses_get(
 
 /// Handle the `chat` command and its subcommands.
 async fn handle_chat(args: chat::ChatArgs, flags: &root::RootFlags) -> i32 {
-    use chat::{ChatCommand, ChatSpacesCommand, ChatMessagesCommand, ChatThreadsCommand, ChatDmCommand};
+    use chat::{
+        ChatCommand, ChatDmCommand, ChatMessagesCommand, ChatSpacesCommand, ChatThreadsCommand,
+    };
 
     // Bootstrap auth
     let ctx = match crate::services::bootstrap_service_context(flags).await {
@@ -5606,19 +5769,23 @@ async fn handle_chat_spaces_list(
     ctx: &crate::services::ServiceContext,
     args: &chat::ChatSpacesListArgs,
 ) -> i32 {
-    let url = crate::services::chat::spaces::build_spaces_list_url(
-        args.max,
-        args.page.as_deref(),
-    );
+    let url = crate::services::chat::spaces::build_spaces_list_url(args.max, args.page.as_deref());
 
-    let result: crate::services::chat::types::SpaceListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::chat::types::SpaceListResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     let next_token = result.next_page_token.clone();
     if let Err(e) = ctx.write_paginated(&result, next_token.as_deref()) {
@@ -5633,19 +5800,23 @@ async fn handle_chat_spaces_find(
     ctx: &crate::services::ServiceContext,
     args: &chat::ChatSpacesFindArgs,
 ) -> i32 {
-    let url = crate::services::chat::spaces::build_spaces_find_url(
-        &args.name,
-        args.max,
-    );
+    let url = crate::services::chat::spaces::build_spaces_find_url(&args.name, args.max);
 
-    let result: crate::services::chat::types::SpaceListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::chat::types::SpaceListResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -5664,8 +5835,16 @@ async fn handle_chat_spaces_create(
     let body = crate::services::chat::spaces::build_space_create_body(&args.name, &member_refs);
 
     match crate::http::api::api_post::<crate::services::chat::types::Space>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(space)) => {
             if let Err(e) = ctx.write_output(&space) {
                 eprintln!("Error: {}", e);
@@ -5697,14 +5876,21 @@ async fn handle_chat_messages_list(
         args.thread.as_deref(),
     );
 
-    let result: crate::services::chat::types::MessageListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::chat::types::MessageListResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     let next_token = result.next_page_token.clone();
     if let Err(e) = ctx.write_paginated(&result, next_token.as_deref()) {
@@ -5726,8 +5912,16 @@ async fn handle_chat_messages_send(
     );
 
     match crate::http::api::api_post::<crate::services::chat::types::Message>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(msg)) => {
             if let Err(e) = ctx.write_output(&msg) {
                 eprintln!("Error: {}", e);
@@ -5757,14 +5951,21 @@ async fn handle_chat_threads_list(
         args.page.as_deref(),
     );
 
-    let result: crate::services::chat::types::MessageListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::chat::types::MessageListResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     let next_token = result.next_page_token.clone();
     if let Err(e) = ctx.write_paginated(&result, next_token.as_deref()) {
@@ -5783,8 +5984,16 @@ async fn handle_chat_dm_space(
     let body = crate::services::chat::dm::build_dm_space_body(&args.user);
 
     match crate::http::api::api_post::<crate::services::chat::types::Space>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(space)) => {
             if let Err(e) = ctx.write_output(&space) {
                 eprintln!("Error: {}", e);
@@ -5814,8 +6023,16 @@ async fn handle_chat_dm_send(
 
     let space: crate::services::chat::types::Space =
         match crate::http::api::api_post::<crate::services::chat::types::Space>(
-            &ctx.client, &space_url, &space_body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), false,
-        ).await {
+            &ctx.client,
+            &space_url,
+            &space_body,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+            false,
+        )
+        .await
+        {
             Ok(Some(s)) => s,
             Ok(None) => {
                 eprintln!("Error: unexpected empty response from DM space lookup");
@@ -5836,14 +6053,20 @@ async fn handle_chat_dm_send(
     };
 
     let send_url = crate::services::chat::dm::build_dm_send_url(&space_name);
-    let send_body = crate::services::chat::dm::build_dm_send_body(
-        &args.text,
-        args.thread.as_deref(),
-    );
+    let send_body =
+        crate::services::chat::dm::build_dm_send_body(&args.text, args.thread.as_deref());
 
     match crate::http::api::api_post::<crate::services::chat::types::Message>(
-        &ctx.client, &send_url, &send_body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &send_url,
+        &send_body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(msg)) => {
             if let Err(e) = ctx.write_output(&msg) {
                 eprintln!("Error: {}", e);
@@ -5865,11 +6088,11 @@ async fn handle_chat_dm_send(
 /// Handle the `classroom` command and its subcommands.
 async fn handle_classroom(args: classroom::ClassroomArgs, flags: &root::RootFlags) -> i32 {
     use classroom::{
-        ClassroomCommand, ClassroomCoursesCommand, ClassroomStudentsCommand,
-        ClassroomTeachersCommand, ClassroomRosterCommand, ClassroomCourseworkCommand,
-        ClassroomMaterialsCommand, ClassroomSubmissionsCommand, ClassroomAnnouncementsCommand,
-        ClassroomTopicsCommand, ClassroomInvitationsCommand, ClassroomGuardiansCommand,
-        ClassroomGuardianInvitationsCommand,
+        ClassroomAnnouncementsCommand, ClassroomCommand, ClassroomCoursesCommand,
+        ClassroomCourseworkCommand, ClassroomGuardianInvitationsCommand, ClassroomGuardiansCommand,
+        ClassroomInvitationsCommand, ClassroomMaterialsCommand, ClassroomRosterCommand,
+        ClassroomStudentsCommand, ClassroomSubmissionsCommand, ClassroomTeachersCommand,
+        ClassroomTopicsCommand,
     };
 
     // Handle offline commands first (no auth needed)
@@ -5887,7 +6110,10 @@ async fn handle_classroom(args: classroom::ClassroomArgs, flags: &root::RootFlag
             if flags.json {
                 let json_val = match serde_json::to_value(&urls) {
                     Ok(v) => v,
-                    Err(e) => { eprintln!("Error: {}", e); return codes::GENERIC_ERROR; }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        return codes::GENERIC_ERROR;
+                    }
                 };
                 println!("{}", to_json_pretty(&json_val));
             } else {
@@ -5912,11 +6138,21 @@ async fn handle_classroom(args: classroom::ClassroomArgs, flags: &root::RootFlag
         ClassroomCommand::Courses(ca) => match ca.command {
             ClassroomCoursesCommand::List(ref a) => handle_classroom_courses_list(&ctx, a).await,
             ClassroomCoursesCommand::Get(ref a) => handle_classroom_courses_get(&ctx, a).await,
-            ClassroomCoursesCommand::Create(ref a) => handle_classroom_courses_create(&ctx, a).await,
-            ClassroomCoursesCommand::Update(ref a) => handle_classroom_courses_update(&ctx, a).await,
-            ClassroomCoursesCommand::Delete(ref a) => handle_classroom_courses_delete(&ctx, a).await,
-            ClassroomCoursesCommand::Archive(ref a) => handle_classroom_courses_archive(&ctx, a).await,
-            ClassroomCoursesCommand::Unarchive(ref a) => handle_classroom_courses_unarchive(&ctx, a).await,
+            ClassroomCoursesCommand::Create(ref a) => {
+                handle_classroom_courses_create(&ctx, a).await
+            }
+            ClassroomCoursesCommand::Update(ref a) => {
+                handle_classroom_courses_update(&ctx, a).await
+            }
+            ClassroomCoursesCommand::Delete(ref a) => {
+                handle_classroom_courses_delete(&ctx, a).await
+            }
+            ClassroomCoursesCommand::Archive(ref a) => {
+                handle_classroom_courses_archive(&ctx, a).await
+            }
+            ClassroomCoursesCommand::Unarchive(ref a) => {
+                handle_classroom_courses_unarchive(&ctx, a).await
+            }
             ClassroomCoursesCommand::Join(ref a) => handle_classroom_courses_join(&ctx, a).await,
             ClassroomCoursesCommand::Leave(ref a) => handle_classroom_courses_leave(&ctx, a).await,
             ClassroomCoursesCommand::Url(_) => unreachable!(),
@@ -5925,47 +6161,95 @@ async fn handle_classroom(args: classroom::ClassroomArgs, flags: &root::RootFlag
             ClassroomStudentsCommand::List(ref a) => handle_classroom_students_list(&ctx, a).await,
             ClassroomStudentsCommand::Get(ref a) => handle_classroom_students_get(&ctx, a).await,
             ClassroomStudentsCommand::Add(ref a) => handle_classroom_students_add(&ctx, a).await,
-            ClassroomStudentsCommand::Remove(ref a) => handle_classroom_students_remove(&ctx, a).await,
+            ClassroomStudentsCommand::Remove(ref a) => {
+                handle_classroom_students_remove(&ctx, a).await
+            }
         },
         ClassroomCommand::Teachers(ta) => match ta.command {
             ClassroomTeachersCommand::List(ref a) => handle_classroom_teachers_list(&ctx, a).await,
             ClassroomTeachersCommand::Get(ref a) => handle_classroom_teachers_get(&ctx, a).await,
             ClassroomTeachersCommand::Add(ref a) => handle_classroom_teachers_add(&ctx, a).await,
-            ClassroomTeachersCommand::Remove(ref a) => handle_classroom_teachers_remove(&ctx, a).await,
+            ClassroomTeachersCommand::Remove(ref a) => {
+                handle_classroom_teachers_remove(&ctx, a).await
+            }
         },
         ClassroomCommand::Roster(ra) => match ra.command {
             ClassroomRosterCommand::List(ref a) => handle_classroom_roster_list(&ctx, a).await,
         },
         ClassroomCommand::Coursework(cwa) => match cwa.command {
-            ClassroomCourseworkCommand::List(ref a) => handle_classroom_coursework_list(&ctx, a).await,
-            ClassroomCourseworkCommand::Get(ref a) => handle_classroom_coursework_get(&ctx, a).await,
-            ClassroomCourseworkCommand::Create(ref a) => handle_classroom_coursework_create(&ctx, a).await,
-            ClassroomCourseworkCommand::Update(ref a) => handle_classroom_coursework_update(&ctx, a).await,
-            ClassroomCourseworkCommand::Delete(ref a) => handle_classroom_coursework_delete(&ctx, a).await,
-            ClassroomCourseworkCommand::Assignees(ref a) => handle_classroom_coursework_assignees(&ctx, a).await,
+            ClassroomCourseworkCommand::List(ref a) => {
+                handle_classroom_coursework_list(&ctx, a).await
+            }
+            ClassroomCourseworkCommand::Get(ref a) => {
+                handle_classroom_coursework_get(&ctx, a).await
+            }
+            ClassroomCourseworkCommand::Create(ref a) => {
+                handle_classroom_coursework_create(&ctx, a).await
+            }
+            ClassroomCourseworkCommand::Update(ref a) => {
+                handle_classroom_coursework_update(&ctx, a).await
+            }
+            ClassroomCourseworkCommand::Delete(ref a) => {
+                handle_classroom_coursework_delete(&ctx, a).await
+            }
+            ClassroomCourseworkCommand::Assignees(ref a) => {
+                handle_classroom_coursework_assignees(&ctx, a).await
+            }
         },
         ClassroomCommand::Materials(ma) => match ma.command {
-            ClassroomMaterialsCommand::List(ref a) => handle_classroom_materials_list(&ctx, a).await,
+            ClassroomMaterialsCommand::List(ref a) => {
+                handle_classroom_materials_list(&ctx, a).await
+            }
             ClassroomMaterialsCommand::Get(ref a) => handle_classroom_materials_get(&ctx, a).await,
-            ClassroomMaterialsCommand::Create(ref a) => handle_classroom_materials_create(&ctx, a).await,
-            ClassroomMaterialsCommand::Update(ref a) => handle_classroom_materials_update(&ctx, a).await,
-            ClassroomMaterialsCommand::Delete(ref a) => handle_classroom_materials_delete(&ctx, a).await,
+            ClassroomMaterialsCommand::Create(ref a) => {
+                handle_classroom_materials_create(&ctx, a).await
+            }
+            ClassroomMaterialsCommand::Update(ref a) => {
+                handle_classroom_materials_update(&ctx, a).await
+            }
+            ClassroomMaterialsCommand::Delete(ref a) => {
+                handle_classroom_materials_delete(&ctx, a).await
+            }
         },
         ClassroomCommand::Submissions(sa) => match sa.command {
-            ClassroomSubmissionsCommand::List(ref a) => handle_classroom_submissions_list(&ctx, a).await,
-            ClassroomSubmissionsCommand::Get(ref a) => handle_classroom_submissions_get(&ctx, a).await,
-            ClassroomSubmissionsCommand::TurnIn(ref a) => handle_classroom_submissions_turnin(&ctx, a).await,
-            ClassroomSubmissionsCommand::Reclaim(ref a) => handle_classroom_submissions_reclaim(&ctx, a).await,
-            ClassroomSubmissionsCommand::Return(ref a) => handle_classroom_submissions_return(&ctx, a).await,
-            ClassroomSubmissionsCommand::Grade(ref a) => handle_classroom_submissions_grade(&ctx, a).await,
+            ClassroomSubmissionsCommand::List(ref a) => {
+                handle_classroom_submissions_list(&ctx, a).await
+            }
+            ClassroomSubmissionsCommand::Get(ref a) => {
+                handle_classroom_submissions_get(&ctx, a).await
+            }
+            ClassroomSubmissionsCommand::TurnIn(ref a) => {
+                handle_classroom_submissions_turnin(&ctx, a).await
+            }
+            ClassroomSubmissionsCommand::Reclaim(ref a) => {
+                handle_classroom_submissions_reclaim(&ctx, a).await
+            }
+            ClassroomSubmissionsCommand::Return(ref a) => {
+                handle_classroom_submissions_return(&ctx, a).await
+            }
+            ClassroomSubmissionsCommand::Grade(ref a) => {
+                handle_classroom_submissions_grade(&ctx, a).await
+            }
         },
         ClassroomCommand::Announcements(aa) => match aa.command {
-            ClassroomAnnouncementsCommand::List(ref a) => handle_classroom_announcements_list(&ctx, a).await,
-            ClassroomAnnouncementsCommand::Get(ref a) => handle_classroom_announcements_get(&ctx, a).await,
-            ClassroomAnnouncementsCommand::Create(ref a) => handle_classroom_announcements_create(&ctx, a).await,
-            ClassroomAnnouncementsCommand::Update(ref a) => handle_classroom_announcements_update(&ctx, a).await,
-            ClassroomAnnouncementsCommand::Delete(ref a) => handle_classroom_announcements_delete(&ctx, a).await,
-            ClassroomAnnouncementsCommand::Assignees(ref a) => handle_classroom_announcements_assignees(&ctx, a).await,
+            ClassroomAnnouncementsCommand::List(ref a) => {
+                handle_classroom_announcements_list(&ctx, a).await
+            }
+            ClassroomAnnouncementsCommand::Get(ref a) => {
+                handle_classroom_announcements_get(&ctx, a).await
+            }
+            ClassroomAnnouncementsCommand::Create(ref a) => {
+                handle_classroom_announcements_create(&ctx, a).await
+            }
+            ClassroomAnnouncementsCommand::Update(ref a) => {
+                handle_classroom_announcements_update(&ctx, a).await
+            }
+            ClassroomAnnouncementsCommand::Delete(ref a) => {
+                handle_classroom_announcements_delete(&ctx, a).await
+            }
+            ClassroomAnnouncementsCommand::Assignees(ref a) => {
+                handle_classroom_announcements_assignees(&ctx, a).await
+            }
         },
         ClassroomCommand::Topics(ta) => match ta.command {
             ClassroomTopicsCommand::List(ref a) => handle_classroom_topics_list(&ctx, a).await,
@@ -5975,21 +6259,41 @@ async fn handle_classroom(args: classroom::ClassroomArgs, flags: &root::RootFlag
             ClassroomTopicsCommand::Delete(ref a) => handle_classroom_topics_delete(&ctx, a).await,
         },
         ClassroomCommand::Invitations(ia) => match ia.command {
-            ClassroomInvitationsCommand::List(ref a) => handle_classroom_invitations_list(&ctx, a).await,
-            ClassroomInvitationsCommand::Get(ref a) => handle_classroom_invitations_get(&ctx, a).await,
-            ClassroomInvitationsCommand::Create(ref a) => handle_classroom_invitations_create(&ctx, a).await,
-            ClassroomInvitationsCommand::Accept(ref a) => handle_classroom_invitations_accept(&ctx, a).await,
-            ClassroomInvitationsCommand::Delete(ref a) => handle_classroom_invitations_delete(&ctx, a).await,
+            ClassroomInvitationsCommand::List(ref a) => {
+                handle_classroom_invitations_list(&ctx, a).await
+            }
+            ClassroomInvitationsCommand::Get(ref a) => {
+                handle_classroom_invitations_get(&ctx, a).await
+            }
+            ClassroomInvitationsCommand::Create(ref a) => {
+                handle_classroom_invitations_create(&ctx, a).await
+            }
+            ClassroomInvitationsCommand::Accept(ref a) => {
+                handle_classroom_invitations_accept(&ctx, a).await
+            }
+            ClassroomInvitationsCommand::Delete(ref a) => {
+                handle_classroom_invitations_delete(&ctx, a).await
+            }
         },
         ClassroomCommand::Guardians(ga) => match ga.command {
-            ClassroomGuardiansCommand::List(ref a) => handle_classroom_guardians_list(&ctx, a).await,
+            ClassroomGuardiansCommand::List(ref a) => {
+                handle_classroom_guardians_list(&ctx, a).await
+            }
             ClassroomGuardiansCommand::Get(ref a) => handle_classroom_guardians_get(&ctx, a).await,
-            ClassroomGuardiansCommand::Delete(ref a) => handle_classroom_guardians_delete(&ctx, a).await,
+            ClassroomGuardiansCommand::Delete(ref a) => {
+                handle_classroom_guardians_delete(&ctx, a).await
+            }
         },
         ClassroomCommand::GuardianInvitations(gia) => match gia.command {
-            ClassroomGuardianInvitationsCommand::List(ref a) => handle_classroom_guardian_invitations_list(&ctx, a).await,
-            ClassroomGuardianInvitationsCommand::Get(ref a) => handle_classroom_guardian_invitations_get(&ctx, a).await,
-            ClassroomGuardianInvitationsCommand::Create(ref a) => handle_classroom_guardian_invitations_create(&ctx, a).await,
+            ClassroomGuardianInvitationsCommand::List(ref a) => {
+                handle_classroom_guardian_invitations_list(&ctx, a).await
+            }
+            ClassroomGuardianInvitationsCommand::Get(ref a) => {
+                handle_classroom_guardian_invitations_get(&ctx, a).await
+            }
+            ClassroomGuardianInvitationsCommand::Create(ref a) => {
+                handle_classroom_guardian_invitations_create(&ctx, a).await
+            }
         },
         ClassroomCommand::Profile(ref a) => handle_classroom_profile(&ctx, a).await,
     }
@@ -6010,7 +6314,15 @@ async fn handle_classroom_courses_list(
     );
 
     let result: crate::services::classroom::types::CourseListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -6032,14 +6344,21 @@ async fn handle_classroom_courses_get(
 ) -> i32 {
     let url = crate::services::classroom::courses::build_course_get_url(&args.course_id);
 
-    let result: crate::services::classroom::types::Course =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::Course = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -6060,8 +6379,16 @@ async fn handle_classroom_courses_create(
     );
 
     match crate::http::api::api_post::<crate::services::classroom::types::Course>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(course)) => {
             if let Err(e) = ctx.write_output(&course) {
                 eprintln!("Error: {}", e);
@@ -6091,8 +6418,16 @@ async fn handle_classroom_courses_update(
     );
 
     match crate::http::api::api_patch::<crate::services::classroom::types::Course>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(course)) => {
             if let Err(e) = ctx.write_output(&course) {
                 eprintln!("Error: {}", e);
@@ -6123,8 +6458,15 @@ async fn handle_classroom_courses_delete(
     let url = crate::services::classroom::courses::build_course_delete_url(&args.course_id);
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Course '{}' deleted.", args.course_id);
             codes::SUCCESS
@@ -6144,8 +6486,16 @@ async fn handle_classroom_courses_archive(
     let body = serde_json::json!({"courseState": "ARCHIVED"});
 
     match crate::http::api::api_patch::<crate::services::classroom::types::Course>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(course)) => {
             if let Err(e) = ctx.write_output(&course) {
                 eprintln!("Error: {}", e);
@@ -6172,8 +6522,16 @@ async fn handle_classroom_courses_unarchive(
     let body = serde_json::json!({"courseState": "ACTIVE"});
 
     match crate::http::api::api_patch::<crate::services::classroom::types::Course>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(course)) => {
             if let Err(e) = ctx.write_output(&course) {
                 eprintln!("Error: {}", e);
@@ -6200,8 +6558,16 @@ async fn handle_classroom_courses_join(
     let body = crate::services::classroom::roster::build_student_add_body("me", None);
 
     match crate::http::api::api_post::<crate::services::classroom::types::Student>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(student)) => {
             if let Err(e) = ctx.write_output(&student) {
                 eprintln!("Error: {}", e);
@@ -6232,8 +6598,15 @@ async fn handle_classroom_courses_leave(
     let url = crate::services::classroom::roster::build_student_remove_url(&args.course_id, "me");
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Left course '{}'.", args.course_id);
             codes::SUCCESS
@@ -6260,7 +6633,15 @@ async fn handle_classroom_students_list(
     );
 
     let result: crate::services::classroom::types::StudentListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -6280,16 +6661,24 @@ async fn handle_classroom_students_get(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomStudentsGetArgs,
 ) -> i32 {
-    let url = crate::services::classroom::roster::build_student_get_url(&args.course_id, &args.user_id);
+    let url =
+        crate::services::classroom::roster::build_student_get_url(&args.course_id, &args.user_id);
 
-    let result: crate::services::classroom::types::Student =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::Student = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -6309,8 +6698,16 @@ async fn handle_classroom_students_add(
     );
 
     match crate::http::api::api_post::<crate::services::classroom::types::Student>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(student)) => {
             if let Err(e) = ctx.write_output(&student) {
                 eprintln!("Error: {}", e);
@@ -6319,7 +6716,10 @@ async fn handle_classroom_students_add(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would add student '{}' to course '{}'", args.user_id, args.course_id);
+            eprintln!(
+                "[dry-run] would add student '{}' to course '{}'",
+                args.user_id, args.course_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -6338,13 +6738,26 @@ async fn handle_classroom_students_remove(
         return codes::USAGE_ERROR;
     }
 
-    let url = crate::services::classroom::roster::build_student_remove_url(&args.course_id, &args.user_id);
+    let url = crate::services::classroom::roster::build_student_remove_url(
+        &args.course_id,
+        &args.user_id,
+    );
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
-            eprintln!("Student '{}' removed from course '{}'.", args.user_id, args.course_id);
+            eprintln!(
+                "Student '{}' removed from course '{}'.",
+                args.user_id, args.course_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -6369,7 +6782,15 @@ async fn handle_classroom_teachers_list(
     );
 
     let result: crate::services::classroom::types::TeacherListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -6389,16 +6810,24 @@ async fn handle_classroom_teachers_get(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomTeachersGetArgs,
 ) -> i32 {
-    let url = crate::services::classroom::roster::build_teacher_get_url(&args.course_id, &args.user_id);
+    let url =
+        crate::services::classroom::roster::build_teacher_get_url(&args.course_id, &args.user_id);
 
-    let result: crate::services::classroom::types::Teacher =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::Teacher = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -6415,8 +6844,16 @@ async fn handle_classroom_teachers_add(
     let body = crate::services::classroom::roster::build_teacher_add_body(&args.user_id);
 
     match crate::http::api::api_post::<crate::services::classroom::types::Teacher>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(teacher)) => {
             if let Err(e) = ctx.write_output(&teacher) {
                 eprintln!("Error: {}", e);
@@ -6425,7 +6862,10 @@ async fn handle_classroom_teachers_add(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would add teacher '{}' to course '{}'", args.user_id, args.course_id);
+            eprintln!(
+                "[dry-run] would add teacher '{}' to course '{}'",
+                args.user_id, args.course_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -6444,13 +6884,26 @@ async fn handle_classroom_teachers_remove(
         return codes::USAGE_ERROR;
     }
 
-    let url = crate::services::classroom::roster::build_teacher_remove_url(&args.course_id, &args.user_id);
+    let url = crate::services::classroom::roster::build_teacher_remove_url(
+        &args.course_id,
+        &args.user_id,
+    );
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
-            eprintln!("Teacher '{}' removed from course '{}'.", args.user_id, args.course_id);
+            eprintln!(
+                "Teacher '{}' removed from course '{}'.",
+                args.user_id, args.course_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -6471,10 +6924,20 @@ async fn handle_classroom_roster_list(
     // If only students or only teachers requested, just call that handler
     if args.students && !args.teachers {
         let url = crate::services::classroom::roster::build_students_list_url(
-            &args.course_id, None, None,
+            &args.course_id,
+            None,
+            None,
         );
         let result: crate::services::classroom::types::StudentListResponse =
-            match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+            match crate::http::api::api_get(
+                &ctx.client,
+                &url,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+            )
+            .await
+            {
                 Ok(r) => r,
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -6491,10 +6954,20 @@ async fn handle_classroom_roster_list(
 
     if args.teachers && !args.students {
         let url = crate::services::classroom::roster::build_teachers_list_url(
-            &args.course_id, None, None,
+            &args.course_id,
+            None,
+            None,
         );
         let result: crate::services::classroom::types::TeacherListResponse =
-            match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+            match crate::http::api::api_get(
+                &ctx.client,
+                &url,
+                &ctx.circuit_breaker,
+                &ctx.retry_config,
+                ctx.is_verbose(),
+            )
+            .await
+            {
                 Ok(r) => r,
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -6510,15 +6983,21 @@ async fn handle_classroom_roster_list(
     }
 
     // Both (default)
-    let students_url = crate::services::classroom::roster::build_students_list_url(
-        &args.course_id, None, None,
-    );
-    let teachers_url = crate::services::classroom::roster::build_teachers_list_url(
-        &args.course_id, None, None,
-    );
+    let students_url =
+        crate::services::classroom::roster::build_students_list_url(&args.course_id, None, None);
+    let teachers_url =
+        crate::services::classroom::roster::build_teachers_list_url(&args.course_id, None, None);
 
     let students_result: crate::services::classroom::types::StudentListResponse =
-        match crate::http::api::api_get(&ctx.client, &students_url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &students_url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error fetching students: {}", e);
@@ -6527,7 +7006,15 @@ async fn handle_classroom_roster_list(
         };
 
     let teachers_result: crate::services::classroom::types::TeacherListResponse =
-        match crate::http::api::api_get(&ctx.client, &teachers_url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &teachers_url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error fetching teachers: {}", e);
@@ -6562,7 +7049,15 @@ async fn handle_classroom_coursework_list(
     );
 
     let result: crate::services::classroom::types::CourseWorkListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -6583,17 +7078,25 @@ async fn handle_classroom_coursework_get(
     args: &classroom::ClassroomCourseworkGetArgs,
 ) -> i32 {
     let url = crate::services::classroom::coursework::build_coursework_get_url(
-        &args.course_id, &args.coursework_id,
+        &args.course_id,
+        &args.coursework_id,
     );
 
-    let result: crate::services::classroom::types::CourseWork =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::CourseWork = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -6616,8 +7119,16 @@ async fn handle_classroom_coursework_create(
     );
 
     match crate::http::api::api_post::<crate::services::classroom::types::CourseWork>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(cw)) => {
             if let Err(e) = ctx.write_output(&cw) {
                 eprintln!("Error: {}", e);
@@ -6641,7 +7152,8 @@ async fn handle_classroom_coursework_update(
     args: &classroom::ClassroomCourseworkUpdateArgs,
 ) -> i32 {
     let url = crate::services::classroom::coursework::build_coursework_update_url(
-        &args.course_id, &args.coursework_id,
+        &args.course_id,
+        &args.coursework_id,
     );
     let mut body = serde_json::json!({});
     if let Some(ref t) = args.title {
@@ -6652,8 +7164,16 @@ async fn handle_classroom_coursework_update(
     }
 
     match crate::http::api::api_patch::<crate::services::classroom::types::CourseWork>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(cw)) => {
             if let Err(e) = ctx.write_output(&cw) {
                 eprintln!("Error: {}", e);
@@ -6682,12 +7202,20 @@ async fn handle_classroom_coursework_delete(
     }
 
     let url = crate::services::classroom::coursework::build_coursework_delete_url(
-        &args.course_id, &args.coursework_id,
+        &args.course_id,
+        &args.coursework_id,
     );
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Coursework '{}' deleted.", args.coursework_id);
             codes::SUCCESS
@@ -6704,7 +7232,8 @@ async fn handle_classroom_coursework_assignees(
     args: &classroom::ClassroomCourseworkAssigneesArgs,
 ) -> i32 {
     let url = crate::services::classroom::coursework::build_coursework_update_url(
-        &args.course_id, &args.coursework_id,
+        &args.course_id,
+        &args.coursework_id,
     );
     let body = serde_json::json!({
         "assigneeMode": "INDIVIDUAL_STUDENTS",
@@ -6714,8 +7243,16 @@ async fn handle_classroom_coursework_assignees(
     });
 
     match crate::http::api::api_patch::<crate::services::classroom::types::CourseWork>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(cw)) => {
             if let Err(e) = ctx.write_output(&cw) {
                 eprintln!("Error: {}", e);
@@ -6724,7 +7261,10 @@ async fn handle_classroom_coursework_assignees(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would update assignees for coursework '{}'", args.coursework_id);
+            eprintln!(
+                "[dry-run] would update assignees for coursework '{}'",
+                args.coursework_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -6749,7 +7289,15 @@ async fn handle_classroom_materials_list(
     );
 
     let result: crate::services::classroom::types::CourseMaterialListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -6770,17 +7318,25 @@ async fn handle_classroom_materials_get(
     args: &classroom::ClassroomMaterialsGetArgs,
 ) -> i32 {
     let url = crate::services::classroom::materials::build_material_get_url(
-        &args.course_id, &args.material_id,
+        &args.course_id,
+        &args.material_id,
     );
 
-    let result: crate::services::classroom::types::CourseMaterial =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::CourseMaterial = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -6802,8 +7358,16 @@ async fn handle_classroom_materials_create(
     );
 
     match crate::http::api::api_post::<crate::services::classroom::types::CourseMaterial>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(mat)) => {
             if let Err(e) = ctx.write_output(&mat) {
                 eprintln!("Error: {}", e);
@@ -6827,7 +7391,8 @@ async fn handle_classroom_materials_update(
     args: &classroom::ClassroomMaterialsUpdateArgs,
 ) -> i32 {
     let url = crate::services::classroom::materials::build_material_update_url(
-        &args.course_id, &args.material_id,
+        &args.course_id,
+        &args.material_id,
     );
     let mut body = serde_json::json!({});
     if let Some(ref t) = args.title {
@@ -6838,8 +7403,16 @@ async fn handle_classroom_materials_update(
     }
 
     match crate::http::api::api_patch::<crate::services::classroom::types::CourseMaterial>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(mat)) => {
             if let Err(e) = ctx.write_output(&mat) {
                 eprintln!("Error: {}", e);
@@ -6868,12 +7441,20 @@ async fn handle_classroom_materials_delete(
     }
 
     let url = crate::services::classroom::materials::build_material_delete_url(
-        &args.course_id, &args.material_id,
+        &args.course_id,
+        &args.material_id,
     );
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Material '{}' deleted.", args.material_id);
             codes::SUCCESS
@@ -6901,7 +7482,15 @@ async fn handle_classroom_submissions_list(
     );
 
     let result: crate::services::classroom::types::SubmissionListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -6922,11 +7511,21 @@ async fn handle_classroom_submissions_get(
     args: &classroom::ClassroomSubmissionsGetArgs,
 ) -> i32 {
     let url = crate::services::classroom::submissions::build_submission_get_url(
-        &args.course_id, &args.coursework_id, &args.submission_id,
+        &args.course_id,
+        &args.coursework_id,
+        &args.submission_id,
     );
 
     let result: crate::services::classroom::types::StudentSubmission =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -6946,13 +7545,23 @@ async fn handle_classroom_submissions_turnin(
     args: &classroom::ClassroomSubmissionsTurnInArgs,
 ) -> i32 {
     let url = crate::services::classroom::submissions::build_submission_turn_in_url(
-        &args.course_id, &args.coursework_id, &args.submission_id,
+        &args.course_id,
+        &args.coursework_id,
+        &args.submission_id,
     );
     let body = serde_json::json!({});
 
     match crate::http::api::api_post::<serde_json::Value>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(_) => {
             eprintln!("Submission '{}' turned in.", args.submission_id);
             codes::SUCCESS
@@ -6969,13 +7578,23 @@ async fn handle_classroom_submissions_reclaim(
     args: &classroom::ClassroomSubmissionsReclaimArgs,
 ) -> i32 {
     let url = crate::services::classroom::submissions::build_submission_reclaim_url(
-        &args.course_id, &args.coursework_id, &args.submission_id,
+        &args.course_id,
+        &args.coursework_id,
+        &args.submission_id,
     );
     let body = serde_json::json!({});
 
     match crate::http::api::api_post::<serde_json::Value>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(_) => {
             eprintln!("Submission '{}' reclaimed.", args.submission_id);
             codes::SUCCESS
@@ -6992,13 +7611,23 @@ async fn handle_classroom_submissions_return(
     args: &classroom::ClassroomSubmissionsReturnArgs,
 ) -> i32 {
     let url = crate::services::classroom::submissions::build_submission_return_url(
-        &args.course_id, &args.coursework_id, &args.submission_id,
+        &args.course_id,
+        &args.coursework_id,
+        &args.submission_id,
     );
     let body = serde_json::json!({});
 
     match crate::http::api::api_post::<serde_json::Value>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(_) => {
             eprintln!("Submission '{}' returned.", args.submission_id);
             codes::SUCCESS
@@ -7015,7 +7644,9 @@ async fn handle_classroom_submissions_grade(
     args: &classroom::ClassroomSubmissionsGradeArgs,
 ) -> i32 {
     let url = crate::services::classroom::submissions::build_submission_patch_url(
-        &args.course_id, &args.coursework_id, &args.submission_id,
+        &args.course_id,
+        &args.coursework_id,
+        &args.submission_id,
     );
     let body = crate::services::classroom::submissions::build_submission_grade_body(
         args.grade,
@@ -7023,8 +7654,16 @@ async fn handle_classroom_submissions_grade(
     );
 
     match crate::http::api::api_patch::<crate::services::classroom::types::StudentSubmission>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(sub)) => {
             if let Err(e) = ctx.write_output(&sub) {
                 eprintln!("Error: {}", e);
@@ -7058,7 +7697,15 @@ async fn handle_classroom_announcements_list(
     );
 
     let result: crate::services::classroom::types::AnnouncementListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -7079,17 +7726,25 @@ async fn handle_classroom_announcements_get(
     args: &classroom::ClassroomAnnouncementsGetArgs,
 ) -> i32 {
     let url = crate::services::classroom::announcements::build_announcement_get_url(
-        &args.course_id, &args.announcement_id,
+        &args.course_id,
+        &args.announcement_id,
     );
 
-    let result: crate::services::classroom::types::Announcement =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::Announcement = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -7102,15 +7757,24 @@ async fn handle_classroom_announcements_create(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomAnnouncementsCreateArgs,
 ) -> i32 {
-    let url = crate::services::classroom::announcements::build_announcement_create_url(&args.course_id);
+    let url =
+        crate::services::classroom::announcements::build_announcement_create_url(&args.course_id);
     let body = crate::services::classroom::announcements::build_announcement_create_body(
         &args.text,
         args.state.as_deref(),
     );
 
     match crate::http::api::api_post::<crate::services::classroom::types::Announcement>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(ann)) => {
             if let Err(e) = ctx.write_output(&ann) {
                 eprintln!("Error: {}", e);
@@ -7119,7 +7783,10 @@ async fn handle_classroom_announcements_create(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would create announcement in course '{}'", args.course_id);
+            eprintln!(
+                "[dry-run] would create announcement in course '{}'",
+                args.course_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -7134,7 +7801,8 @@ async fn handle_classroom_announcements_update(
     args: &classroom::ClassroomAnnouncementsUpdateArgs,
 ) -> i32 {
     let url = crate::services::classroom::announcements::build_announcement_update_url(
-        &args.course_id, &args.announcement_id,
+        &args.course_id,
+        &args.announcement_id,
     );
     let mut body = serde_json::json!({});
     if let Some(ref t) = args.text {
@@ -7142,8 +7810,16 @@ async fn handle_classroom_announcements_update(
     }
 
     match crate::http::api::api_patch::<crate::services::classroom::types::Announcement>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(ann)) => {
             if let Err(e) = ctx.write_output(&ann) {
                 eprintln!("Error: {}", e);
@@ -7152,7 +7828,10 @@ async fn handle_classroom_announcements_update(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would update announcement '{}'", args.announcement_id);
+            eprintln!(
+                "[dry-run] would update announcement '{}'",
+                args.announcement_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -7172,12 +7851,20 @@ async fn handle_classroom_announcements_delete(
     }
 
     let url = crate::services::classroom::announcements::build_announcement_delete_url(
-        &args.course_id, &args.announcement_id,
+        &args.course_id,
+        &args.announcement_id,
     );
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Announcement '{}' deleted.", args.announcement_id);
             codes::SUCCESS
@@ -7194,7 +7881,8 @@ async fn handle_classroom_announcements_assignees(
     args: &classroom::ClassroomAnnouncementsAssigneesArgs,
 ) -> i32 {
     let url = crate::services::classroom::announcements::build_announcement_update_url(
-        &args.course_id, &args.announcement_id,
+        &args.course_id,
+        &args.announcement_id,
     );
     let body = serde_json::json!({
         "assigneeMode": "INDIVIDUAL_STUDENTS",
@@ -7204,8 +7892,16 @@ async fn handle_classroom_announcements_assignees(
     });
 
     match crate::http::api::api_patch::<crate::services::classroom::types::Announcement>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(ann)) => {
             if let Err(e) = ctx.write_output(&ann) {
                 eprintln!("Error: {}", e);
@@ -7214,7 +7910,10 @@ async fn handle_classroom_announcements_assignees(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would update assignees for announcement '{}'", args.announcement_id);
+            eprintln!(
+                "[dry-run] would update assignees for announcement '{}'",
+                args.announcement_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -7239,7 +7938,15 @@ async fn handle_classroom_topics_list(
     );
 
     let result: crate::services::classroom::types::TopicListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -7259,18 +7966,24 @@ async fn handle_classroom_topics_get(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomTopicsGetArgs,
 ) -> i32 {
-    let url = crate::services::classroom::topics::build_topic_get_url(
-        &args.course_id, &args.topic_id,
-    );
+    let url =
+        crate::services::classroom::topics::build_topic_get_url(&args.course_id, &args.topic_id);
 
-    let result: crate::services::classroom::types::Topic =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::Topic = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -7287,8 +8000,16 @@ async fn handle_classroom_topics_create(
     let body = crate::services::classroom::topics::build_topic_create_body(&args.name);
 
     match crate::http::api::api_post::<crate::services::classroom::types::Topic>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(topic)) => {
             if let Err(e) = ctx.write_output(&topic) {
                 eprintln!("Error: {}", e);
@@ -7311,14 +8032,21 @@ async fn handle_classroom_topics_update(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomTopicsUpdateArgs,
 ) -> i32 {
-    let url = crate::services::classroom::topics::build_topic_update_url(
-        &args.course_id, &args.topic_id,
-    );
+    let url =
+        crate::services::classroom::topics::build_topic_update_url(&args.course_id, &args.topic_id);
     let body = crate::services::classroom::topics::build_topic_update_body(&args.name);
 
     match crate::http::api::api_patch::<crate::services::classroom::types::Topic>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(topic)) => {
             if let Err(e) = ctx.write_output(&topic) {
                 eprintln!("Error: {}", e);
@@ -7346,13 +8074,19 @@ async fn handle_classroom_topics_delete(
         return codes::USAGE_ERROR;
     }
 
-    let url = crate::services::classroom::topics::build_topic_delete_url(
-        &args.course_id, &args.topic_id,
-    );
+    let url =
+        crate::services::classroom::topics::build_topic_delete_url(&args.course_id, &args.topic_id);
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Topic '{}' deleted.", args.topic_id);
             codes::SUCCESS
@@ -7380,7 +8114,15 @@ async fn handle_classroom_invitations_list(
     );
 
     let result: crate::services::classroom::types::InvitationListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -7400,16 +8142,24 @@ async fn handle_classroom_invitations_get(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomInvitationsGetArgs,
 ) -> i32 {
-    let url = crate::services::classroom::invitations::build_invitation_get_url(&args.invitation_id);
+    let url =
+        crate::services::classroom::invitations::build_invitation_get_url(&args.invitation_id);
 
-    let result: crate::services::classroom::types::Invitation =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::Invitation = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -7430,8 +8180,16 @@ async fn handle_classroom_invitations_create(
     );
 
     match crate::http::api::api_post::<crate::services::classroom::types::Invitation>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(inv)) => {
             if let Err(e) = ctx.write_output(&inv) {
                 eprintln!("Error: {}", e);
@@ -7440,7 +8198,10 @@ async fn handle_classroom_invitations_create(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would create invitation for '{}' in course '{}'", args.user_id, args.course_id);
+            eprintln!(
+                "[dry-run] would create invitation for '{}' in course '{}'",
+                args.user_id, args.course_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -7454,12 +8215,21 @@ async fn handle_classroom_invitations_accept(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomInvitationsAcceptArgs,
 ) -> i32 {
-    let url = crate::services::classroom::invitations::build_invitation_accept_url(&args.invitation_id);
+    let url =
+        crate::services::classroom::invitations::build_invitation_accept_url(&args.invitation_id);
     let body = serde_json::json!({});
 
     match crate::http::api::api_post::<serde_json::Value>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(_) => {
             eprintln!("Invitation '{}' accepted.", args.invitation_id);
             codes::SUCCESS
@@ -7480,11 +8250,19 @@ async fn handle_classroom_invitations_delete(
         return codes::USAGE_ERROR;
     }
 
-    let url = crate::services::classroom::invitations::build_invitation_delete_url(&args.invitation_id);
+    let url =
+        crate::services::classroom::invitations::build_invitation_delete_url(&args.invitation_id);
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Invitation '{}' deleted.", args.invitation_id);
             codes::SUCCESS
@@ -7511,7 +8289,15 @@ async fn handle_classroom_guardians_list(
     );
 
     let result: crate::services::classroom::types::GuardianListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -7532,17 +8318,25 @@ async fn handle_classroom_guardians_get(
     args: &classroom::ClassroomGuardiansGetArgs,
 ) -> i32 {
     let url = crate::services::classroom::guardians::build_guardian_get_url(
-        &args.student_id, &args.guardian_id,
+        &args.student_id,
+        &args.guardian_id,
     );
 
-    let result: crate::services::classroom::types::Guardian =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::Guardian = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -7561,12 +8355,20 @@ async fn handle_classroom_guardians_delete(
     }
 
     let url = crate::services::classroom::guardians::build_guardian_delete_url(
-        &args.student_id, &args.guardian_id,
+        &args.student_id,
+        &args.guardian_id,
     );
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Guardian '{}' deleted.", args.guardian_id);
             codes::SUCCESS
@@ -7594,7 +8396,15 @@ async fn handle_classroom_guardian_invitations_list(
     );
 
     let result: crate::services::classroom::types::GuardianInvitationListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -7615,11 +8425,20 @@ async fn handle_classroom_guardian_invitations_get(
     args: &classroom::ClassroomGuardianInvitationsGetArgs,
 ) -> i32 {
     let url = crate::services::classroom::guardians::build_guardian_invitation_get_url(
-        &args.student_id, &args.invitation_id,
+        &args.student_id,
+        &args.invitation_id,
     );
 
     let result: crate::services::classroom::types::GuardianInvitation =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -7638,12 +8457,23 @@ async fn handle_classroom_guardian_invitations_create(
     ctx: &crate::services::ServiceContext,
     args: &classroom::ClassroomGuardianInvitationsCreateArgs,
 ) -> i32 {
-    let url = crate::services::classroom::guardians::build_guardian_invitation_create_url(&args.student_id);
-    let body = crate::services::classroom::guardians::build_guardian_invitation_create_body(&args.email);
+    let url = crate::services::classroom::guardians::build_guardian_invitation_create_url(
+        &args.student_id,
+    );
+    let body =
+        crate::services::classroom::guardians::build_guardian_invitation_create_body(&args.email);
 
     match crate::http::api::api_post::<crate::services::classroom::types::GuardianInvitation>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(inv)) => {
             if let Err(e) = ctx.write_output(&inv) {
                 eprintln!("Error: {}", e);
@@ -7652,7 +8482,10 @@ async fn handle_classroom_guardian_invitations_create(
             codes::SUCCESS
         }
         Ok(None) => {
-            eprintln!("[dry-run] would create guardian invitation for '{}' to student '{}'", args.email, args.student_id);
+            eprintln!(
+                "[dry-run] would create guardian invitation for '{}' to student '{}'",
+                args.email, args.student_id
+            );
             codes::SUCCESS
         }
         Err(e) => {
@@ -7673,20 +8506,24 @@ async fn handle_classroom_profile(
     let url = format!(
         "{}/userProfiles/{}",
         crate::services::classroom::CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            &args.user_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(&args.user_id, percent_encoding::NON_ALPHANUMERIC)
     );
 
-    let result: crate::services::classroom::types::UserProfile =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::classroom::types::UserProfile = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -7729,19 +8566,24 @@ async fn handle_tasks_lists_list(
     ctx: &crate::services::ServiceContext,
     args: &tasks::TasksListsListArgs,
 ) -> i32 {
-    let url = crate::services::tasks::tasklists::build_tasklists_list_url(
-        args.max,
-        args.page.as_deref(),
-    );
+    let url =
+        crate::services::tasks::tasklists::build_tasklists_list_url(args.max, args.page.as_deref());
 
-    let result: crate::services::tasks::types::TaskListsResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::tasks::types::TaskListsResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     let next_token = result.next_page_token.clone();
     if let Err(e) = ctx.write_paginated(&result, next_token.as_deref()) {
@@ -7760,8 +8602,16 @@ async fn handle_tasks_lists_create(
     let body = crate::services::tasks::tasklists::build_tasklist_create_body(&args.title);
 
     match crate::http::api::api_post::<crate::services::tasks::types::TaskList>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(tl)) => {
             if let Err(e) = ctx.write_output(&tl) {
                 eprintln!("Error: {}", e);
@@ -7791,14 +8641,21 @@ async fn handle_tasks_list(
         args.page.as_deref(),
     );
 
-    let result: crate::services::tasks::types::TasksResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::tasks::types::TasksResponse = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     let next_token = result.next_page_token.clone();
     if let Err(e) = ctx.write_paginated(&result, next_token.as_deref()) {
@@ -7815,14 +8672,21 @@ async fn handle_tasks_get(
 ) -> i32 {
     let url = crate::services::tasks::task_ops::build_task_get_url(&args.tasklist, &args.task);
 
-    let result: crate::services::tasks::types::Task =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::tasks::types::Task = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -7846,8 +8710,16 @@ async fn handle_tasks_add(
     );
 
     match crate::http::api::api_post::<crate::services::tasks::types::Task>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(task)) => {
             if let Err(e) = ctx.write_output(&task) {
                 eprintln!("Error: {}", e);
@@ -7880,8 +8752,16 @@ async fn handle_tasks_update(
     );
 
     match crate::http::api::api_patch::<crate::services::tasks::types::Task>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(task)) => {
             if let Err(e) = ctx.write_output(&task) {
                 eprintln!("Error: {}", e);
@@ -7907,12 +8787,23 @@ async fn handle_tasks_done(
 ) -> i32 {
     let url = crate::services::tasks::task_ops::build_task_update_url(&args.tasklist, &args.task);
     let body = crate::services::tasks::task_ops::build_task_update_body(
-        None, None, None, Some("completed"),
+        None,
+        None,
+        None,
+        Some("completed"),
     );
 
     match crate::http::api::api_patch::<crate::services::tasks::types::Task>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(task)) => {
             if let Err(e) = ctx.write_output(&task) {
                 eprintln!("Error: {}", e);
@@ -7938,12 +8829,23 @@ async fn handle_tasks_undo(
 ) -> i32 {
     let url = crate::services::tasks::task_ops::build_task_update_url(&args.tasklist, &args.task);
     let body = crate::services::tasks::task_ops::build_task_update_body(
-        None, None, None, Some("needsAction"),
+        None,
+        None,
+        None,
+        Some("needsAction"),
     );
 
     match crate::http::api::api_patch::<crate::services::tasks::types::Task>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(task)) => {
             if let Err(e) = ctx.write_output(&task) {
                 eprintln!("Error: {}", e);
@@ -7968,9 +8870,14 @@ async fn handle_tasks_delete(
     args: &tasks::TasksDeleteArgs,
 ) -> i32 {
     if !ctx.is_force() && !ctx.flags.no_input {
-        eprint!("Are you sure you want to delete task '{}'? [y/N] ", args.task);
+        eprint!(
+            "Are you sure you want to delete task '{}'? [y/N] ",
+            args.task
+        );
         let mut input = String::new();
-        if std::io::stdin().read_line(&mut input).is_err() || !input.trim().eq_ignore_ascii_case("y") {
+        if std::io::stdin().read_line(&mut input).is_err()
+            || !input.trim().eq_ignore_ascii_case("y")
+        {
             eprintln!("Aborted.");
             return codes::SUCCESS;
         }
@@ -7982,8 +8889,15 @@ async fn handle_tasks_delete(
     let url = crate::services::tasks::task_ops::build_task_delete_url(&args.tasklist, &args.task);
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Task '{}' deleted.", args.task);
             codes::SUCCESS
@@ -8004,8 +8918,16 @@ async fn handle_tasks_clear(
     let body = serde_json::json!({});
 
     match crate::http::api::api_post::<serde_json::Value>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(_) => {
             eprintln!("Completed tasks cleared from list '{}'.", args.tasklist);
             codes::SUCCESS
@@ -8039,7 +8961,9 @@ async fn handle_contacts(args: contacts::ContactsArgs, flags: &root::RootFlags) 
         ContactsCommand::Delete(ref a) => handle_contacts_delete(&ctx, a).await,
         ContactsCommand::Directory(da) => match da.command {
             ContactsDirectoryCommand::List(ref a) => handle_contacts_directory_list(&ctx, a).await,
-            ContactsDirectoryCommand::Search(ref a) => handle_contacts_directory_search(&ctx, a).await,
+            ContactsDirectoryCommand::Search(ref a) => {
+                handle_contacts_directory_search(&ctx, a).await
+            }
         },
         ContactsCommand::Other(oa) => match oa.command {
             ContactsOtherCommand::List(ref a) => handle_contacts_other_list(&ctx, a).await,
@@ -8054,19 +8978,23 @@ async fn handle_contacts_search(
     args: &contacts::ContactsSearchArgs,
 ) -> i32 {
     let query = args.query.join(" ");
-    let url = crate::services::contacts::contacts::build_contacts_search_url(
-        &query,
-        args.max,
-    );
+    let url = crate::services::contacts::contacts::build_contacts_search_url(&query, args.max);
 
-    let result: serde_json::Value =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: serde_json::Value = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -8086,7 +9014,15 @@ async fn handle_contacts_list(
     );
 
     let result: crate::services::contacts::types::PersonListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -8109,14 +9045,21 @@ async fn handle_contacts_get(
 ) -> i32 {
     let url = crate::services::contacts::contacts::build_contact_get_url(&args.resource_name);
 
-    let result: crate::services::contacts::types::Person =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: crate::services::contacts::types::Person = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -8139,8 +9082,16 @@ async fn handle_contacts_create(
     );
 
     match crate::http::api::api_post::<crate::services::contacts::types::Person>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(person)) => {
             if let Err(e) = ctx.write_output(&person) {
                 eprintln!("Error: {}", e);
@@ -8181,8 +9132,16 @@ async fn handle_contacts_update(
     };
 
     match crate::http::api::api_patch::<crate::services::contacts::types::Person>(
-        &ctx.client, &url, &body, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(Some(person)) => {
             if let Err(e) = ctx.write_output(&person) {
                 eprintln!("Error: {}", e);
@@ -8207,9 +9166,14 @@ async fn handle_contacts_delete(
     args: &contacts::ContactsDeleteArgs,
 ) -> i32 {
     if !ctx.is_force() && !ctx.flags.no_input {
-        eprint!("Are you sure you want to delete contact '{}'? [y/N] ", args.resource_name);
+        eprint!(
+            "Are you sure you want to delete contact '{}'? [y/N] ",
+            args.resource_name
+        );
         let mut input = String::new();
-        if std::io::stdin().read_line(&mut input).is_err() || !input.trim().eq_ignore_ascii_case("y") {
+        if std::io::stdin().read_line(&mut input).is_err()
+            || !input.trim().eq_ignore_ascii_case("y")
+        {
             eprintln!("Aborted.");
             return codes::SUCCESS;
         }
@@ -8221,8 +9185,15 @@ async fn handle_contacts_delete(
     let url = crate::services::contacts::contacts::build_contact_delete_url(&args.resource_name);
 
     match crate::http::api::api_delete(
-        &ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose(), ctx.is_dry_run(),
-    ).await {
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+        ctx.is_dry_run(),
+    )
+    .await
+    {
         Ok(()) => {
             eprintln!("Contact '{}' deleted.", args.resource_name);
             codes::SUCCESS
@@ -8245,7 +9216,15 @@ async fn handle_contacts_directory_list(
     );
 
     let result: crate::services::contacts::types::DirectoryListResponse =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
+        match crate::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            ctx.is_verbose(),
+        )
+        .await
+        {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("Error: {}", e);
@@ -8267,19 +9246,23 @@ async fn handle_contacts_directory_search(
     args: &contacts::ContactsDirectorySearchArgs,
 ) -> i32 {
     let query = args.query.join(" ");
-    let url = crate::services::contacts::directory::build_directory_search_url(
-        &query,
-        args.max,
-    );
+    let url = crate::services::contacts::directory::build_directory_search_url(&query, args.max);
 
-    let result: serde_json::Value =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: serde_json::Value = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -8298,16 +9281,24 @@ async fn handle_contacts_other_list(
         args.page.as_deref(),
     );
 
-    let result: serde_json::Value =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: serde_json::Value = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
-    let next_token = result.get("nextPageToken")
+    let next_token = result
+        .get("nextPageToken")
         .and_then(|v| v.as_str())
         .map(String::from);
     if let Err(e) = ctx.write_paginated(&result, next_token.as_deref()) {
@@ -8323,19 +9314,24 @@ async fn handle_contacts_other_search(
     args: &contacts::ContactsOtherSearchArgs,
 ) -> i32 {
     let query = args.query.join(" ");
-    let url = crate::services::contacts::directory::build_other_contacts_search_url(
-        &query,
-        args.max,
-    );
+    let url =
+        crate::services::contacts::directory::build_other_contacts_search_url(&query, args.max);
 
-    let result: serde_json::Value =
-        match crate::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, ctx.is_verbose()).await {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                return map_error_to_exit_code(&e);
-            }
-        };
+    let result: serde_json::Value = match crate::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        ctx.is_verbose(),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return map_error_to_exit_code(&e);
+        }
+    };
 
     if let Err(e) = ctx.write_output(&result) {
         eprintln!("Error: {}", e);
@@ -8461,9 +9457,8 @@ async fn handle_people_relations(
     ctx: &crate::services::ServiceContext,
     args: &people::PeopleRelationsArgs,
 ) -> i32 {
-    let url = crate::services::people::people::build_people_relations_url(
-        args.resource_name.as_deref(),
-    );
+    let url =
+        crate::services::people::people::build_people_relations_url(args.resource_name.as_deref());
 
     let result: serde_json::Value = match crate::http::api::api_get(
         &ctx.client,
@@ -8590,7 +9585,10 @@ async fn handle_groups_members(
     let group_name = match group_lookup.get("name").and_then(|v| v.as_str()) {
         Some(name) => name.to_string(),
         None => {
-            eprintln!("Error: could not resolve group name for '{}'", args.group_email);
+            eprintln!(
+                "Error: could not resolve group name for '{}'",
+                args.group_email
+            );
             return codes::GENERIC_ERROR;
         }
     };
@@ -8670,10 +9668,7 @@ async fn handle_keep(args: keep::KeepArgs, flags: &root::RootFlags) -> i32 {
 }
 
 /// Handle Keep list.
-async fn handle_keep_list(
-    ctx: &crate::services::ServiceContext,
-    args: &keep::KeepListArgs,
-) -> i32 {
+async fn handle_keep_list(ctx: &crate::services::ServiceContext, args: &keep::KeepListArgs) -> i32 {
     let params = crate::services::common::PaginationParams {
         max_results: args.max,
         page_token: args.page.clone(),
@@ -8728,10 +9723,7 @@ async fn handle_keep_list(
 }
 
 /// Handle Keep get.
-async fn handle_keep_get(
-    ctx: &crate::services::ServiceContext,
-    args: &keep::KeepGetArgs,
-) -> i32 {
+async fn handle_keep_get(ctx: &crate::services::ServiceContext, args: &keep::KeepGetArgs) -> i32 {
     let url = crate::services::keep::notes::build_note_get_url(&args.note_id);
     let note: crate::services::keep::types::Note = match crate::http::api::api_get(
         &ctx.client,
@@ -8830,7 +9822,8 @@ async fn handle_keep_attachment(
     ctx: &crate::services::ServiceContext,
     args: &keep::KeepAttachmentArgs,
 ) -> i32 {
-    let url = crate::services::keep::attachments::build_attachment_download_url(&args.attachment_name);
+    let url =
+        crate::services::keep::attachments::build_attachment_download_url(&args.attachment_name);
 
     let response = match crate::http::api::api_get_raw(
         &ctx.client,
@@ -9098,7 +10091,8 @@ fn handle_exit_codes(flags: &root::RootFlags) -> i32 {
     } else if flags.csv {
         println!("code,name,description");
         for entry in &table {
-            println!("{},{},{}",
+            println!(
+                "{},{},{}",
                 crate::output::csv_escape(&entry.code.to_string()),
                 crate::output::csv_escape(&entry.name),
                 crate::output::csv_escape(&entry.description),
@@ -9371,7 +10365,12 @@ mod tests {
     // Acceptance: --fields x,y is rewritten to --select x,y
     #[test]
     fn req_cli_009_fields_rewritten_to_select() {
-        let args = vec!["gmail".to_string(), "search".to_string(), "--fields".to_string(), "id,subject".to_string()];
+        let args = vec![
+            "gmail".to_string(),
+            "search".to_string(),
+            "--fields".to_string(),
+            "id,subject".to_string(),
+        ];
         let result = rewrite_desire_path_args(args);
         assert!(result.contains(&"--select".to_string()));
         assert!(!result.contains(&"--fields".to_string()));
@@ -9381,7 +10380,11 @@ mod tests {
     // Acceptance: --fields=x,y is rewritten to --select=x,y
     #[test]
     fn req_cli_009_fields_equals_rewritten() {
-        let args = vec!["drive".to_string(), "ls".to_string(), "--fields=id,name".to_string()];
+        let args = vec![
+            "drive".to_string(),
+            "ls".to_string(),
+            "--fields=id,name".to_string(),
+        ];
         let result = rewrite_desire_path_args(args);
         assert!(result.iter().any(|a| a.starts_with("--select=")));
         assert!(!result.iter().any(|a| a.starts_with("--fields=")));
@@ -9391,7 +10394,12 @@ mod tests {
     // Acceptance: calendar events --fields is NOT rewritten
     #[test]
     fn req_cli_009_calendar_events_not_rewritten() {
-        let args = vec!["calendar".to_string(), "events".to_string(), "--fields".to_string(), "items(id)".to_string()];
+        let args = vec![
+            "calendar".to_string(),
+            "events".to_string(),
+            "--fields".to_string(),
+            "items(id)".to_string(),
+        ];
         let result = rewrite_desire_path_args(args);
         assert!(result.contains(&"--fields".to_string()));
         assert!(!result.contains(&"--select".to_string()));
@@ -9401,7 +10409,12 @@ mod tests {
     // Acceptance: cal events --fields is also NOT rewritten (alias)
     #[test]
     fn req_cli_009_cal_events_not_rewritten() {
-        let args = vec!["cal".to_string(), "events".to_string(), "--fields".to_string(), "items(id)".to_string()];
+        let args = vec![
+            "cal".to_string(),
+            "events".to_string(),
+            "--fields".to_string(),
+            "items(id)".to_string(),
+        ];
         let result = rewrite_desire_path_args(args);
         assert!(result.contains(&"--fields".to_string()));
     }
@@ -9410,7 +10423,12 @@ mod tests {
     // Acceptance: calendar ls --fields is also NOT rewritten
     #[test]
     fn req_cli_009_calendar_ls_not_rewritten() {
-        let args = vec!["calendar".to_string(), "ls".to_string(), "--fields".to_string(), "items(id)".to_string()];
+        let args = vec![
+            "calendar".to_string(),
+            "ls".to_string(),
+            "--fields".to_string(),
+            "items(id)".to_string(),
+        ];
         let result = rewrite_desire_path_args(args);
         assert!(result.contains(&"--fields".to_string()));
     }
@@ -9419,7 +10437,13 @@ mod tests {
     // Acceptance: -- stops rewriting
     #[test]
     fn req_cli_009_double_dash_stops_rewriting() {
-        let args = vec!["gmail".to_string(), "search".to_string(), "--".to_string(), "--fields".to_string(), "test".to_string()];
+        let args = vec![
+            "gmail".to_string(),
+            "search".to_string(),
+            "--".to_string(),
+            "--fields".to_string(),
+            "test".to_string(),
+        ];
         let result = rewrite_desire_path_args(args);
         // --fields after -- should NOT be rewritten
         assert!(result.contains(&"--fields".to_string()));
@@ -9432,18 +10456,36 @@ mod tests {
     // Requirement: REQ-CLI-009 (Should)
     #[test]
     fn req_cli_009_detects_calendar_events() {
-        assert!(is_calendar_events_command(&["calendar".to_string(), "events".to_string()]));
-        assert!(is_calendar_events_command(&["cal".to_string(), "events".to_string()]));
-        assert!(is_calendar_events_command(&["calendar".to_string(), "ls".to_string()]));
-        assert!(is_calendar_events_command(&["calendar".to_string(), "list".to_string()]));
+        assert!(is_calendar_events_command(&[
+            "calendar".to_string(),
+            "events".to_string()
+        ]));
+        assert!(is_calendar_events_command(&[
+            "cal".to_string(),
+            "events".to_string()
+        ]));
+        assert!(is_calendar_events_command(&[
+            "calendar".to_string(),
+            "ls".to_string()
+        ]));
+        assert!(is_calendar_events_command(&[
+            "calendar".to_string(),
+            "list".to_string()
+        ]));
     }
 
     // Requirement: REQ-CLI-009 (Should)
     #[test]
     fn req_cli_009_non_calendar_commands() {
-        assert!(!is_calendar_events_command(&["gmail".to_string(), "search".to_string()]));
+        assert!(!is_calendar_events_command(&[
+            "gmail".to_string(),
+            "search".to_string()
+        ]));
         assert!(!is_calendar_events_command(&["calendar".to_string()]));
-        assert!(!is_calendar_events_command(&["drive".to_string(), "ls".to_string()]));
+        assert!(!is_calendar_events_command(&[
+            "drive".to_string(),
+            "ls".to_string()
+        ]));
     }
 
     // Requirement: REQ-CLI-009 (Should)
@@ -9451,7 +10493,11 @@ mod tests {
     #[test]
     fn req_cli_009_skips_flags_in_detection() {
         assert!(is_calendar_events_command(&[
-            "--json".to_string(), "calendar".to_string(), "--account".to_string(), "me@x.com".to_string(), "events".to_string()
+            "--json".to_string(),
+            "calendar".to_string(),
+            "--account".to_string(),
+            "me@x.com".to_string(),
+            "events".to_string()
         ]));
     }
 

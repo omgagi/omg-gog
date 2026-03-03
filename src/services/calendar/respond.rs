@@ -11,10 +11,7 @@ pub struct RsvpRequest {
 /// and the `sendUpdates` value as a separate query parameter, since the
 /// Google Calendar API expects `sendUpdates` as a URL query parameter,
 /// not in the request body.
-pub fn build_rsvp_body(
-    status: &str,
-    send_updates: Option<&str>,
-) -> RsvpRequest {
+pub fn build_rsvp_body(status: &str, send_updates: Option<&str>) -> RsvpRequest {
     let body = serde_json::json!({
         "attendees": [{
             "responseStatus": status,
@@ -27,11 +24,7 @@ pub fn build_rsvp_body(
 }
 
 /// Build the RSVP URL with optional sendUpdates query parameter.
-pub fn build_rsvp_url(
-    calendar_id: &str,
-    event_id: &str,
-    send_updates: Option<&str>,
-) -> String {
+pub fn build_rsvp_url(calendar_id: &str, event_id: &str, send_updates: Option<&str>) -> String {
     use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
     let encoded_cal = utf8_percent_encode(calendar_id, NON_ALPHANUMERIC).to_string();
     let encoded_event = utf8_percent_encode(event_id, NON_ALPHANUMERIC).to_string();
@@ -49,7 +42,10 @@ pub fn build_rsvp_url(
 pub fn validate_rsvp_status(status: &str) -> anyhow::Result<()> {
     match status {
         "accepted" | "declined" | "tentative" | "needsAction" => Ok(()),
-        _ => anyhow::bail!("invalid RSVP status: '{}'. Must be one of: accepted, declined, tentative, needsAction", status),
+        _ => anyhow::bail!(
+            "invalid RSVP status: '{}'. Must be one of: accepted, declined, tentative, needsAction",
+            status
+        ),
     }
 }
 

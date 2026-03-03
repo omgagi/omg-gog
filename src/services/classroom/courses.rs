@@ -37,10 +37,7 @@ pub fn build_course_get_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -72,18 +69,12 @@ pub fn build_course_update_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
 /// Build request body for updating a course.
-pub fn build_course_update_body(
-    name: Option<&str>,
-    state: Option<&str>,
-) -> serde_json::Value {
+pub fn build_course_update_body(name: Option<&str>, state: Option<&str>) -> serde_json::Value {
     let mut body = serde_json::json!({});
     if let Some(n) = name {
         body["name"] = serde_json::Value::String(n.to_string());
@@ -99,10 +90,7 @@ pub fn build_course_delete_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -111,10 +99,7 @@ pub fn build_course_archive_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}?updateMask=courseState",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -176,7 +161,8 @@ mod tests {
     // Acceptance: Course create body with all fields
     #[test]
     fn req_class_001_course_create_body() {
-        let body = build_course_create_body("Math 101", Some("teacher@example.com"), Some("PROVISIONED"));
+        let body =
+            build_course_create_body("Math 101", Some("teacher@example.com"), Some("PROVISIONED"));
         assert_eq!(body["name"], "Math 101");
         assert_eq!(body["ownerId"], "teacher@example.com");
         assert_eq!(body["courseState"], "PROVISIONED");

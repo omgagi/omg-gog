@@ -105,13 +105,25 @@ fn req_cli_002_env_bool_falsy_values() {
 #[test]
 fn req_cli_009_fields_to_select_gmail() {
     let args = vec![
-        "gmail".to_string(), "search".to_string(), "test".to_string(),
-        "--fields".to_string(), "id,subject".to_string(),
+        "gmail".to_string(),
+        "search".to_string(),
+        "test".to_string(),
+        "--fields".to_string(),
+        "id,subject".to_string(),
     ];
     let result = cli::rewrite_desire_path_args(args);
-    assert!(result.contains(&"--select".to_string()), "should rewrite --fields to --select");
-    assert!(!result.contains(&"--fields".to_string()), "should not contain --fields");
-    assert!(result.contains(&"id,subject".to_string()), "value should be preserved");
+    assert!(
+        result.contains(&"--select".to_string()),
+        "should rewrite --fields to --select"
+    );
+    assert!(
+        !result.contains(&"--fields".to_string()),
+        "should not contain --fields"
+    );
+    assert!(
+        result.contains(&"id,subject".to_string()),
+        "value should be preserved"
+    );
 }
 
 // Requirement: REQ-CLI-009 (Should)
@@ -119,7 +131,8 @@ fn req_cli_009_fields_to_select_gmail() {
 #[test]
 fn req_cli_009_fields_equals_to_select() {
     let args = vec![
-        "drive".to_string(), "ls".to_string(),
+        "drive".to_string(),
+        "ls".to_string(),
         "--fields=id,name,mimeType".to_string(),
     ];
     let result = cli::rewrite_desire_path_args(args);
@@ -132,12 +145,20 @@ fn req_cli_009_fields_equals_to_select() {
 #[test]
 fn req_cli_009_calendar_events_fields_kept() {
     let args = vec![
-        "calendar".to_string(), "events".to_string(),
-        "--fields".to_string(), "items(id,summary)".to_string(),
+        "calendar".to_string(),
+        "events".to_string(),
+        "--fields".to_string(),
+        "items(id,summary)".to_string(),
     ];
     let result = cli::rewrite_desire_path_args(args);
-    assert!(result.contains(&"--fields".to_string()), "calendar events should keep --fields");
-    assert!(!result.contains(&"--select".to_string()), "should not contain --select");
+    assert!(
+        result.contains(&"--fields".to_string()),
+        "calendar events should keep --fields"
+    );
+    assert!(
+        !result.contains(&"--select".to_string()),
+        "should not contain --select"
+    );
 }
 
 // Requirement: REQ-CLI-009 (Should)
@@ -145,8 +166,10 @@ fn req_cli_009_calendar_events_fields_kept() {
 #[test]
 fn req_cli_009_cal_alias_events_fields_kept() {
     let args = vec![
-        "cal".to_string(), "events".to_string(),
-        "--fields".to_string(), "items(id)".to_string(),
+        "cal".to_string(),
+        "events".to_string(),
+        "--fields".to_string(),
+        "items(id)".to_string(),
     ];
     let result = cli::rewrite_desire_path_args(args);
     assert!(result.contains(&"--fields".to_string()));
@@ -157,8 +180,10 @@ fn req_cli_009_cal_alias_events_fields_kept() {
 #[test]
 fn req_cli_009_calendar_list_fields_kept() {
     let args = vec![
-        "calendar".to_string(), "list".to_string(),
-        "--fields".to_string(), "items(id)".to_string(),
+        "calendar".to_string(),
+        "list".to_string(),
+        "--fields".to_string(),
+        "items(id)".to_string(),
     ];
     let result = cli::rewrite_desire_path_args(args);
     assert!(result.contains(&"--fields".to_string()));
@@ -169,9 +194,11 @@ fn req_cli_009_calendar_list_fields_kept() {
 #[test]
 fn req_cli_009_double_dash_stops() {
     let args = vec![
-        "gmail".to_string(), "search".to_string(),
+        "gmail".to_string(),
+        "search".to_string(),
         "--".to_string(),
-        "--fields".to_string(), "test".to_string(),
+        "--fields".to_string(),
+        "test".to_string(),
     ];
     let result = cli::rewrite_desire_path_args(args);
     // After --, --fields should NOT be rewritten
@@ -185,9 +212,11 @@ fn req_cli_009_flags_between_commands() {
     let args = vec![
         "--json".to_string(),
         "gmail".to_string(),
-        "--account".to_string(), "me@x.com".to_string(),
+        "--account".to_string(),
+        "me@x.com".to_string(),
         "search".to_string(),
-        "--fields".to_string(), "id".to_string(),
+        "--fields".to_string(),
+        "id".to_string(),
     ];
     let result = cli::rewrite_desire_path_args(args);
     assert!(result.contains(&"--select".to_string()));
@@ -202,7 +231,8 @@ fn req_cli_009_flags_between_commands() {
 #[test]
 fn req_cli_009_detect_calendar_events() {
     assert!(cli::is_calendar_events_command(&[
-        "calendar".to_string(), "events".to_string(),
+        "calendar".to_string(),
+        "events".to_string(),
     ]));
 }
 
@@ -211,7 +241,8 @@ fn req_cli_009_detect_calendar_events() {
 #[test]
 fn req_cli_009_detect_cal_alias() {
     assert!(cli::is_calendar_events_command(&[
-        "cal".to_string(), "events".to_string(),
+        "cal".to_string(),
+        "events".to_string(),
     ]));
 }
 
@@ -220,10 +251,12 @@ fn req_cli_009_detect_cal_alias() {
 #[test]
 fn req_cli_009_detect_calendar_ls() {
     assert!(cli::is_calendar_events_command(&[
-        "calendar".to_string(), "ls".to_string(),
+        "calendar".to_string(),
+        "ls".to_string(),
     ]));
     assert!(cli::is_calendar_events_command(&[
-        "calendar".to_string(), "list".to_string(),
+        "calendar".to_string(),
+        "list".to_string(),
     ]));
 }
 
@@ -232,10 +265,12 @@ fn req_cli_009_detect_calendar_ls() {
 #[test]
 fn req_cli_009_non_calendar() {
     assert!(!cli::is_calendar_events_command(&[
-        "gmail".to_string(), "search".to_string(),
+        "gmail".to_string(),
+        "search".to_string(),
     ]));
     assert!(!cli::is_calendar_events_command(&[
-        "drive".to_string(), "ls".to_string(),
+        "drive".to_string(),
+        "ls".to_string(),
     ]));
 }
 
@@ -251,7 +286,8 @@ fn req_cli_009_single_token() {
 #[test]
 fn req_cli_009_skips_flag_values() {
     assert!(cli::is_calendar_events_command(&[
-        "--account".to_string(), "me@x.com".to_string(),
+        "--account".to_string(),
+        "me@x.com".to_string(),
         "calendar".to_string(),
         "--json".to_string(),
         "events".to_string(),
@@ -622,7 +658,10 @@ async fn req_rt_012_auth_tokens_delete_dispatches() {
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
     let args: Vec<OsString> = vec![
-        "auth".into(), "tokens".into(), "delete".into(), "user@example.com".into(),
+        "auth".into(),
+        "tokens".into(),
+        "delete".into(),
+        "user@example.com".into(),
     ];
     let exit_code = cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
@@ -756,15 +795,29 @@ async fn req_rt_008_auth_subcommands_all_reachable() {
         vec!["auth".into(), "status".into()],
         vec!["auth".into(), "services".into()],
         vec!["auth".into(), "tokens".into(), "list".into()],
-        vec!["auth".into(), "tokens".into(), "delete".into(), "test@x.com".into()],
-        vec!["auth".into(), "alias".into(), "set".into(), "work".into(), "me@corp.com".into()],
+        vec![
+            "auth".into(),
+            "tokens".into(),
+            "delete".into(),
+            "test@x.com".into(),
+        ],
+        vec![
+            "auth".into(),
+            "alias".into(),
+            "set".into(),
+            "work".into(),
+            "me@corp.com".into(),
+        ],
         vec!["auth".into(), "alias".into(), "unset".into(), "work".into()],
         vec!["auth".into(), "alias".into(), "list".into()],
     ];
 
     let mut results = Vec::new();
     for args in subcommands {
-        let desc: Vec<String> = args.iter().map(|a| a.to_string_lossy().to_string()).collect();
+        let desc: Vec<String> = args
+            .iter()
+            .map(|a| a.to_string_lossy().to_string())
+            .collect();
         let exit_code = cli::execute(args).await;
         results.push((desc, exit_code));
     }
@@ -774,7 +827,8 @@ async fn req_rt_008_auth_subcommands_all_reachable() {
         assert!(
             exit_code != 2,
             "Command {:?} should not be a usage error (got exit code {})",
-            desc, exit_code
+            desc,
+            exit_code
         );
     }
 }
@@ -790,7 +844,10 @@ async fn req_rt_009_auth_remove_force_flag_parsed() {
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // The --force flag is a root flag, should be parseable with auth remove
     let args: Vec<OsString> = vec![
-        "--force".into(), "auth".into(), "remove".into(), "user@example.com".into(),
+        "--force".into(),
+        "auth".into(),
+        "remove".into(),
+        "user@example.com".into(),
     ];
     let exit_code = cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
@@ -835,7 +892,10 @@ fn req_rt_002_oauth_flow_module_accessible() {
         code: "test".to_string(),
         redirect_uri: "http://127.0.0.1:12345".to_string(),
     };
-    assert_eq!(omega_google::auth::oauth_flow::DESKTOP_FLOW_TIMEOUT_SECS, 120);
+    assert_eq!(
+        omega_google::auth::oauth_flow::DESKTOP_FLOW_TIMEOUT_SECS,
+        120
+    );
     assert_eq!(
         omega_google::auth::oauth_flow::MANUAL_REDIRECT_URI,
         "urn:ietf:wg:oauth:2.0:oob"

@@ -107,7 +107,10 @@ mod tests {
     // Edge case: Title with special characters
     #[test]
     fn req_forms_002_form_create_body_special_chars() {
-        let body = build_form_create_body("Survey: \"Q&A\" <2024>", Some("Description with \"quotes\""));
+        let body = build_form_create_body(
+            "Survey: \"Q&A\" <2024>",
+            Some("Description with \"quotes\""),
+        );
         assert_eq!(body["info"]["title"], "Survey: \"Q&A\" <2024>");
         assert_eq!(body["info"]["description"], "Description with \"quotes\"");
     }

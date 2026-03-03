@@ -27,7 +27,10 @@ pub fn build_acl_list_url(calendar_id: &str) -> String {
 }
 
 /// Resolve a calendar name to its ID.
-pub fn resolve_calendar_id(name_or_id: &str, calendars: &[super::types::CalendarListEntry]) -> Option<String> {
+pub fn resolve_calendar_id(
+    name_or_id: &str,
+    calendars: &[super::types::CalendarListEntry],
+) -> Option<String> {
     // First check by ID
     if let Some(cal) = calendars.iter().find(|c| c.id == name_or_id) {
         return Some(cal.id.clone());
@@ -69,21 +72,19 @@ mod tests {
     // Acceptance: Calendar ID resolution by name
     #[test]
     fn req_cal_003_resolve_calendar_by_name() {
-        let calendars = vec![
-            super::super::types::CalendarListEntry {
-                id: "abc@group.calendar.google.com".to_string(),
-                summary: Some("Team Calendar".to_string()),
-                description: None,
-                time_zone: None,
-                access_role: None,
-                primary: None,
-                background_color: None,
-                foreground_color: None,
-                selected: None,
-                hidden: None,
-                extra: HashMap::new(),
-            },
-        ];
+        let calendars = vec![super::super::types::CalendarListEntry {
+            id: "abc@group.calendar.google.com".to_string(),
+            summary: Some("Team Calendar".to_string()),
+            description: None,
+            time_zone: None,
+            access_role: None,
+            primary: None,
+            background_color: None,
+            foreground_color: None,
+            selected: None,
+            hidden: None,
+            extra: HashMap::new(),
+        }];
         let id = resolve_calendar_id("Team Calendar", &calendars).unwrap();
         assert_eq!(id, "abc@group.calendar.google.com");
     }
@@ -92,21 +93,19 @@ mod tests {
     // Acceptance: Calendar ID resolution by ID
     #[test]
     fn req_cal_003_resolve_calendar_by_id() {
-        let calendars = vec![
-            super::super::types::CalendarListEntry {
-                id: "primary".to_string(),
-                summary: Some("My Calendar".to_string()),
-                description: None,
-                time_zone: None,
-                access_role: None,
-                primary: None,
-                background_color: None,
-                foreground_color: None,
-                selected: None,
-                hidden: None,
-                extra: HashMap::new(),
-            },
-        ];
+        let calendars = vec![super::super::types::CalendarListEntry {
+            id: "primary".to_string(),
+            summary: Some("My Calendar".to_string()),
+            description: None,
+            time_zone: None,
+            access_role: None,
+            primary: None,
+            background_color: None,
+            foreground_color: None,
+            selected: None,
+            hidden: None,
+            extra: HashMap::new(),
+        }];
         let id = resolve_calendar_id("primary", &calendars).unwrap();
         assert_eq!(id, "primary");
     }

@@ -1,8 +1,8 @@
 //! Keep service integration tests.
 
-use omega_google::services::keep::types::*;
-use omega_google::services::keep::notes::*;
 use omega_google::services::keep::attachments::*;
+use omega_google::services::keep::notes::*;
+use omega_google::services::keep::types::*;
 use std::collections::HashMap;
 
 // ---------------------------------------------------------------

@@ -32,19 +32,27 @@ pub fn pick_display_message(thread: &Thread, oldest: bool) -> Option<&Message> {
     if oldest {
         // Return the message with the smallest internal_date
         thread.messages.iter().min_by_key(|m| {
-            m.internal_date.as_ref().and_then(|d| d.parse::<i64>().ok()).unwrap_or(0)
+            m.internal_date
+                .as_ref()
+                .and_then(|d| d.parse::<i64>().ok())
+                .unwrap_or(0)
         })
     } else {
         // Return the message with the largest internal_date
         thread.messages.iter().max_by_key(|m| {
-            m.internal_date.as_ref().and_then(|d| d.parse::<i64>().ok()).unwrap_or(0)
+            m.internal_date
+                .as_ref()
+                .and_then(|d| d.parse::<i64>().ok())
+                .unwrap_or(0)
         })
     }
 }
 
 /// Get the internal date of a message as milliseconds.
 pub fn message_date_millis(msg: &Message) -> Option<i64> {
-    msg.internal_date.as_ref().and_then(|d| d.parse::<i64>().ok())
+    msg.internal_date
+        .as_ref()
+        .and_then(|d| d.parse::<i64>().ok())
 }
 
 #[cfg(test)]

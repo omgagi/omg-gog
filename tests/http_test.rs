@@ -3,9 +3,11 @@
 //! Tests cover REQ-HTTP-001 through REQ-HTTP-006 (Must priority).
 //! Uses mockito for HTTP server mocking and tests retry/circuit breaker behavior.
 
-use omega_google::http::RetryConfig;
-use omega_google::http::circuit_breaker::{CircuitBreaker, CIRCUIT_BREAKER_THRESHOLD, CIRCUIT_BREAKER_RESET_TIME};
+use omega_google::http::circuit_breaker::{
+    CircuitBreaker, CIRCUIT_BREAKER_RESET_TIME, CIRCUIT_BREAKER_THRESHOLD,
+};
 use omega_google::http::retry;
+use omega_google::http::RetryConfig;
 use std::time::Duration;
 
 // ---------------------------------------------------------------
@@ -140,8 +142,16 @@ fn req_http_003_status_429() {
 #[test]
 fn req_http_003_status_5xx() {
     for status in [500, 502, 503, 504, 599] {
-        assert!(retry::is_server_error(status), "status {} should be server error", status);
-        assert!(retry::is_retryable(status), "status {} should be retryable", status);
+        assert!(
+            retry::is_server_error(status),
+            "status {} should be server error",
+            status
+        );
+        assert!(
+            retry::is_retryable(status),
+            "status {} should be retryable",
+            status
+        );
     }
 }
 
@@ -150,7 +160,11 @@ fn req_http_003_status_5xx() {
 #[test]
 fn req_http_003_status_4xx_not_retryable() {
     for status in [400, 401, 403, 404, 405, 409, 413, 422] {
-        assert!(!retry::is_retryable(status), "status {} should NOT be retryable", status);
+        assert!(
+            !retry::is_retryable(status),
+            "status {} should NOT be retryable",
+            status
+        );
     }
 }
 
@@ -159,7 +173,11 @@ fn req_http_003_status_4xx_not_retryable() {
 #[test]
 fn req_http_003_status_success_not_retryable() {
     for status in [200, 201, 204, 301, 302, 304] {
-        assert!(!retry::is_retryable(status), "status {} should NOT be retryable", status);
+        assert!(
+            !retry::is_retryable(status),
+            "status {} should NOT be retryable",
+            status
+        );
     }
 }
 
@@ -213,7 +231,10 @@ fn req_http_004_integration_non_consecutive() {
     for _ in 0..(CIRCUIT_BREAKER_THRESHOLD - 1) {
         cb.record_failure();
     }
-    assert!(!cb.is_open(), "Non-consecutive failures should not open circuit");
+    assert!(
+        !cb.is_open(),
+        "Non-consecutive failures should not open circuit"
+    );
 }
 
 // Requirement: REQ-HTTP-004 (Must)

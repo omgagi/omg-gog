@@ -633,7 +633,10 @@ mod tests {
         let comment: Comment = serde_json::from_str(json_str).unwrap();
         assert_eq!(comment.replies.len(), 2);
         assert_eq!(comment.replies[0].id, Some("r1".to_string()));
-        assert_eq!(comment.replies[0].content, Some("Reply to comment".to_string()));
+        assert_eq!(
+            comment.replies[0].content,
+            Some("Reply to comment".to_string())
+        );
     }
 
     // Requirement: REQ-DOCS-007 (Must)

@@ -34,7 +34,10 @@ pub fn resolve_label_id(name_or_id: &str, labels: &[Label]) -> Option<String> {
         return Some(label.id.clone());
     }
     // Then check by name (case-insensitive)
-    if let Some(label) = labels.iter().find(|l| l.name.eq_ignore_ascii_case(name_or_id)) {
+    if let Some(label) = labels
+        .iter()
+        .find(|l| l.name.eq_ignore_ascii_case(name_or_id))
+    {
         return Some(label.id.clone());
     }
     None
@@ -107,21 +110,19 @@ mod tests {
     // Acceptance: Resolves system label by name
     #[test]
     fn req_gmail_009_resolve_system_label() {
-        let labels = vec![
-            Label {
-                id: "INBOX".to_string(),
-                name: "INBOX".to_string(),
-                r#type: Some("system".to_string()),
-                message_list_visibility: None,
-                label_list_visibility: None,
-                messages_total: None,
-                messages_unread: None,
-                threads_total: None,
-                threads_unread: None,
-                color: None,
-                extra: HashMap::new(),
-            },
-        ];
+        let labels = vec![Label {
+            id: "INBOX".to_string(),
+            name: "INBOX".to_string(),
+            r#type: Some("system".to_string()),
+            message_list_visibility: None,
+            label_list_visibility: None,
+            messages_total: None,
+            messages_unread: None,
+            threads_total: None,
+            threads_unread: None,
+            color: None,
+            extra: HashMap::new(),
+        }];
         let id = resolve_label_id("INBOX", &labels).unwrap();
         assert_eq!(id, "INBOX");
     }
@@ -130,21 +131,19 @@ mod tests {
     // Acceptance: Resolves user label by name
     #[test]
     fn req_gmail_009_resolve_user_label_by_name() {
-        let labels = vec![
-            Label {
-                id: "Label_1".to_string(),
-                name: "Work".to_string(),
-                r#type: Some("user".to_string()),
-                message_list_visibility: None,
-                label_list_visibility: None,
-                messages_total: None,
-                messages_unread: None,
-                threads_total: None,
-                threads_unread: None,
-                color: None,
-                extra: HashMap::new(),
-            },
-        ];
+        let labels = vec![Label {
+            id: "Label_1".to_string(),
+            name: "Work".to_string(),
+            r#type: Some("user".to_string()),
+            message_list_visibility: None,
+            label_list_visibility: None,
+            messages_total: None,
+            messages_unread: None,
+            threads_total: None,
+            threads_unread: None,
+            color: None,
+            extra: HashMap::new(),
+        }];
         let id = resolve_label_id("Work", &labels).unwrap();
         assert_eq!(id, "Label_1");
     }
@@ -153,21 +152,19 @@ mod tests {
     // Acceptance: Resolves label by ID directly
     #[test]
     fn req_gmail_009_resolve_label_by_id() {
-        let labels = vec![
-            Label {
-                id: "Label_1".to_string(),
-                name: "Work".to_string(),
-                r#type: Some("user".to_string()),
-                message_list_visibility: None,
-                label_list_visibility: None,
-                messages_total: None,
-                messages_unread: None,
-                threads_total: None,
-                threads_unread: None,
-                color: None,
-                extra: HashMap::new(),
-            },
-        ];
+        let labels = vec![Label {
+            id: "Label_1".to_string(),
+            name: "Work".to_string(),
+            r#type: Some("user".to_string()),
+            message_list_visibility: None,
+            label_list_visibility: None,
+            messages_total: None,
+            messages_unread: None,
+            threads_total: None,
+            threads_unread: None,
+            color: None,
+            extra: HashMap::new(),
+        }];
         let id = resolve_label_id("Label_1", &labels).unwrap();
         assert_eq!(id, "Label_1");
     }
@@ -184,21 +181,19 @@ mod tests {
     // Edge case: Case-insensitive label name matching
     #[test]
     fn req_gmail_009_resolve_label_case_insensitive() {
-        let labels = vec![
-            Label {
-                id: "Label_1".to_string(),
-                name: "Work Projects".to_string(),
-                r#type: Some("user".to_string()),
-                message_list_visibility: None,
-                label_list_visibility: None,
-                messages_total: None,
-                messages_unread: None,
-                threads_total: None,
-                threads_unread: None,
-                color: None,
-                extra: HashMap::new(),
-            },
-        ];
+        let labels = vec![Label {
+            id: "Label_1".to_string(),
+            name: "Work Projects".to_string(),
+            r#type: Some("user".to_string()),
+            message_list_visibility: None,
+            label_list_visibility: None,
+            messages_total: None,
+            messages_unread: None,
+            threads_total: None,
+            threads_unread: None,
+            color: None,
+            extra: HashMap::new(),
+        }];
         let id = resolve_label_id("work projects", &labels).unwrap();
         assert_eq!(id, "Label_1");
     }

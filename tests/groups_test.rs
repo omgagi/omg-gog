@@ -1,7 +1,7 @@
 //! Groups service integration tests.
 
-use omega_google::services::groups::types::*;
 use omega_google::services::groups::groups::*;
+use omega_google::services::groups::types::*;
 
 // ---------------------------------------------------------------
 // REQ-GROUPS-001 (Must): Group deserialization from full JSON
@@ -78,7 +78,10 @@ fn req_groups_001_integration_group_list_from_api() {
     let resp: GroupListResponse = serde_json::from_str(api_response).unwrap();
 
     assert_eq!(resp.groups.len(), 3);
-    assert_eq!(resp.next_page_token, Some("groups_page_2_token".to_string()));
+    assert_eq!(
+        resp.next_page_token,
+        Some("groups_page_2_token".to_string())
+    );
 
     // First group
     assert_eq!(resp.groups[0].name, Some("groups/aaa".to_string()));
@@ -117,9 +120,15 @@ fn req_groups_002_integration_full_membership_from_api() {
 
     let membership: Membership = serde_json::from_str(api_response).unwrap();
 
-    assert_eq!(membership.name, Some("groups/abc123/memberships/mem789".to_string()));
+    assert_eq!(
+        membership.name,
+        Some("groups/abc123/memberships/mem789".to_string())
+    );
     assert_eq!(membership.type_, Some("USER".to_string()));
-    assert_eq!(membership.create_time, Some("2024-03-15T08:00:00.000Z".to_string()));
+    assert_eq!(
+        membership.create_time,
+        Some("2024-03-15T08:00:00.000Z".to_string())
+    );
 
     let key = membership.preferred_member_key.unwrap();
     assert_eq!(key.id, Some("alice@example.com".to_string()));

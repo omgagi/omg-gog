@@ -126,7 +126,10 @@ mod tests {
     #[test]
     fn req_slides_001_resolve_mime_case_insensitive() {
         assert_eq!(resolve_export_mime("PDF"), "application/pdf");
-        assert_eq!(resolve_export_mime("Pptx"), "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+        assert_eq!(
+            resolve_export_mime("Pptx"),
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        );
     }
 
     // ---------------------------------------------------------------

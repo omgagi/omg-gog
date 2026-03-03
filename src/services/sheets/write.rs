@@ -75,8 +75,8 @@ pub fn parse_cell_values(input: &str) -> Vec<Vec<serde_json::Value>> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::structure::{build_copy_body, build_create_spreadsheet_body};
     use super::*;
-    use super::super::structure::{build_create_spreadsheet_body, build_copy_body};
     use serde_json::json;
 
     // ---------------------------------------------------------------
@@ -137,12 +137,7 @@ mod tests {
     // Acceptance: Append URL with insert data option
     #[test]
     fn req_sheets_003_append_url_with_insert_option() {
-        let url = build_values_append_url(
-            "abc123",
-            "Sheet1!A1",
-            "RAW",
-            Some("INSERT_ROWS"),
-        );
+        let url = build_values_append_url("abc123", "Sheet1!A1", "RAW", Some("INSERT_ROWS"));
         assert!(url.contains("insertDataOption=INSERT_ROWS"));
     }
 
@@ -150,12 +145,7 @@ mod tests {
     // Acceptance: Append URL with OVERWRITE
     #[test]
     fn req_sheets_003_append_url_overwrite() {
-        let url = build_values_append_url(
-            "abc123",
-            "A1",
-            "USER_ENTERED",
-            Some("OVERWRITE"),
-        );
+        let url = build_values_append_url("abc123", "A1", "USER_ENTERED", Some("OVERWRITE"));
         assert!(url.contains("insertDataOption=OVERWRITE"));
     }
 
@@ -197,10 +187,8 @@ mod tests {
     // Acceptance: Create body with sheet names
     #[test]
     fn req_sheets_009_create_body_with_sheets() {
-        let body = build_create_spreadsheet_body(
-            "My Sheet",
-            &["Data".to_string(), "Summary".to_string()],
-        );
+        let body =
+            build_create_spreadsheet_body("My Sheet", &["Data".to_string(), "Summary".to_string()]);
         assert_eq!(body["properties"]["title"], json!("My Sheet"));
         let sheets = body["sheets"].as_array().unwrap();
         assert_eq!(sheets.len(), 2);

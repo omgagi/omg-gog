@@ -171,7 +171,10 @@ mod tests {
         assert_eq!(person.names.len(), 1);
         assert_eq!(person.names[0].given_name, Some("John".to_string()));
         assert_eq!(person.email_addresses.len(), 1);
-        assert_eq!(person.email_addresses[0].value, Some("john@example.com".to_string()));
+        assert_eq!(
+            person.email_addresses[0].value,
+            Some("john@example.com".to_string())
+        );
         assert_eq!(person.phone_numbers.len(), 1);
         assert_eq!(person.birthdays.len(), 1);
         let date = person.birthdays[0].date.as_ref().unwrap();

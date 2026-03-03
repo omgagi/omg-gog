@@ -50,8 +50,14 @@ fn req_drive_001_integration_file_list_from_api() {
     assert_eq!(resp.files[0].name, Some("Q1 Report".to_string()));
     assert_eq!(resp.files[0].mime_type, Some(MIME_GOOGLE_DOC.to_string()));
     assert_eq!(resp.files[2].size, Some("2048576".to_string()));
-    assert_eq!(resp.files[3].mime_type, Some(MIME_GOOGLE_FOLDER.to_string()));
-    assert_eq!(resp.next_page_token, Some("next_page_token_123".to_string()));
+    assert_eq!(
+        resp.files[3].mime_type,
+        Some(MIME_GOOGLE_FOLDER.to_string())
+    );
+    assert_eq!(
+        resp.next_page_token,
+        Some("next_page_token_123".to_string())
+    );
 }
 
 // ---------------------------------------------------------------
@@ -253,10 +259,14 @@ fn req_drive_001_integration_size_formatting() {
 
     let file_json = r#"{"id": "f1", "size": "1048576"}"#;
     let file: DriveFile = serde_json::from_str(file_json).unwrap();
-    let size_str = file.size.as_ref().map(|s| {
-        let bytes: i64 = s.parse().unwrap_or(0);
-        format_size(bytes)
-    }).unwrap_or("-".to_string());
+    let size_str = file
+        .size
+        .as_ref()
+        .map(|s| {
+            let bytes: i64 = s.parse().unwrap_or(0);
+            format_size(bytes)
+        })
+        .unwrap_or("-".to_string());
     assert_eq!(size_str, "1.0 MB");
 }
 
@@ -272,6 +282,10 @@ fn req_drive_001_integration_datetime_formatting() {
 
     let file_json = r#"{"id": "f1", "modifiedTime": "2024-01-15T14:30:00.000Z"}"#;
     let file: DriveFile = serde_json::from_str(file_json).unwrap();
-    let dt = file.modified_time.as_deref().map(format_datetime).unwrap_or("-".to_string());
+    let dt = file
+        .modified_time
+        .as_deref()
+        .map(format_datetime)
+        .unwrap_or("-".to_string());
     assert_eq!(dt, "2024-01-15 14:30");
 }

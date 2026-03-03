@@ -1,7 +1,7 @@
 //! Slides service integration tests.
 
-use omega_google::services::slides::types::*;
 use omega_google::services::slides::markdown::*;
+use omega_google::services::slides::types::*;
 
 // ---------------------------------------------------------------
 // REQ-SLIDES-002 (Must): Presentation from realistic API response
@@ -209,7 +209,10 @@ fn req_slides_002_integration_presentation_from_api() {
     let notes = sp2.notes_page.as_ref().unwrap();
     assert_eq!(notes.object_id, Some("notes_002".to_string()));
     let notes_props = notes.notes_properties.as_ref().unwrap();
-    assert_eq!(notes_props.speaker_notes_object_id, Some("notes_shape_002".to_string()));
+    assert_eq!(
+        notes_props.speaker_notes_object_id,
+        Some("notes_shape_002".to_string())
+    );
 
     // Verify masters and layouts
     assert_eq!(pres.masters.len(), 1);
@@ -284,10 +287,17 @@ fn req_slides_004_integration_build_requests_from_markdown() {
     let reqs = body["requests"].as_array().unwrap();
 
     // Should have requests for creating slides, shapes, and inserting text
-    assert!(reqs.len() >= 6, "Expected at least 6 requests, got {}", reqs.len());
+    assert!(
+        reqs.len() >= 6,
+        "Expected at least 6 requests, got {}",
+        reqs.len()
+    );
 
     // First request should be createSlide
-    assert!(reqs[0]["createSlide"].is_object(), "First request should be createSlide");
+    assert!(
+        reqs[0]["createSlide"].is_object(),
+        "First request should be createSlide"
+    );
 }
 
 // Requirement: REQ-SLIDES-004 (Must)

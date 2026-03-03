@@ -2,7 +2,7 @@
 //!
 //! Converts a Docs API document body to Markdown format.
 
-use super::types::{Body, StructuralElement, Paragraph, ParagraphElement, TextRun, ParagraphStyle};
+use super::types::{Body, Paragraph, ParagraphElement, ParagraphStyle, StructuralElement, TextRun};
 
 /// Convert a document body to Markdown.
 pub fn body_to_markdown(body: &Body) -> String {
@@ -136,8 +136,8 @@ fn text_run_to_markdown(tr: &TextRun) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::types::*;
+    use super::*;
     use std::collections::HashMap;
 
     fn make_text_run(text: &str, bold: bool, italic: bool) -> TextRun {
@@ -254,7 +254,12 @@ mod tests {
                 extra: HashMap::new(),
             };
             let md = body_to_markdown(&body);
-            assert!(md.starts_with(prefix), "Level {} should start with '{}'", level, prefix);
+            assert!(
+                md.starts_with(prefix),
+                "Level {} should start with '{}'",
+                level,
+                prefix
+            );
         }
     }
 
@@ -453,7 +458,12 @@ mod tests {
         let md = body_to_markdown(&body);
         // Should have header row, separator, and data row
         let lines: Vec<&str> = md.lines().collect();
-        assert_eq!(lines.len(), 3, "Expected 3 lines (header, separator, data), got: {:?}", lines);
+        assert_eq!(
+            lines.len(),
+            3,
+            "Expected 3 lines (header, separator, data), got: {:?}",
+            lines
+        );
         assert!(lines[0].contains("Name"));
         assert!(lines[1].contains("---"));
         assert!(lines[2].contains("Alice"));

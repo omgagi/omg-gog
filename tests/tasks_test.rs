@@ -1,8 +1,8 @@
 //! Tasks service integration tests.
 
-use omega_google::services::tasks::types::*;
-use omega_google::services::tasks::tasklists::*;
 use omega_google::services::tasks::task_ops::*;
+use omega_google::services::tasks::tasklists::*;
+use omega_google::services::tasks::types::*;
 
 // ---------------------------------------------------------------
 // REQ-TASKS-001 (Must): TaskList deserialization
@@ -109,7 +109,11 @@ fn req_tasks_003_integration_task_full_from_api() {
     assert_eq!(task.title, Some("Prepare Q1 quarterly report".to_string()));
     assert_eq!(task.status, Some("needsAction".to_string()));
     assert_eq!(task.due, Some("2024-03-31T00:00:00.000Z".to_string()));
-    assert!(task.notes.as_ref().unwrap().contains("revenue breakdown by region"));
+    assert!(task
+        .notes
+        .as_ref()
+        .unwrap()
+        .contains("revenue breakdown by region"));
     assert!(task.completed.is_none());
     assert!(task.parent.is_none());
     assert_eq!(task.position, Some("00000000000000000001".to_string()));
@@ -117,10 +121,21 @@ fn req_tasks_003_integration_task_full_from_api() {
     // Verify links
     assert_eq!(task.links.len(), 2);
     assert_eq!(task.links[0].type_, Some("email".to_string()));
-    assert_eq!(task.links[0].description, Some("Email from CFO with requirements".to_string()));
-    assert!(task.links[0].link.as_ref().unwrap().contains("mail.google.com"));
+    assert_eq!(
+        task.links[0].description,
+        Some("Email from CFO with requirements".to_string())
+    );
+    assert!(task.links[0]
+        .link
+        .as_ref()
+        .unwrap()
+        .contains("mail.google.com"));
     assert_eq!(task.links[1].type_, Some("related".to_string()));
-    assert!(task.links[1].link.as_ref().unwrap().contains("docs.google.com"));
+    assert!(task.links[1]
+        .link
+        .as_ref()
+        .unwrap()
+        .contains("docs.google.com"));
 
     // Unknown fields preserved
     assert!(task.extra.contains_key("kind"));

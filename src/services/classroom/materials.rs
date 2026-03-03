@@ -11,10 +11,7 @@ pub fn build_materials_list_url(
     let base = format!(
         "{}/courses/{}/courseWorkMaterials",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -38,14 +35,8 @@ pub fn build_material_get_url(course_id: &str, material_id: &str) -> String {
     format!(
         "{}/courses/{}/courseWorkMaterials/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            material_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(material_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -54,10 +45,7 @@ pub fn build_material_create_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}/courseWorkMaterials",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -88,14 +76,8 @@ pub fn build_material_update_url(course_id: &str, material_id: &str) -> String {
     format!(
         "{}/courses/{}/courseWorkMaterials/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            material_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(material_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -104,14 +86,8 @@ pub fn build_material_delete_url(course_id: &str, material_id: &str) -> String {
     format!(
         "{}/courses/{}/courseWorkMaterials/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            material_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(material_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -161,7 +137,12 @@ mod tests {
     // Acceptance: Material create body with all fields
     #[test]
     fn req_class_006_material_create_body_full() {
-        let body = build_material_create_body("Reading", Some("Chapter 1"), Some("topic1"), Some("PUBLISHED"));
+        let body = build_material_create_body(
+            "Reading",
+            Some("Chapter 1"),
+            Some("topic1"),
+            Some("PUBLISHED"),
+        );
         assert_eq!(body["title"], "Reading");
         assert_eq!(body["description"], "Chapter 1");
         assert_eq!(body["topicId"], "topic1");

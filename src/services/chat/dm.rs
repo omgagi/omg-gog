@@ -51,7 +51,10 @@ mod tests {
     #[test]
     fn req_chat_007_dm_space_url() {
         let url = build_dm_space_url();
-        assert_eq!(url, "https://chat.googleapis.com/v1/spaces:findDirectMessage");
+        assert_eq!(
+            url,
+            "https://chat.googleapis.com/v1/spaces:findDirectMessage"
+        );
     }
 
     // Requirement: REQ-CHAT-007 (Must)

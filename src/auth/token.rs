@@ -38,12 +38,14 @@ pub fn serialize_token(token: &TokenData) -> anyhow::Result<String> {
 pub fn deserialize_token(json_str: &str) -> anyhow::Result<TokenData> {
     let val: serde_json::Value = serde_json::from_str(json_str)?;
 
-    let client = val.get("client")
+    let client = val
+        .get("client")
         .and_then(|v| v.as_str())
         .unwrap_or("default")
         .to_string();
 
-    let email = val.get("email")
+    let email = val
+        .get("email")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("missing 'email' in token data"))?
         .to_string();
@@ -63,17 +65,20 @@ pub fn deserialize_token(json_str: &str) -> anyhow::Result<TokenData> {
         None => chrono::Utc::now(),
     };
 
-    let refresh_token = val.get("refresh_token")
+    let refresh_token = val
+        .get("refresh_token")
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
 
     // REQ-RT-007: read new optional fields (backward compatible)
-    let access_token = val.get("access_token")
+    let access_token = val
+        .get("access_token")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    let expires_at = val.get("expires_at")
+    let expires_at = val
+        .get("expires_at")
         .and_then(|v| v.as_str())
         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&chrono::Utc));
@@ -120,7 +125,8 @@ pub async fn refresh_access_token(
         &creds.client_id,
         &creds.client_secret,
         refresh_token,
-    ).await
+    )
+    .await
 }
 
 /// Internal: refresh access token against a specific token endpoint URL (for testing).
@@ -190,7 +196,13 @@ mod tests {
     #[test]
     fn req_rt_007_serialize_includes_access_token() {
         let now = chrono::Utc::now();
-        let token = make_token("default", "user@example.com", now, Some("ya29.test_access"), None);
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now,
+            Some("ya29.test_access"),
+            None,
+        );
         let json_str = serialize_token(&token).expect("serialize should succeed");
         let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert_eq!(
@@ -206,7 +218,13 @@ mod tests {
     fn req_rt_007_serialize_includes_expires_at() {
         let now = chrono::Utc::now();
         let expires = now + chrono::Duration::hours(1);
-        let token = make_token("default", "user@example.com", now, Some("at"), Some(expires));
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now,
+            Some("at"),
+            Some(expires),
+        );
         let json_str = serialize_token(&token).expect("serialize should succeed");
         let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
         assert!(
@@ -326,7 +344,13 @@ mod tests {
     fn req_rt_007_roundtrip_with_new_fields() {
         let now = chrono::Utc::now();
         let expires = now + chrono::Duration::hours(1);
-        let original = make_token("myapp", "test@gmail.com", now, Some("ya29.round_trip"), Some(expires));
+        let original = make_token(
+            "myapp",
+            "test@gmail.com",
+            now,
+            Some("ya29.round_trip"),
+            Some(expires),
+        );
         let json_str = serialize_token(&original).expect("serialize");
         let restored = deserialize_token(&json_str).expect("deserialize");
         assert_eq!(restored.client, original.client);
@@ -336,7 +360,11 @@ mod tests {
         // DateTime comparison: allow 1-second tolerance due to RFC3339 truncation
         if let (Some(orig_ea), Some(rest_ea)) = (original.expires_at, restored.expires_at) {
             let diff = (orig_ea - rest_ea).num_seconds().abs();
-            assert!(diff <= 1, "expires_at round-trip difference too large: {} seconds", diff);
+            assert!(
+                diff <= 1,
+                "expires_at round-trip difference too large: {} seconds",
+                diff
+            );
         } else {
             panic!("Both expires_at should be Some after round-trip");
         }
@@ -365,7 +393,13 @@ mod tests {
         let now = chrono::Utc::now();
         // Token expires in 3 minutes (within 5-min buffer)
         let expires = now + chrono::Duration::minutes(3);
-        let token = make_token("default", "user@example.com", now, Some("at"), Some(expires));
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now,
+            Some("at"),
+            Some(expires),
+        );
         assert!(
             needs_refresh(&token),
             "Token expiring in 3 minutes (within 5-min buffer) should need refresh"
@@ -379,7 +413,13 @@ mod tests {
         let now = chrono::Utc::now();
         // Token expires in 10 minutes (outside 5-min buffer)
         let expires = now + chrono::Duration::minutes(10);
-        let token = make_token("default", "user@example.com", now, Some("at"), Some(expires));
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now,
+            Some("at"),
+            Some(expires),
+        );
         assert!(
             !needs_refresh(&token),
             "Token expiring in 10 minutes (outside 5-min buffer) should NOT need refresh"
@@ -393,7 +433,13 @@ mod tests {
         let now = chrono::Utc::now();
         // Token expires exactly in 5 minutes
         let expires = now + chrono::Duration::minutes(5);
-        let token = make_token("default", "user@example.com", now, Some("at"), Some(expires));
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now,
+            Some("at"),
+            Some(expires),
+        );
         // At exactly 5 minutes, it should need refresh (5min remaining <= 5min buffer)
         assert!(
             needs_refresh(&token),
@@ -407,7 +453,13 @@ mod tests {
     fn req_rt_007_needs_refresh_expires_at_already_expired() {
         let now = chrono::Utc::now();
         let expires = now - chrono::Duration::minutes(10);
-        let token = make_token("default", "user@example.com", now - chrono::Duration::hours(2), Some("at"), Some(expires));
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now - chrono::Duration::hours(2),
+            Some("at"),
+            Some(expires),
+        );
         assert!(
             needs_refresh(&token),
             "Already-expired token must need refresh"
@@ -420,7 +472,13 @@ mod tests {
     fn req_rt_007_needs_refresh_no_expires_at_fresh_token() {
         let now = chrono::Utc::now();
         // Created 10 minutes ago, no expires_at -- should NOT need refresh (< 55 min)
-        let token = make_token("default", "user@example.com", now - chrono::Duration::minutes(10), None, None);
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now - chrono::Duration::minutes(10),
+            None,
+            None,
+        );
         assert!(
             !needs_refresh(&token),
             "Token created 10 min ago without expires_at should not need refresh (created_at fallback)"
@@ -433,7 +491,13 @@ mod tests {
     fn req_rt_007_needs_refresh_no_expires_at_old_token() {
         let now = chrono::Utc::now();
         // Created 60 minutes ago, no expires_at -- should need refresh (> 55 min)
-        let token = make_token("default", "user@example.com", now - chrono::Duration::minutes(60), None, None);
+        let token = make_token(
+            "default",
+            "user@example.com",
+            now - chrono::Duration::minutes(60),
+            None,
+            None,
+        );
         assert!(
             needs_refresh(&token),
             "Token created 60 min ago without expires_at should need refresh (created_at fallback)"
@@ -454,7 +518,10 @@ mod tests {
         let token = deserialize_token(json_str).expect("old format should deserialize");
         assert!(token.access_token.is_none());
         assert!(token.expires_at.is_none());
-        assert!(needs_refresh(&token), "Old token without new fields must need refresh");
+        assert!(
+            needs_refresh(&token),
+            "Old token without new fields must need refresh"
+        );
     }
 
     // =================================================================
@@ -483,7 +550,10 @@ mod tests {
     fn req_rt_007_edge_deserialize_missing_email() {
         let json_str = r#"{"client": "default", "refresh_token": "rt"}"#;
         let result = deserialize_token(json_str);
-        assert!(result.is_err(), "Missing email should cause deserialization error");
+        assert!(
+            result.is_err(),
+            "Missing email should cause deserialization error"
+        );
     }
 
     // Requirement: REQ-RT-007 (Must)
@@ -530,7 +600,10 @@ mod tests {
         }"#;
         let token = deserialize_token(json_str).expect("far future expires_at should parse");
         assert!(token.expires_at.is_some());
-        assert!(!needs_refresh(&token), "Token with far-future expires_at should not need refresh");
+        assert!(
+            !needs_refresh(&token),
+            "Token with far-future expires_at should not need refresh"
+        );
     }
 
     // =================================================================
@@ -557,21 +630,27 @@ mod tests {
     #[tokio::test]
     async fn req_rt_005_refresh_posts_to_token_endpoint() {
         let mut server = mockito::Server::new_async().await;
-        let mock = server.mock("POST", "/token")
+        let mock = server
+            .mock("POST", "/token")
             .match_body(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded("grant_type".to_string(), "refresh_token".to_string()),
                 mockito::Matcher::UrlEncoded("refresh_token".to_string(), "1//test_rt".to_string()),
                 mockito::Matcher::UrlEncoded("client_id".to_string(), "test_client_id".to_string()),
-                mockito::Matcher::UrlEncoded("client_secret".to_string(), "test_secret".to_string()),
+                mockito::Matcher::UrlEncoded(
+                    "client_secret".to_string(),
+                    "test_secret".to_string(),
+                ),
             ]))
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
                 "access_token": "ya29.new_access_token",
                 "expires_in": 3600,
                 "token_type": "Bearer",
                 "scope": "openid email"
-            }"#)
+            }"#,
+            )
             .create_async()
             .await;
 
@@ -583,7 +662,8 @@ mod tests {
             "test_client_id",
             "test_secret",
             "1//test_rt",
-        ).await;
+        )
+        .await;
         let response = result.expect("refresh should succeed with mock");
         assert_eq!(response.access_token, "ya29.new_access_token");
         mock.assert_async().await;
@@ -600,8 +680,8 @@ mod tests {
             "scope": "openid email https://www.googleapis.com/auth/gmail.modify",
             "token_type": "Bearer"
         }"#;
-        let resp: crate::auth::oauth::TokenResponse = serde_json::from_str(json)
-            .expect("Should deserialize valid token response");
+        let resp: crate::auth::oauth::TokenResponse =
+            serde_json::from_str(json).expect("Should deserialize valid token response");
         assert_eq!(resp.access_token, "ya29.a0AfH6SMA...");
         assert_eq!(resp.token_type, "Bearer");
         assert_eq!(resp.expires_in, Some(3599));
@@ -637,13 +717,14 @@ mod tests {
 
         let client = reqwest::Client::new();
         let token_url = format!("{}/token", server.url());
-        let result = refresh_access_token_with_url(
-            &client, &token_url, "id", "secret", "1//revoked",
-        ).await;
+        let result =
+            refresh_access_token_with_url(&client, &token_url, "id", "secret", "1//revoked").await;
         assert!(result.is_err(), "Revoked token refresh should fail");
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("invalid") || err_msg.contains("revoked") || err_msg.contains("Re-authenticate"),
+            err_msg.contains("invalid")
+                || err_msg.contains("revoked")
+                || err_msg.contains("Re-authenticate"),
             "Error should mention invalid/revoked: {}",
             err_msg,
         );
@@ -663,7 +744,10 @@ mod tests {
         };
         // Attempting to refresh against the real endpoint with bad creds should fail
         let result = refresh_access_token(&client, &creds, "1//some_token").await;
-        assert!(result.is_err(), "Refresh against real endpoint with bad creds should fail");
+        assert!(
+            result.is_err(),
+            "Refresh against real endpoint with bad creds should fail"
+        );
     }
 
     // Requirement: REQ-RT-005 (Must)
@@ -699,8 +783,17 @@ mod tests {
     #[test]
     fn req_rt_005_needs_refresh_within_five_min_buffer() {
         let now = chrono::Utc::now();
-        let token = make_token("default", "u@e.com", now, Some("at"), Some(now + chrono::Duration::minutes(4)));
-        assert!(needs_refresh(&token), "4 min until expiry: should need refresh");
+        let token = make_token(
+            "default",
+            "u@e.com",
+            now,
+            Some("at"),
+            Some(now + chrono::Duration::minutes(4)),
+        );
+        assert!(
+            needs_refresh(&token),
+            "4 min until expiry: should need refresh"
+        );
     }
 
     // Requirement: REQ-RT-005 (Must)
@@ -708,7 +801,16 @@ mod tests {
     #[test]
     fn req_rt_005_needs_refresh_outside_five_min_buffer() {
         let now = chrono::Utc::now();
-        let token = make_token("default", "u@e.com", now, Some("at"), Some(now + chrono::Duration::minutes(30)));
-        assert!(!needs_refresh(&token), "30 min until expiry: should NOT need refresh");
+        let token = make_token(
+            "default",
+            "u@e.com",
+            now,
+            Some("at"),
+            Some(now + chrono::Duration::minutes(30)),
+        );
+        assert!(
+            !needs_refresh(&token),
+            "30 min until expiry: should NOT need refresh"
+        );
     }
 }

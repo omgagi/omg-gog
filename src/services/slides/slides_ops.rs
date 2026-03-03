@@ -14,10 +14,7 @@ pub fn build_add_slide_request(
     let mut create_slide = serde_json::Map::new();
 
     if let Some(idx) = insertion_index {
-        create_slide.insert(
-            "insertionIndex".to_string(),
-            serde_json::json!(idx),
-        );
+        create_slide.insert("insertionIndex".to_string(), serde_json::json!(idx));
     }
 
     if let Some(lid) = layout_id {
@@ -178,8 +175,8 @@ pub fn extract_speaker_notes(page: &Page) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::types::*;
+    use super::*;
     use std::collections::HashMap;
 
     // ---------------------------------------------------------------
@@ -383,8 +380,7 @@ mod tests {
             }),
             extra: HashMap::new(),
         };
-        let req =
-            build_replace_image_request("slide_1", "https://example.com/img.png", Some(&ps));
+        let req = build_replace_image_request("slide_1", "https://example.com/img.png", Some(&ps));
         let ep = &req["createImage"]["elementProperties"];
         assert_eq!(ep["pageObjectId"], "slide_1");
         assert_eq!(ep["size"]["width"]["magnitude"], 9144000.0);

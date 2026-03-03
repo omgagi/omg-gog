@@ -40,9 +40,7 @@ pub fn build_other_contacts_list_url(max: Option<u32>, page_token: Option<&str>)
     let max_val = max.unwrap_or(100);
     let mut url = format!(
         "{}/otherContacts?readMask={}&pageSize={}",
-        PEOPLE_API_BASE_URL,
-        DIRECTORY_FIELDS,
-        max_val
+        PEOPLE_API_BASE_URL, DIRECTORY_FIELDS, max_val
     );
     if let Some(token) = page_token {
         url.push_str(&format!(

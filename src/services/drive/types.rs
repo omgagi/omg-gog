@@ -18,9 +18,11 @@ pub const MIME_GOOGLE_FOLDER: &str = "application/vnd.google-apps.folder";
 
 pub const MIME_PDF: &str = "application/pdf";
 pub const MIME_CSV: &str = "text/csv";
-pub const MIME_DOCX: &str = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+pub const MIME_DOCX: &str =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 pub const MIME_XLSX: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-pub const MIME_PPTX: &str = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+pub const MIME_PPTX: &str =
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 pub const MIME_PNG: &str = "image/png";
 pub const MIME_TEXT_PLAIN: &str = "text/plain";
 
@@ -231,7 +233,10 @@ pub fn default_export_mime(google_mime_type: &str) -> &'static str {
 }
 
 /// Get the export MIME type for a specific format flag (e.g., "pdf", "docx").
-pub fn export_mime_for_format(google_mime_type: &str, format: &str) -> anyhow::Result<&'static str> {
+pub fn export_mime_for_format(
+    google_mime_type: &str,
+    format: &str,
+) -> anyhow::Result<&'static str> {
     match (google_mime_type, format) {
         // Google Docs exports
         (MIME_GOOGLE_DOC, "pdf") => Ok(MIME_PDF),
@@ -551,10 +556,7 @@ mod tests {
     // Edge case: Empty file ID
     #[test]
     fn req_drive_013_file_url_empty() {
-        assert_eq!(
-            file_url(""),
-            "https://drive.google.com/open?id="
-        );
+        assert_eq!(file_url(""), "https://drive.google.com/open?id=");
     }
 
     // ---------------------------------------------------------------

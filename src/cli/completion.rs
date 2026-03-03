@@ -50,7 +50,10 @@ pub struct CompletionArgs {
 }
 
 /// Generate shell completions and write to the given writer.
-pub fn generate_completions(shell_str: &str, writer: &mut impl std::io::Write) -> Result<(), String> {
+pub fn generate_completions(
+    shell_str: &str,
+    writer: &mut impl std::io::Write,
+) -> Result<(), String> {
     let shell: ShellType = shell_str.parse()?;
 
     let clap_shell = match shell {
@@ -81,7 +84,10 @@ mod tests {
         assert_eq!("bash".parse::<ShellType>().unwrap(), ShellType::Bash);
         assert_eq!("zsh".parse::<ShellType>().unwrap(), ShellType::Zsh);
         assert_eq!("fish".parse::<ShellType>().unwrap(), ShellType::Fish);
-        assert_eq!("powershell".parse::<ShellType>().unwrap(), ShellType::PowerShell);
+        assert_eq!(
+            "powershell".parse::<ShellType>().unwrap(),
+            ShellType::PowerShell
+        );
         assert_eq!("ps".parse::<ShellType>().unwrap(), ShellType::PowerShell);
     }
 
@@ -92,7 +98,10 @@ mod tests {
         assert_eq!("BASH".parse::<ShellType>().unwrap(), ShellType::Bash);
         assert_eq!("Zsh".parse::<ShellType>().unwrap(), ShellType::Zsh);
         assert_eq!("FISH".parse::<ShellType>().unwrap(), ShellType::Fish);
-        assert_eq!("PowerShell".parse::<ShellType>().unwrap(), ShellType::PowerShell);
+        assert_eq!(
+            "PowerShell".parse::<ShellType>().unwrap(),
+            ShellType::PowerShell
+        );
     }
 
     // Requirement: REQ-CLI-020 (Must)
@@ -122,7 +131,10 @@ mod tests {
         generate_completions("bash", &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
         assert!(!output.is_empty(), "bash completions should not be empty");
-        assert!(output.contains("omega-google"), "should reference the binary name");
+        assert!(
+            output.contains("omega-google"),
+            "should reference the binary name"
+        );
     }
 
     // Requirement: REQ-CLI-020 (Must)
@@ -152,7 +164,10 @@ mod tests {
         let mut buf = Vec::new();
         generate_completions("powershell", &mut buf).unwrap();
         let output = String::from_utf8(buf).unwrap();
-        assert!(!output.is_empty(), "powershell completions should not be empty");
+        assert!(
+            !output.is_empty(),
+            "powershell completions should not be empty"
+        );
     }
 
     // Requirement: REQ-CLI-020 (Must)

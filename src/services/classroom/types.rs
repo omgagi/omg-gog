@@ -736,7 +736,10 @@ mod tests {
         let guardian: Guardian = serde_json::from_str(json_str).unwrap();
         assert_eq!(guardian.student_id, Some("student1".to_string()));
         assert_eq!(guardian.guardian_id, Some("guardian1".to_string()));
-        assert_eq!(guardian.invited_email_address, Some("parent@example.com".to_string()));
+        assert_eq!(
+            guardian.invited_email_address,
+            Some("parent@example.com".to_string())
+        );
     }
 
     // Requirement: REQ-CLASS-011 (Must)

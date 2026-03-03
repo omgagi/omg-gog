@@ -1,7 +1,7 @@
 //! Drive sharing and permissions management.
 
-use serde_json::json;
 use super::types::DRIVE_BASE_URL;
+use serde_json::json;
 
 /// Build a permission request body for sharing.
 pub fn build_share_permission(
@@ -81,12 +81,8 @@ mod tests {
     // Acceptance: Share to specific user with writer role
     #[test]
     fn req_drive_010_share_user_writer() {
-        let body = build_share_permission(
-            "user",
-            "writer",
-            Some("user@example.com"),
-            None,
-        ).unwrap();
+        let body =
+            build_share_permission("user", "writer", Some("user@example.com"), None).unwrap();
         assert_eq!(body["type"], "user");
         assert_eq!(body["role"], "writer");
         assert_eq!(body["emailAddress"], "user@example.com");
@@ -96,12 +92,7 @@ mod tests {
     // Acceptance: Share to domain
     #[test]
     fn req_drive_010_share_domain() {
-        let body = build_share_permission(
-            "domain",
-            "reader",
-            None,
-            Some("example.com"),
-        ).unwrap();
+        let body = build_share_permission("domain", "reader", None, Some("example.com")).unwrap();
         assert_eq!(body["type"], "domain");
         assert_eq!(body["domain"], "example.com");
     }

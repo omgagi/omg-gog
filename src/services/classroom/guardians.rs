@@ -15,10 +15,7 @@ pub fn build_guardians_list_url(
     let base = format!(
         "{}/userProfiles/{}/guardians",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            student_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(student_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -42,14 +39,8 @@ pub fn build_guardian_get_url(student_id: &str, guardian_id: &str) -> String {
     format!(
         "{}/userProfiles/{}/guardians/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            student_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            guardian_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(student_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(guardian_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -58,14 +49,8 @@ pub fn build_guardian_delete_url(student_id: &str, guardian_id: &str) -> String 
     format!(
         "{}/userProfiles/{}/guardians/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            student_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            guardian_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(student_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(guardian_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -83,10 +68,7 @@ pub fn build_guardian_invitations_list_url(
     let base = format!(
         "{}/userProfiles/{}/guardianInvitations",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            student_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(student_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(s) = states {
@@ -116,14 +98,8 @@ pub fn build_guardian_invitation_get_url(student_id: &str, invitation_id: &str) 
     format!(
         "{}/userProfiles/{}/guardianInvitations/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            student_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            invitation_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(student_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(invitation_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -132,17 +108,12 @@ pub fn build_guardian_invitation_create_url(student_id: &str) -> String {
     format!(
         "{}/userProfiles/{}/guardianInvitations",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            student_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(student_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
 /// Build request body for creating a guardian invitation.
-pub fn build_guardian_invitation_create_body(
-    invited_email_address: &str,
-) -> serde_json::Value {
+pub fn build_guardian_invitation_create_body(invited_email_address: &str) -> serde_json::Value {
     serde_json::json!({
         "invitedEmailAddress": invited_email_address,
     })

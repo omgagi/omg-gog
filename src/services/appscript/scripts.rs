@@ -129,7 +129,10 @@ mod tests {
     fn req_script_002_content_get_url() {
         // REQ-SCRIPT-002
         let url = build_content_get_url("abc123");
-        assert_eq!(url, "https://script.googleapis.com/v1/projects/abc123/content");
+        assert_eq!(
+            url,
+            "https://script.googleapis.com/v1/projects/abc123/content"
+        );
     }
 
     // ---------------------------------------------------------------

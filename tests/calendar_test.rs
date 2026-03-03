@@ -43,7 +43,10 @@ fn req_cal_003_integration_event_list_from_api() {
     assert_eq!(resp.items[0].summary, Some("Morning Standup".to_string()));
     assert_eq!(resp.items[0].attendees.len(), 2);
     assert_eq!(resp.items[0].recurrence.len(), 1);
-    assert_eq!(resp.items[1].location, Some("Restaurant Downtown".to_string()));
+    assert_eq!(
+        resp.items[1].location,
+        Some("Restaurant Downtown".to_string())
+    );
     assert_eq!(resp.time_zone, Some("America/New_York".to_string()));
 }
 
@@ -118,18 +121,16 @@ fn req_cal_005_integration_event_create_roundtrip() {
         updated: None,
         creator: None,
         organizer: None,
-        attendees: vec![
-            Attendee {
-                email: "bob@example.com".to_string(),
-                display_name: Some("Bob".to_string()),
-                response_status: None,
-                organizer: None,
-                is_self: None,
-                optional: None,
-                comment: None,
-                extra: HashMap::new(),
-            },
-        ],
+        attendees: vec![Attendee {
+            email: "bob@example.com".to_string(),
+            display_name: Some("Bob".to_string()),
+            response_status: None,
+            organizer: None,
+            is_self: None,
+            optional: None,
+            comment: None,
+            extra: HashMap::new(),
+        }],
         recurrence: vec![],
         recurring_event_id: None,
         event_type: None,
@@ -184,7 +185,10 @@ fn req_cal_008_integration_freebusy_response() {
     assert_eq!(calendars.len(), 3);
     assert_eq!(calendars["alice@example.com"].busy.len(), 2);
     assert_eq!(calendars["bob@example.com"].busy.len(), 1);
-    assert_eq!(calendars["room-a@resource.calendar.google.com"].busy.len(), 0);
+    assert_eq!(
+        calendars["room-a@resource.calendar.google.com"].busy.len(),
+        0
+    );
 }
 
 // ---------------------------------------------------------------
@@ -267,9 +271,18 @@ fn req_cal_009_integration_attendee_statuses() {
     }"#;
     let event: Event = serde_json::from_str(api_response).unwrap();
     assert_eq!(event.attendees.len(), 5);
-    assert_eq!(event.attendees[0].response_status, Some("accepted".to_string()));
+    assert_eq!(
+        event.attendees[0].response_status,
+        Some("accepted".to_string())
+    );
     assert_eq!(event.attendees[0].organizer, Some(true));
-    assert_eq!(event.attendees[1].response_status, Some("declined".to_string()));
+    assert_eq!(
+        event.attendees[1].response_status,
+        Some("declined".to_string())
+    );
     assert_eq!(event.attendees[4].optional, Some(true));
-    assert_eq!(event.attendees[4].comment, Some("Joining remotely".to_string()));
+    assert_eq!(
+        event.attendees[4].comment,
+        Some("Joining remotely".to_string())
+    );
 }

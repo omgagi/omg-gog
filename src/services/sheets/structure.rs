@@ -67,10 +67,7 @@ pub fn build_create_spreadsheet_url() -> String {
 
 /// Build URL for copying a spreadsheet via Drive API.
 pub fn build_copy_spreadsheet_url(spreadsheet_id: &str) -> String {
-    format!(
-        "{}/files/{}/copy",
-        DRIVE_BASE_URL, spreadsheet_id
-    )
+    format!("{}/files/{}/copy", DRIVE_BASE_URL, spreadsheet_id)
 }
 
 /// Build the copy request body.
@@ -193,7 +190,10 @@ mod tests {
 
     #[test]
     fn test_resolve_export_mime() {
-        assert_eq!(resolve_export_mime("xlsx"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        assert_eq!(
+            resolve_export_mime("xlsx"),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
         assert_eq!(resolve_export_mime("csv"), "text/csv");
         assert_eq!(resolve_export_mime("pdf"), "application/pdf");
     }

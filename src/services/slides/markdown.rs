@@ -104,8 +104,7 @@ fn split_on_headings(segment: &str) -> Vec<SlideContent> {
         let trimmed = line.trim();
 
         // Check if this line is a heading (# or ##)
-        if (trimmed.starts_with("# ") && !trimmed.starts_with("## "))
-            || trimmed.starts_with("## ")
+        if (trimmed.starts_with("# ") && !trimmed.starts_with("## ")) || trimmed.starts_with("## ")
         {
             // If we already have accumulated content, push it as a slide
             if has_heading || !current_body_lines.is_empty() {
@@ -146,11 +145,7 @@ fn split_on_headings(segment: &str) -> Vec<SlideContent> {
 }
 
 /// Finalize a slide by processing body lines, extracting notes, and trimming.
-fn finalize_slide(
-    title: String,
-    body_lines: Vec<String>,
-    layout: SlideLayout,
-) -> SlideContent {
+fn finalize_slide(title: String, body_lines: Vec<String>, layout: SlideLayout) -> SlideContent {
     let raw_body = body_lines.join("\n");
 
     // Extract HTML comment notes
@@ -175,8 +170,15 @@ fn finalize_slide(
 /// Trim leading and trailing blank lines from text.
 fn trim_blank_lines(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
-    let start = lines.iter().position(|l| !l.trim().is_empty()).unwrap_or(lines.len());
-    let end = lines.iter().rposition(|l| !l.trim().is_empty()).map(|i| i + 1).unwrap_or(start);
+    let start = lines
+        .iter()
+        .position(|l| !l.trim().is_empty())
+        .unwrap_or(lines.len());
+    let end = lines
+        .iter()
+        .rposition(|l| !l.trim().is_empty())
+        .map(|i| i + 1)
+        .unwrap_or(start);
     if start >= end {
         return String::new();
     }
@@ -192,8 +194,7 @@ fn extract_html_notes(content: &str) -> (String, Option<String>) {
     if let Some(start_idx) = content.find(notes_start) {
         if let Some(end_rel) = content[start_idx..].find(notes_end) {
             let end_idx = start_idx + end_rel + notes_end.len();
-            let notes_raw =
-                &content[start_idx + notes_start.len()..start_idx + end_rel];
+            let notes_raw = &content[start_idx + notes_start.len()..start_idx + end_rel];
             let notes_text = notes_raw.trim().to_string();
 
             let mut cleaned = String::new();
@@ -236,7 +237,11 @@ fn extract_marker_notes(content: &str) -> (String, Option<String>) {
         (content.to_string(), None)
     } else {
         let joined = notes_lines.join("\n").trim().to_string();
-        let notes = if joined.is_empty() { None } else { Some(joined) };
+        let notes = if joined.is_empty() {
+            None
+        } else {
+            Some(joined)
+        };
         (before.join("\n"), notes)
     }
 }

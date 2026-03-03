@@ -33,7 +33,10 @@ mod tests {
     fn req_keep_004_attachment_download_url() {
         // REQ-KEEP-004
         let url = build_attachment_download_url("notes/abc123/attachments/att456");
-        assert_eq!(url, "https://keep.googleapis.com/v1/notes/abc123/attachments/att456:media");
+        assert_eq!(
+            url,
+            "https://keep.googleapis.com/v1/notes/abc123/attachments/att456:media"
+        );
     }
 
     // Requirement: REQ-KEEP-004 (Must)
@@ -42,6 +45,9 @@ mod tests {
     fn req_keep_004_attachment_download_url_special_chars() {
         // REQ-KEEP-004
         let url = build_attachment_download_url("notes/abc 123/attachments/att+456");
-        assert_eq!(url, "https://keep.googleapis.com/v1/notes/abc%20123/attachments/att%2B456:media");
+        assert_eq!(
+            url,
+            "https://keep.googleapis.com/v1/notes/abc%20123/attachments/att%2B456:media"
+        );
     }
 }

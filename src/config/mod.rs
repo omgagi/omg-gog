@@ -1,10 +1,10 @@
-pub mod file;
 pub mod credentials;
+pub mod file;
 pub mod paths;
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 
 /// Application name used for keyring service and config directory.
 pub const APP_NAME: &str = "omega-google";
@@ -192,8 +192,8 @@ mod tests {
             "keyring_backend": "auto",
             "default_timezone": "America/New_York", // trailing comma OK
         }"#;
-        let cfg: ConfigFile = json5::from_str(json5_content)
-            .expect("JSON5 with comments should parse");
+        let cfg: ConfigFile =
+            json5::from_str(json5_content).expect("JSON5 with comments should parse");
         assert_eq!(cfg.keyring_backend.as_deref(), Some("auto"));
         assert_eq!(cfg.default_timezone.as_deref(), Some("America/New_York"));
     }
@@ -205,8 +205,8 @@ mod tests {
         let json5_content = r#"{
             "keyring_backend": "file",
         }"#;
-        let cfg: ConfigFile = json5::from_str(json5_content)
-            .expect("JSON5 with trailing commas should parse");
+        let cfg: ConfigFile =
+            json5::from_str(json5_content).expect("JSON5 with trailing commas should parse");
         assert_eq!(cfg.keyring_backend.as_deref(), Some("file"));
     }
 
@@ -267,7 +267,8 @@ mod tests {
     // Acceptance: Unknown fields are preserved (forward compatibility)
     #[test]
     fn req_config_002_unknown_fields_preserved() {
-        let json_str = r#"{"keyring_backend": "auto", "future_field": "some_value", "another_unknown": 42}"#;
+        let json_str =
+            r#"{"keyring_backend": "auto", "future_field": "some_value", "another_unknown": 42}"#;
         let cfg: ConfigFile = json5::from_str(json_str).unwrap();
         assert_eq!(cfg.keyring_backend.as_deref(), Some("auto"));
         assert!(cfg.extra.contains_key("future_field"));
@@ -380,7 +381,10 @@ mod tests {
         // But truly broken JSON5 should fail:
         let truly_broken = r#"{ "key": }"#;
         let result = json5::from_str::<ConfigFile>(truly_broken);
-        assert!(result.is_err(), "Truly malformed JSON5 should fail to parse");
+        assert!(
+            result.is_err(),
+            "Truly malformed JSON5 should fail to parse"
+        );
     }
 
     // Requirement: REQ-CONFIG-001 (Must)
@@ -388,7 +392,10 @@ mod tests {
     #[test]
     fn req_config_001_edge_empty_string_fails() {
         let result = json5::from_str::<ConfigFile>("");
-        assert!(result.is_err(), "Empty string should fail to parse as JSON5");
+        assert!(
+            result.is_err(),
+            "Empty string should fail to parse as JSON5"
+        );
     }
 
     // Requirement: REQ-CONFIG-002 (Must)

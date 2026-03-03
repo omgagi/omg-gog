@@ -42,7 +42,10 @@ pub fn build_responses_list_url_with_options(
 
 /// Build URL for getting a single response by ID.
 pub fn build_response_get_url(form_id: &str, response_id: &str) -> String {
-    format!("{}/forms/{}/responses/{}", FORMS_BASE_URL, form_id, response_id)
+    format!(
+        "{}/forms/{}/responses/{}",
+        FORMS_BASE_URL, form_id, response_id
+    )
 }
 
 #[cfg(test)]
@@ -58,7 +61,10 @@ mod tests {
     #[test]
     fn req_forms_003_list_responses_url() {
         let url = build_responses_list_url("form_123");
-        assert_eq!(url, "https://forms.googleapis.com/v1/forms/form_123/responses");
+        assert_eq!(
+            url,
+            "https://forms.googleapis.com/v1/forms/form_123/responses"
+        );
     }
 
     // Requirement: REQ-FORMS-003 (Must)
@@ -102,7 +108,10 @@ mod tests {
     #[test]
     fn req_forms_003_list_responses_url_no_options() {
         let url = build_responses_list_url_with_options("form_123", None, None, None);
-        assert_eq!(url, "https://forms.googleapis.com/v1/forms/form_123/responses");
+        assert_eq!(
+            url,
+            "https://forms.googleapis.com/v1/forms/form_123/responses"
+        );
         assert!(!url.contains('?'));
     }
 
@@ -115,7 +124,10 @@ mod tests {
     #[test]
     fn req_forms_004_get_response_url() {
         let url = build_response_get_url("form_123", "resp_456");
-        assert_eq!(url, "https://forms.googleapis.com/v1/forms/form_123/responses/resp_456");
+        assert_eq!(
+            url,
+            "https://forms.googleapis.com/v1/forms/form_123/responses/resp_456"
+        );
     }
 
     // Requirement: REQ-FORMS-004 (Must)

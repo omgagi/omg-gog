@@ -126,11 +126,7 @@ async fn req_rt_032_handle_gmail_is_async() {
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
-    let args: Vec<OsString> = vec![
-        "gmail".into(),
-        "search".into(),
-        "test query".into(),
-    ];
+    let args: Vec<OsString> = vec!["gmail".into(), "search".into(), "test query".into()];
     let exit = omega_google::cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
@@ -151,15 +147,20 @@ async fn req_rt_032_gmail_search_calls_correct_url() {
 
     // Mock the Gmail thread list endpoint
     let mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/threads\?.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/threads\?.*".to_string()),
+        )
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "threads": [
                 {"id": "thread1", "snippet": "Hello world", "historyId": "1234"}
             ],
             "resultSizeEstimate": 1
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -182,7 +183,10 @@ async fn req_rt_032_gmail_search_calls_correct_url() {
     let response: omega_google::services::gmail::types::ThreadListResponse =
         omega_google::http::api::api_get(
             &ctx.client,
-            &format!("{}/gmail/v1/users/me/threads?maxResults=10&q=test", server.url()),
+            &format!(
+                "{}/gmail/v1/users/me/threads?maxResults=10&q=test",
+                server.url()
+            ),
             &ctx.circuit_breaker,
             &ctx.retry_config,
             false,
@@ -202,7 +206,10 @@ async fn req_rt_032_gmail_search_fail_empty_no_results() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()),
+        )
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"threads": [], "resultSizeEstimate": 0}"#)
@@ -212,7 +219,10 @@ async fn req_rt_032_gmail_search_fail_empty_no_results() {
     // Verify that check_fail_empty correctly identifies empty results
     let items: Vec<String> = vec![];
     let result = omega_google::services::pagination::check_fail_empty(&items, true);
-    assert!(result.is_err(), "Should fail with empty results when fail_empty=true");
+    assert!(
+        result.is_err(),
+        "Should fail with empty results when fail_empty=true"
+    );
 }
 
 // Requirement: REQ-RT-032 (Must)
@@ -223,24 +233,34 @@ async fn req_rt_032_gmail_search_pagination_all_pages() {
 
     // Page 1
     let _mock1 = server
-        .mock("GET", mockito::Matcher::Regex(r"^/gmail/v1/users/me/threads\?maxResults=".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"^/gmail/v1/users/me/threads\?maxResults=".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "threads": [{"id": "t1", "snippet": "page1"}],
             "nextPageToken": "page2token",
             "resultSizeEstimate": 2
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     // Page 2
     let _mock2 = server
-        .mock("GET", mockito::Matcher::Regex(r".*pageToken=page2token.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r".*pageToken=page2token.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "threads": [{"id": "t2", "snippet": "page2"}],
             "resultSizeEstimate": 2
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -298,13 +318,18 @@ async fn req_rt_032_gmail_search_single_page_hint() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "threads": [{"id": "t1", "snippet": "result"}],
             "nextPageToken": "NEXT123",
             "resultSizeEstimate": 100
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -384,7 +409,10 @@ async fn req_rt_032_gmail_search_api_401_auth_error() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()),
+        )
         .with_status(401)
         .with_body(r#"{"error":{"code":401,"message":"Token expired"}}"#)
         .create_async()
@@ -421,7 +449,10 @@ async fn req_rt_032_gmail_search_api_429_rate_limited() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/threads.*".to_string()),
+        )
         .with_status(429)
         .with_body(r#"{"error":{"code":429,"message":"Rate limit exceeded"}}"#)
         .create_async()
@@ -490,16 +521,21 @@ async fn req_rt_033_gmail_message_search_deserializes_response() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/messages.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/messages.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "messages": [
                 {"id": "msg1", "threadId": "t1"},
                 {"id": "msg2", "threadId": "t2"}
             ],
             "nextPageToken": "next_token",
             "resultSizeEstimate": 50
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -507,10 +543,15 @@ async fn req_rt_033_gmail_message_search_deserializes_response() {
     let url = format!("{}/gmail/v1/users/me/messages?maxResults=10", server.url());
 
     // The message list response uses a different structure than thread list
-    let response: serde_json::Value =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+    let response: serde_json::Value = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await
+    .unwrap();
 
     let messages = response.get("messages").unwrap().as_array().unwrap();
     assert_eq!(messages.len(), 2);
@@ -538,24 +579,31 @@ async fn req_rt_034_gmail_thread_get_returns_full_thread() {
     let _mock = server
         .mock("GET", "/gmail/v1/users/me/threads/thread123")
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "thread123",
             "historyId": "99999",
             "messages": [
                 {"id": "msg1", "threadId": "thread123", "snippet": "First message"},
                 {"id": "msg2", "threadId": "thread123", "snippet": "Reply"}
             ]
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
     let url = format!("{}/gmail/v1/users/me/threads/thread123", server.url());
 
-    let thread: omega_google::services::gmail::types::Thread =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+    let thread: omega_google::services::gmail::types::Thread = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(thread.id, "thread123");
     assert_eq!(thread.messages.len(), 2);
@@ -580,8 +628,14 @@ async fn req_rt_034_gmail_thread_get_not_found() {
     let url = format!("{}/gmail/v1/users/me/threads/nonexistent", server.url());
 
     let result: anyhow::Result<omega_google::services::gmail::types::Thread> =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await;
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await;
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -610,7 +664,8 @@ fn req_rt_035_gmail_message_get_url_with_format() {
 // Acceptance: Message get URL with metadata format
 #[test]
 fn req_rt_035_gmail_message_get_url_metadata() {
-    let url = omega_google::services::gmail::message::build_message_get_url("msg123", Some("metadata"));
+    let url =
+        omega_google::services::gmail::message::build_message_get_url("msg123", Some("metadata"));
     assert!(url.contains("format=metadata"));
 }
 
@@ -629,9 +684,13 @@ async fn req_rt_035_gmail_message_get_full_response() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/messages/msg456.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/messages/msg456.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "msg456",
             "threadId": "thread789",
             "labelIds": ["INBOX", "UNREAD"],
@@ -646,17 +705,26 @@ async fn req_rt_035_gmail_message_get_full_response() {
                 ],
                 "body": {"size": 100, "data": "SGVsbG8gV29ybGQ="}
             }
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/gmail/v1/users/me/messages/msg456?format=full", server.url());
+    let url = format!(
+        "{}/gmail/v1/users/me/messages/msg456?format=full",
+        server.url()
+    );
 
-    let msg: omega_google::services::gmail::types::Message =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+    let msg: omega_google::services::gmail::types::Message = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(msg.id, "msg456");
     assert_eq!(msg.thread_id, Some("thread789".to_string()));
@@ -728,17 +796,16 @@ async fn req_rt_036_gmail_send_dry_run() {
     let url = format!("{}/gmail/v1/users/me/messages/send", server.url());
     let body = serde_json::json!({"raw": "test_message"});
 
-    let result: anyhow::Result<Option<serde_json::Value>> =
-        omega_google::http::api::api_post(
-            &ctx.client,
-            &url,
-            &body,
-            &ctx.circuit_breaker,
-            &ctx.retry_config,
-            false,
-            true, // dry_run = true
-        )
-        .await;
+    let result: anyhow::Result<Option<serde_json::Value>> = omega_google::http::api::api_post(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+        true, // dry_run = true
+    )
+    .await;
 
     assert!(result.is_ok());
     assert!(result.unwrap().is_none(), "Dry-run should return None");
@@ -842,12 +909,14 @@ async fn req_rt_037_gmail_labels_list_response() {
     let _mock = server
         .mock("GET", "/gmail/v1/users/me/labels")
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "labels": [
                 {"id": "INBOX", "name": "INBOX", "type": "system"},
                 {"id": "Label_1", "name": "Work", "type": "user"}
             ]
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -855,9 +924,15 @@ async fn req_rt_037_gmail_labels_list_response() {
     let url = format!("{}/gmail/v1/users/me/labels", server.url());
 
     let response: omega_google::services::gmail::types::LabelListResponse =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(response.labels.len(), 2);
     assert_eq!(response.labels[0].id, "INBOX");
@@ -868,7 +943,8 @@ async fn req_rt_037_gmail_labels_list_response() {
 // Acceptance: Label create builds correct request
 #[test]
 fn req_rt_037_gmail_label_create_request() {
-    let (url, body) = omega_google::services::gmail::labels::build_label_create_request("My New Label");
+    let (url, body) =
+        omega_google::services::gmail::labels::build_label_create_request("My New Label");
     assert!(url.contains("users/me/labels"));
     assert_eq!(body["name"], "My New Label");
 }
@@ -1006,7 +1082,10 @@ async fn req_rt_040_gmail_thread_modify_post() {
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/gmail/v1/users/me/threads/thread123/modify", server.url());
+    let url = format!(
+        "{}/gmail/v1/users/me/threads/thread123/modify",
+        server.url()
+    );
     let body = serde_json::json!({
         "addLabelIds": ["STARRED"],
         "removeLabelIds": ["UNREAD"]
@@ -1033,11 +1112,8 @@ async fn req_rt_040_gmail_thread_modify_post() {
 // Edge case: Thread modify with empty add and remove lists
 #[test]
 fn req_rt_040_gmail_thread_modify_empty_labels() {
-    let (url, body) = omega_google::services::gmail::thread::build_thread_modify_request(
-        "thread_abc",
-        &[],
-        &[],
-    );
+    let (url, body) =
+        omega_google::services::gmail::thread::build_thread_modify_request("thread_abc", &[], &[]);
     assert!(url.contains("threads/thread_abc/modify"));
     assert_eq!(body["addLabelIds"], serde_json::json!([]));
     assert_eq!(body["removeLabelIds"], serde_json::json!([]));
@@ -1112,15 +1188,20 @@ async fn req_rt_038_gmail_drafts_list_response() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/gmail/v1/users/me/drafts.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/gmail/v1/users/me/drafts.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "drafts": [
                 {"id": "draft1", "message": {"id": "msg1"}},
                 {"id": "draft2", "message": {"id": "msg2"}}
             ],
             "resultSizeEstimate": 2
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -1128,9 +1209,15 @@ async fn req_rt_038_gmail_drafts_list_response() {
     let url = format!("{}/gmail/v1/users/me/drafts?maxResults=20", server.url());
 
     let response: omega_google::services::gmail::types::DraftListResponse =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(response.drafts.len(), 2);
     assert_eq!(response.drafts[0].id, "draft1");
@@ -1152,10 +1239,7 @@ async fn req_rt_044_handle_calendar_is_async() {
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
-    let args: Vec<OsString> = vec![
-        "calendar".into(),
-        "events".into(),
-    ];
+    let args: Vec<OsString> = vec!["calendar".into(), "events".into()];
     let exit = omega_google::cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
@@ -1211,9 +1295,13 @@ async fn req_rt_044_calendar_events_list_deserializes() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "items": [
                 {
                     "id": "event1",
@@ -1225,7 +1313,8 @@ async fn req_rt_044_calendar_events_list_deserializes() {
             "nextPageToken": "next_event_page",
             "summary": "Test Calendar",
             "timeZone": "America/New_York"
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -1236,14 +1325,23 @@ async fn req_rt_044_calendar_events_list_deserializes() {
     );
 
     let response: omega_google::services::calendar::types::EventListResponse =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(response.items.len(), 1);
     assert_eq!(response.items[0].id, Some("event1".to_string()));
     assert_eq!(response.items[0].summary, Some("Team Meeting".to_string()));
-    assert_eq!(response.next_page_token, Some("next_event_page".to_string()));
+    assert_eq!(
+        response.next_page_token,
+        Some("next_event_page".to_string())
+    );
 }
 
 // Requirement: REQ-RT-044 (Must)
@@ -1253,21 +1351,33 @@ async fn req_rt_044_calendar_events_pagination() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock1 = server
-        .mock("GET", mockito::Matcher::Regex(r"^/calendar/v3/calendars/primary/events\?maxResults=".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(
+                r"^/calendar/v3/calendars/primary/events\?maxResults=".to_string(),
+            ),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "items": [{"id": "e1", "summary": "Event 1"}],
             "nextPageToken": "page2"
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let _mock2 = server
-        .mock("GET", mockito::Matcher::Regex(r".*pageToken=page2.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r".*pageToken=page2.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "items": [{"id": "e2", "summary": "Event 2"}]
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -1327,7 +1437,10 @@ async fn req_rt_044_calendar_events_empty_list() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()),
+        )
         .with_status(200)
         .with_body(r#"{"items": [], "summary": "Empty Calendar"}"#)
         .create_async()
@@ -1340,9 +1453,15 @@ async fn req_rt_044_calendar_events_empty_list() {
     );
 
     let response: omega_google::services::calendar::types::EventListResponse =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await
+        .unwrap();
 
     assert!(response.items.is_empty());
 }
@@ -1367,9 +1486,13 @@ async fn req_rt_045_calendar_event_get_response() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "event_123",
             "summary": "Team Standup",
             "description": "Daily standup meeting",
@@ -1381,17 +1504,26 @@ async fn req_rt_045_calendar_event_get_response() {
                 {"email": "alice@example.com", "responseStatus": "accepted"},
                 {"email": "bob@example.com", "responseStatus": "tentative"}
             ]
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/event_123", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/event_123",
+        server.url()
+    );
 
-    let event: omega_google::services::calendar::types::Event =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+    let event: omega_google::services::calendar::types::Event = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(event.id, Some("event_123".to_string()));
     assert_eq!(event.summary, Some("Team Standup".to_string()));
@@ -1406,18 +1538,30 @@ async fn req_rt_045_calendar_event_not_found() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()),
+        )
         .with_status(404)
         .with_body(r#"{"error":{"code":404,"message":"Not Found"}}"#)
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/nonexistent", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/nonexistent",
+        server.url()
+    );
 
     let result: anyhow::Result<omega_google::services::calendar::types::Event> =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await;
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await;
 
     assert!(result.is_err());
 }
@@ -1461,14 +1605,19 @@ async fn req_rt_046_calendar_event_create_post() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("POST", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()))
+        .mock(
+            "POST",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "new_event_id",
             "summary": "Created Event",
             "status": "confirmed",
             "htmlLink": "https://calendar.google.com/event?eid=abc123"
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -1504,7 +1653,10 @@ async fn req_rt_046_calendar_event_create_dry_run() {
     let mut server = mockito::Server::new_async().await;
 
     let mock = server
-        .mock("POST", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()))
+        .mock(
+            "POST",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events.*".to_string()),
+        )
         .expect(0)
         .create_async()
         .await;
@@ -1513,17 +1665,16 @@ async fn req_rt_046_calendar_event_create_dry_run() {
     let url = format!("{}/calendar/v3/calendars/primary/events", server.url());
     let body = serde_json::json!({"summary": "Dry Run Event"});
 
-    let result: anyhow::Result<Option<serde_json::Value>> =
-        omega_google::http::api::api_post(
-            &ctx.client,
-            &url,
-            &body,
-            &ctx.circuit_breaker,
-            &ctx.retry_config,
-            false,
-            true, // dry_run
-        )
-        .await;
+    let result: anyhow::Result<Option<serde_json::Value>> = omega_google::http::api::api_post(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+        true, // dry_run
+    )
+    .await;
 
     assert!(result.unwrap().is_none());
     mock.assert_async().await;
@@ -1568,18 +1719,26 @@ async fn req_rt_047_calendar_event_update_patch() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("PATCH", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()))
+        .mock(
+            "PATCH",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "event_updated",
             "summary": "Updated Meeting",
             "status": "confirmed"
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/event_updated", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/event_updated",
+        server.url()
+    );
     let body = serde_json::json!({"summary": "Updated Meeting"});
 
     let result: Option<omega_google::services::calendar::types::Event> =
@@ -1612,20 +1771,22 @@ async fn req_rt_047_calendar_event_update_dry_run() {
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/event_id", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/event_id",
+        server.url()
+    );
     let body = serde_json::json!({"summary": "Dry Run Update"});
 
-    let result: anyhow::Result<Option<serde_json::Value>> =
-        omega_google::http::api::api_patch(
-            &ctx.client,
-            &url,
-            &body,
-            &ctx.circuit_breaker,
-            &ctx.retry_config,
-            false,
-            true,
-        )
-        .await;
+    let result: anyhow::Result<Option<serde_json::Value>> = omega_google::http::api::api_patch(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+        true,
+    )
+    .await;
 
     assert!(result.unwrap().is_none());
     mock.assert_async().await;
@@ -1642,14 +1803,20 @@ async fn req_rt_048_calendar_event_delete() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("DELETE", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()))
+        .mock(
+            "DELETE",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()),
+        )
         .with_status(204)
         .with_body("")
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/event_del", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/event_del",
+        server.url()
+    );
 
     let result = omega_google::http::api::api_delete(
         &ctx.client,
@@ -1677,7 +1844,10 @@ async fn req_rt_048_calendar_event_delete_dry_run() {
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/event_del", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/event_del",
+        server.url()
+    );
 
     let result = omega_google::http::api::api_delete(
         &ctx.client,
@@ -1700,14 +1870,20 @@ async fn req_rt_048_calendar_event_delete_not_found() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("DELETE", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()))
+        .mock(
+            "DELETE",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()),
+        )
         .with_status(404)
         .with_body(r#"{"error":{"code":404,"message":"Not Found"}}"#)
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/nonexistent", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/nonexistent",
+        server.url()
+    );
 
     let result = omega_google::http::api::api_delete(
         &ctx.client,
@@ -1730,7 +1906,8 @@ async fn req_rt_048_calendar_event_delete_not_found() {
 // Acceptance: Calendars list URL is correct
 #[test]
 fn req_rt_049_calendar_calendars_list_url() {
-    let url = omega_google::services::calendar::calendars::build_calendars_list_url(Some(100), None);
+    let url =
+        omega_google::services::calendar::calendars::build_calendars_list_url(Some(100), None);
     assert!(url.contains("users/me/calendarList"));
     assert!(url.contains("maxResults=100"));
 }
@@ -1742,24 +1919,38 @@ async fn req_rt_049_calendar_calendars_list_response() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/calendar/v3/users/me/calendarList.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/calendar/v3/users/me/calendarList.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "items": [
                 {"id": "primary", "summary": "Main Calendar", "primary": true},
                 {"id": "work@group.calendar.google.com", "summary": "Work Calendar"}
             ]
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/users/me/calendarList?maxResults=100", server.url());
+    let url = format!(
+        "{}/calendar/v3/users/me/calendarList?maxResults=100",
+        server.url()
+    );
 
     let response: omega_google::services::calendar::types::CalendarListResponse =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(response.items.len(), 2);
     assert_eq!(response.items[0].id, "primary");
@@ -1783,7 +1974,10 @@ fn req_rt_050_calendar_freebusy_url() {
 #[test]
 fn req_rt_050_calendar_freebusy_request_body() {
     let req = omega_google::services::calendar::freebusy::build_freebusy_request(
-        &["alice@example.com".to_string(), "bob@example.com".to_string()],
+        &[
+            "alice@example.com".to_string(),
+            "bob@example.com".to_string(),
+        ],
         "2024-03-01T00:00:00Z",
         "2024-03-02T00:00:00Z",
     );
@@ -1801,7 +1995,8 @@ async fn req_rt_050_calendar_freebusy_post() {
     let _mock = server
         .mock("POST", "/calendar/v3/freeBusy")
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "kind": "calendar#freeBusy",
             "timeMin": "2024-03-01T00:00:00Z",
             "timeMax": "2024-03-02T00:00:00Z",
@@ -1812,7 +2007,8 @@ async fn req_rt_050_calendar_freebusy_post() {
                     ]
                 }
             }
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -1824,18 +2020,17 @@ async fn req_rt_050_calendar_freebusy_post() {
         "items": [{"id": "alice@example.com"}]
     });
 
-    let result: Option<serde_json::Value> =
-        omega_google::http::api::api_post(
-            &ctx.client,
-            &url,
-            &body,
-            &ctx.circuit_breaker,
-            &ctx.retry_config,
-            false,
-            false,
-        )
-        .await
-        .unwrap();
+    let result: Option<serde_json::Value> = omega_google::http::api::api_post(
+        &ctx.client,
+        &url,
+        &body,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+        false,
+    )
+    .await
+    .unwrap();
 
     let resp = result.unwrap();
     assert!(resp.get("calendars").is_some());
@@ -1857,10 +2052,7 @@ async fn req_rt_055_handle_drive_is_async() {
     let tmp = tempfile::tempdir().unwrap();
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
-    let args: Vec<OsString> = vec![
-        "drive".into(),
-        "ls".into(),
-    ];
+    let args: Vec<OsString> = vec!["drive".into(), "ls".into()];
     let exit = omega_google::cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
@@ -1900,12 +2092,21 @@ async fn req_rt_055_drive_list_deserializes_response() {
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/drive/v3/files?q=trashed+%3D+false&pageSize=20", server.url());
+    let url = format!(
+        "{}/drive/v3/files?q=trashed+%3D+false&pageSize=20",
+        server.url()
+    );
 
     let response: omega_google::services::drive::types::FileListResponse =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(response.files.len(), 2);
     assert_eq!(response.files[0].name, Some("Document.docx".to_string()));
@@ -1919,14 +2120,20 @@ async fn req_rt_055_drive_list_pagination() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock1 = server
-        .mock("GET", mockito::Matcher::Regex(r"^/drive/v3/files\?.*pageSize=".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"^/drive/v3/files\?.*pageSize=".to_string()),
+        )
         .with_status(200)
         .with_body(r#"{"files": [{"id": "f1", "name": "File 1"}], "nextPageToken": "pg2"}"#)
         .create_async()
         .await;
 
     let _mock2 = server
-        .mock("GET", mockito::Matcher::Regex(r".*pageToken=pg2.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r".*pageToken=pg2.*".to_string()),
+        )
         .with_status(200)
         .with_body(r#"{"files": [{"id": "f2", "name": "File 2"}]}"#)
         .create_async()
@@ -2030,24 +2237,31 @@ async fn req_rt_057_drive_get_response() {
     let _mock = server
         .mock("GET", "/drive/v3/files/file_abc")
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "file_abc",
             "name": "Important Document.pdf",
             "mimeType": "application/pdf",
             "size": "524288",
             "modifiedTime": "2024-01-15T10:30:00.000Z",
             "parents": ["folder_root"]
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
     let url = format!("{}/drive/v3/files/file_abc", server.url());
 
-    let file: omega_google::services::drive::types::DriveFile =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+    let file: omega_google::services::drive::types::DriveFile = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(file.id, Some("file_abc".to_string()));
     assert_eq!(file.name, Some("Important Document.pdf".to_string()));
@@ -2071,8 +2285,14 @@ async fn req_rt_057_drive_get_not_found() {
     let url = format!("{}/drive/v3/files/nonexistent", server.url());
 
     let result: anyhow::Result<omega_google::services::drive::types::DriveFile> =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await;
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await;
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -2101,7 +2321,8 @@ fn req_rt_060_drive_mkdir_body() {
 // Acceptance: Mkdir body with parent folder
 #[test]
 fn req_rt_060_drive_mkdir_body_with_parent() {
-    let body = omega_google::services::drive::folders::build_mkdir_body("Sub Folder", Some("parent_id"));
+    let body =
+        omega_google::services::drive::folders::build_mkdir_body("Sub Folder", Some("parent_id"));
     assert_eq!(body["name"], "Sub Folder");
     assert_eq!(body["parents"], serde_json::json!(["parent_id"]));
 }
@@ -2115,11 +2336,13 @@ async fn req_rt_060_drive_mkdir_post() {
     let _mock = server
         .mock("POST", "/drive/v3/files")
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "folder_new",
             "name": "Created Folder",
             "mimeType": "application/vnd.google-apps.folder"
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -2142,7 +2365,10 @@ async fn req_rt_060_drive_mkdir_post() {
 
     let file = result.unwrap();
     assert_eq!(file.id, Some("folder_new".to_string()));
-    assert_eq!(file.mime_type, Some("application/vnd.google-apps.folder".to_string()));
+    assert_eq!(
+        file.mime_type,
+        Some("application/vnd.google-apps.folder".to_string())
+    );
 }
 
 // -------------------------------------------------------------------
@@ -2205,7 +2431,10 @@ async fn req_rt_062_drive_move_patch() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("PATCH", mockito::Matcher::Regex(r"/drive/v3/files/file_move.*".to_string()))
+        .mock(
+            "PATCH",
+            mockito::Matcher::Regex(r"/drive/v3/files/file_move.*".to_string()),
+        )
         .with_status(200)
         .with_body(r#"{"id": "file_move", "name": "moved.txt", "parents": ["new_parent"]}"#)
         .create_async()
@@ -2299,10 +2528,7 @@ fn req_rt_063_drive_rename_special_chars() {
 #[test]
 fn req_rt_064_drive_share_anyone() {
     let body = omega_google::services::drive::permissions::build_share_permission(
-        "anyone",
-        "reader",
-        None,
-        None,
+        "anyone", "reader", None, None,
     )
     .unwrap();
     assert_eq!(body["type"], "anyone");
@@ -2401,9 +2627,15 @@ async fn req_rt_065_drive_permissions_list_response() {
     let url = format!("{}/drive/v3/files/file_abc/permissions", server.url());
 
     let response: omega_google::services::drive::types::PermissionListResponse =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(response.permissions.len(), 2);
     assert_eq!(response.permissions[0].role, Some("owner".to_string()));
@@ -2430,11 +2662,13 @@ async fn req_rt_066_drive_copy_post() {
     let _mock = server
         .mock("POST", "/drive/v3/files/file_orig/copy")
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "file_copy",
             "name": "Document (Copy).pdf",
             "mimeType": "application/pdf"
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
@@ -2514,15 +2748,15 @@ async fn req_rt_032_dispatch_command_gmail_async() {
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // Gmail URL command works without auth (existing behavior)
-    let args: Vec<OsString> = vec![
-        "gmail".into(),
-        "url".into(),
-        "thread_123".into(),
-    ];
+    let args: Vec<OsString> = vec!["gmail".into(), "url".into(), "thread_123".into()];
     let exit = omega_google::cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
-    assert_eq!(exit, codes::SUCCESS, "Gmail URL should succeed without auth");
+    assert_eq!(
+        exit,
+        codes::SUCCESS,
+        "Gmail URL should succeed without auth"
+    );
 }
 
 // Requirement: REQ-RT-055 (Must)
@@ -2534,15 +2768,15 @@ async fn req_rt_055_dispatch_command_drive_async() {
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // Drive URL command works without auth
-    let args: Vec<OsString> = vec![
-        "drive".into(),
-        "url".into(),
-        "file_123".into(),
-    ];
+    let args: Vec<OsString> = vec!["drive".into(), "url".into(), "file_123".into()];
     let exit = omega_google::cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
-    assert_eq!(exit, codes::SUCCESS, "Drive URL should succeed without auth");
+    assert_eq!(
+        exit,
+        codes::SUCCESS,
+        "Drive URL should succeed without auth"
+    );
 }
 
 // Requirement: REQ-RT-044 (Must)
@@ -2554,14 +2788,15 @@ async fn req_rt_044_dispatch_command_calendar_async() {
     std::env::set_var("OMEGA_GOOGLE_CONFIG_DIR", tmp.path());
     std::env::set_var("GOG_KEYRING_BACKEND", "file");
     // Calendar time command works without auth
-    let args: Vec<OsString> = vec![
-        "calendar".into(),
-        "time".into(),
-    ];
+    let args: Vec<OsString> = vec!["calendar".into(), "time".into()];
     let exit = omega_google::cli::execute(args).await;
     std::env::remove_var("GOG_KEYRING_BACKEND");
     std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
-    assert_eq!(exit, codes::SUCCESS, "Calendar time should succeed without auth");
+    assert_eq!(
+        exit,
+        codes::SUCCESS,
+        "Calendar time should succeed without auth"
+    );
 }
 
 // -------------------------------------------------------------------
@@ -2584,9 +2819,14 @@ async fn req_rt_032_api_403_permission_denied() {
     let ctx = test_service_context(&server.url());
     let url = format!("{}/gmail/v1/users/me/threads", server.url());
 
-    let result: anyhow::Result<serde_json::Value> =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await;
+    let result: anyhow::Result<serde_json::Value> = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await;
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -2614,9 +2854,14 @@ async fn req_rt_032_api_500_server_error() {
     let ctx = test_service_context(&server.url());
     let url = format!("{}/api/endpoint", server.url());
 
-    let result: anyhow::Result<serde_json::Value> =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await;
+    let result: anyhow::Result<serde_json::Value> = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await;
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -2684,8 +2929,14 @@ async fn req_rt_032_edge_malformed_json_response() {
     let url = format!("{}/gmail/v1/users/me/threads", server.url());
 
     let result: anyhow::Result<omega_google::services::gmail::types::ThreadListResponse> =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await;
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await;
 
     assert!(result.is_err(), "Malformed JSON should return error");
 }
@@ -2707,8 +2958,14 @@ async fn req_rt_032_edge_empty_response_body() {
     let url = format!("{}/gmail/v1/users/me/threads", server.url());
 
     let result: anyhow::Result<omega_google::services::gmail::types::ThreadListResponse> =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await;
+        omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await;
 
     assert!(result.is_err(), "Empty body should fail deserialization");
 }
@@ -2729,10 +2986,15 @@ async fn req_rt_057_edge_drive_file_minimal_fields() {
     let ctx = test_service_context(&server.url());
     let url = format!("{}/drive/v3/files/minimal", server.url());
 
-    let file: omega_google::services::drive::types::DriveFile =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+    let file: omega_google::services::drive::types::DriveFile = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(file.id, Some("minimal".to_string()));
     assert!(file.name.is_none());
@@ -2747,24 +3009,37 @@ async fn req_rt_044_edge_calendar_all_day_event() {
     let mut server = mockito::Server::new_async().await;
 
     let _mock = server
-        .mock("GET", mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()))
+        .mock(
+            "GET",
+            mockito::Matcher::Regex(r"/calendar/v3/calendars/.*/events/.*".to_string()),
+        )
         .with_status(200)
-        .with_body(r#"{
+        .with_body(
+            r#"{
             "id": "all_day_event",
             "summary": "Company Holiday",
             "start": {"date": "2024-12-25"},
             "end": {"date": "2024-12-26"}
-        }"#)
+        }"#,
+        )
         .create_async()
         .await;
 
     let ctx = test_service_context(&server.url());
-    let url = format!("{}/calendar/v3/calendars/primary/events/all_day_event", server.url());
+    let url = format!(
+        "{}/calendar/v3/calendars/primary/events/all_day_event",
+        server.url()
+    );
 
-    let event: omega_google::services::calendar::types::Event =
-        omega_google::http::api::api_get(&ctx.client, &url, &ctx.circuit_breaker, &ctx.retry_config, false)
-            .await
-            .unwrap();
+    let event: omega_google::services::calendar::types::Event = omega_google::http::api::api_get(
+        &ctx.client,
+        &url,
+        &ctx.circuit_breaker,
+        &ctx.retry_config,
+        false,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(event.id, Some("all_day_event".to_string()));
     let start = event.start.as_ref().unwrap();
@@ -2789,7 +3064,8 @@ fn req_rt_058_drive_download_url() {
 // Acceptance: Export URL includes mimeType
 #[test]
 fn req_rt_058_drive_export_url() {
-    let url = omega_google::services::drive::files::build_file_export_url("file_exp", "application/pdf");
+    let url =
+        omega_google::services::drive::files::build_file_export_url("file_exp", "application/pdf");
     assert!(url.contains("files/file_exp/export"));
     assert!(url.contains("mimeType="));
 }
@@ -2863,15 +3139,14 @@ async fn req_rt_032_circuit_breaker_opens_after_failures() {
 
     // Make multiple failed requests to trigger circuit breaker
     for _ in 0..5 {
-        let _result: anyhow::Result<serde_json::Value> =
-            omega_google::http::api::api_get(
-                &ctx.client,
-                &url,
-                &ctx.circuit_breaker,
-                &ctx.retry_config,
-                false,
-            )
-            .await;
+        let _result: anyhow::Result<serde_json::Value> = omega_google::http::api::api_get(
+            &ctx.client,
+            &url,
+            &ctx.circuit_breaker,
+            &ctx.retry_config,
+            false,
+        )
+        .await;
     }
 
     // After 5 failures, circuit breaker should be open

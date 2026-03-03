@@ -1,9 +1,9 @@
 //! Classroom service integration tests.
 
-use omega_google::services::classroom::types::*;
 use omega_google::services::classroom::courses::*;
-use omega_google::services::classroom::roster::*;
 use omega_google::services::classroom::coursework::*;
+use omega_google::services::classroom::roster::*;
+use omega_google::services::classroom::types::*;
 
 // ---------------------------------------------------------------
 // REQ-CLASS-001 (Must): Course deserialization from full JSON
@@ -38,11 +38,24 @@ fn req_class_001_integration_full_course_from_api() {
     assert_eq!(course.owner_id, Some("teacher001".to_string()));
     assert_eq!(course.course_state, Some("ACTIVE".to_string()));
     assert_eq!(course.section, Some("Period 3".to_string()));
-    assert!(course.description.as_ref().unwrap().contains("Java programming"));
-    assert_eq!(course.alternate_link, Some("https://classroom.google.com/c/123456789".to_string()));
+    assert!(course
+        .description
+        .as_ref()
+        .unwrap()
+        .contains("Java programming"));
+    assert_eq!(
+        course.alternate_link,
+        Some("https://classroom.google.com/c/123456789".to_string())
+    );
     assert_eq!(course.enrollment_code, Some("xk7tm9q".to_string()));
-    assert_eq!(course.teacher_group_email, Some("cs_teachers@school.edu".to_string()));
-    assert_eq!(course.course_group_email, Some("cs_all@school.edu".to_string()));
+    assert_eq!(
+        course.teacher_group_email,
+        Some("cs_teachers@school.edu".to_string())
+    );
+    assert_eq!(
+        course.course_group_email,
+        Some("cs_all@school.edu".to_string())
+    );
     assert!(course.calendar_id.is_some());
 
     // Unknown fields preserved via flatten
@@ -120,7 +133,10 @@ fn req_class_002_integration_student_list_from_api() {
     assert_eq!(s1.user_id, Some("student001".to_string()));
     assert_eq!(s1.course_id, Some("123456789".to_string()));
     let p1 = s1.profile.as_ref().unwrap();
-    assert_eq!(p1.email_address, Some("emma.johnson@school.edu".to_string()));
+    assert_eq!(
+        p1.email_address,
+        Some("emma.johnson@school.edu".to_string())
+    );
     let n1 = p1.name.as_ref().unwrap();
     assert_eq!(n1.given_name, Some("Emma".to_string()));
     assert_eq!(n1.family_name, Some("Johnson".to_string()));
@@ -245,7 +261,10 @@ fn req_class_005_integration_coursework_from_api() {
     let cw1 = &resp.course_work[0];
     assert_eq!(cw1.course_id, Some("123456789".to_string()));
     assert_eq!(cw1.id, Some("cw001".to_string()));
-    assert_eq!(cw1.title, Some("Homework 1: Variables and Data Types".to_string()));
+    assert_eq!(
+        cw1.title,
+        Some("Homework 1: Variables and Data Types".to_string())
+    );
     assert!(cw1.description.as_ref().unwrap().contains("Chapter 2"));
     assert_eq!(cw1.state, Some("PUBLISHED".to_string()));
     assert_eq!(cw1.work_type, Some("ASSIGNMENT".to_string()));
@@ -372,7 +391,10 @@ fn req_class_005_integration_coursework_url_builders() {
     );
     assert_eq!(body["title"], "Final Exam");
     assert_eq!(body["workType"], "ASSIGNMENT");
-    assert_eq!(body["description"], "Comprehensive final exam covering all topics");
+    assert_eq!(
+        body["description"],
+        "Comprehensive final exam covering all topics"
+    );
     assert_eq!(body["maxPoints"], 300.0);
     assert_eq!(body["state"], "DRAFT");
 }
@@ -418,7 +440,10 @@ fn req_class_001_integration_course_list_from_api() {
     assert_eq!(resp.courses.len(), 3);
     assert_eq!(resp.next_page_token, Some("course_next_page".to_string()));
 
-    assert_eq!(resp.courses[0].name, Some("AP Computer Science A".to_string()));
+    assert_eq!(
+        resp.courses[0].name,
+        Some("AP Computer Science A".to_string())
+    );
     assert_eq!(resp.courses[0].course_state, Some("ACTIVE".to_string()));
     assert_eq!(resp.courses[2].course_state, Some("ARCHIVED".to_string()));
 }

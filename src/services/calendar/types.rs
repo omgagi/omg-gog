@@ -442,8 +442,12 @@ mod tests {
             time_min: "2024-01-15T00:00:00Z".to_string(),
             time_max: "2024-01-16T00:00:00Z".to_string(),
             items: vec![
-                FreeBusyCalendarId { id: "alice@example.com".to_string() },
-                FreeBusyCalendarId { id: "bob@example.com".to_string() },
+                FreeBusyCalendarId {
+                    id: "alice@example.com".to_string(),
+                },
+                FreeBusyCalendarId {
+                    id: "bob@example.com".to_string(),
+                },
             ],
             extra: HashMap::new(),
         };
@@ -563,7 +567,10 @@ mod tests {
         let event: Event = serde_json::from_str(json_str).unwrap();
         assert_eq!(event.recurrence.len(), 2);
         assert!(event.recurrence[0].starts_with("RRULE:"));
-        assert_eq!(event.recurring_event_id, Some("parent_event_id".to_string()));
+        assert_eq!(
+            event.recurring_event_id,
+            Some("parent_event_id".to_string())
+        );
     }
 
     // ---------------------------------------------------------------
@@ -604,11 +611,8 @@ mod tests {
     // Acceptance: Time range with from/to dates
     #[test]
     fn req_cal_020_time_range_from_to() {
-        let (start, end) = resolve_time_range(
-            Some("2024-01-15"),
-            Some("2024-01-16"),
-            "UTC",
-        ).unwrap();
+        let (start, end) =
+            resolve_time_range(Some("2024-01-15"), Some("2024-01-16"), "UTC").unwrap();
         assert!(start.contains("2024-01-15"));
         assert!(end.contains("2024-01-16"));
     }

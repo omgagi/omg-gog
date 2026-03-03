@@ -119,7 +119,10 @@ fn split_sheet_and_range(input: &str) -> Result<(Option<String>, &str), String> 
             } else if rest.is_empty() {
                 Ok((Some(sheet_name.to_string()), ""))
             } else {
-                Err(format!("expected '!' after quoted sheet name, got: {}", rest))
+                Err(format!(
+                    "expected '!' after quoted sheet name, got: {}",
+                    rest
+                ))
             }
         } else {
             Err("unclosed quote in sheet name".to_string())

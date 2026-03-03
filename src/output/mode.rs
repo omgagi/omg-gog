@@ -7,7 +7,7 @@
 //
 // This module re-exports those types for architectural clarity.
 
-pub use super::OutputMode;
 pub use super::resolve_mode;
 pub use super::resolve_mode_full;
 pub use super::JsonTransform;
+pub use super::OutputMode;

@@ -11,10 +11,7 @@ pub fn build_topics_list_url(
     let base = format!(
         "{}/courses/{}/topics",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -38,14 +35,8 @@ pub fn build_topic_get_url(course_id: &str, topic_id: &str) -> String {
     format!(
         "{}/courses/{}/topics/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            topic_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(topic_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -54,10 +45,7 @@ pub fn build_topic_create_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}/topics",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -73,14 +61,8 @@ pub fn build_topic_update_url(course_id: &str, topic_id: &str) -> String {
     format!(
         "{}/courses/{}/topics/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            topic_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(topic_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -96,14 +78,8 @@ pub fn build_topic_delete_url(course_id: &str, topic_id: &str) -> String {
     format!(
         "{}/courses/{}/topics/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            topic_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(topic_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 

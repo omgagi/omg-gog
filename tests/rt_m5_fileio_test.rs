@@ -7,9 +7,9 @@
 //! - REQ-RT-030: Gmail attachment download
 //! - REQ-RT-031: Shared export module
 
-use omega_google::services::export;
 use omega_google::services::drive::files;
 use omega_google::services::drive::types::*;
+use omega_google::services::export;
 use omega_google::services::gmail::message;
 
 // ===================================================================
@@ -25,19 +25,28 @@ fn req_rt_031_integration_format_to_mime_all_formats() {
         export::format_to_mime("docx"),
         Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     );
-    assert_eq!(export::format_to_mime("doc"), export::format_to_mime("docx"));
+    assert_eq!(
+        export::format_to_mime("doc"),
+        export::format_to_mime("docx")
+    );
     // Excel formats
     assert_eq!(
         export::format_to_mime("xlsx"),
         Some("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     );
-    assert_eq!(export::format_to_mime("xls"), export::format_to_mime("xlsx"));
+    assert_eq!(
+        export::format_to_mime("xls"),
+        export::format_to_mime("xlsx")
+    );
     // PowerPoint formats
     assert_eq!(
         export::format_to_mime("pptx"),
         Some("application/vnd.openxmlformats-officedocument.presentationml.presentation")
     );
-    assert_eq!(export::format_to_mime("ppt"), export::format_to_mime("pptx"));
+    assert_eq!(
+        export::format_to_mime("ppt"),
+        export::format_to_mime("pptx")
+    );
     // Text formats
     assert_eq!(export::format_to_mime("csv"), Some("text/csv"));
     assert_eq!(export::format_to_mime("txt"), Some("text/plain"));
@@ -55,8 +64,14 @@ fn req_rt_031_integration_format_to_mime_all_formats() {
 #[test]
 fn req_rt_031_integration_format_to_mime_case_insensitive() {
     assert_eq!(export::format_to_mime("PDF"), Some("application/pdf"));
-    assert_eq!(export::format_to_mime("Docx"), export::format_to_mime("docx"));
-    assert_eq!(export::format_to_mime("XLSX"), export::format_to_mime("xlsx"));
+    assert_eq!(
+        export::format_to_mime("Docx"),
+        export::format_to_mime("docx")
+    );
+    assert_eq!(
+        export::format_to_mime("XLSX"),
+        export::format_to_mime("xlsx")
+    );
 }
 
 // ===================================================================
@@ -123,7 +138,9 @@ fn req_rt_031_integration_is_google_workspace_type() {
     assert!(export::is_google_workspace_type(MIME_GOOGLE_DRAWING));
     assert!(!export::is_google_workspace_type("application/pdf"));
     assert!(!export::is_google_workspace_type("text/plain"));
-    assert!(!export::is_google_workspace_type("application/octet-stream"));
+    assert!(!export::is_google_workspace_type(
+        "application/octet-stream"
+    ));
     assert!(!export::is_google_workspace_type(""));
 }
 
@@ -134,9 +151,18 @@ fn req_rt_031_integration_is_google_workspace_type() {
 #[test]
 fn req_rt_031_integration_default_export_format() {
     assert_eq!(export::default_export_format(MIME_GOOGLE_DOC), Some("pdf"));
-    assert_eq!(export::default_export_format(MIME_GOOGLE_SHEET), Some("pdf"));
-    assert_eq!(export::default_export_format(MIME_GOOGLE_SLIDES), Some("pdf"));
-    assert_eq!(export::default_export_format(MIME_GOOGLE_DRAWING), Some("pdf"));
+    assert_eq!(
+        export::default_export_format(MIME_GOOGLE_SHEET),
+        Some("pdf")
+    );
+    assert_eq!(
+        export::default_export_format(MIME_GOOGLE_SLIDES),
+        Some("pdf")
+    );
+    assert_eq!(
+        export::default_export_format(MIME_GOOGLE_DRAWING),
+        Some("pdf")
+    );
     assert_eq!(export::default_export_format("application/pdf"), None);
     assert_eq!(export::default_export_format(""), None);
 }
@@ -253,11 +279,23 @@ fn req_rt_028_integration_multipart_body_with_parent() {
 
 #[test]
 fn req_rt_028_integration_guess_content_type() {
-    assert_eq!(export::guess_content_type_from_path("file.pdf"), "application/pdf");
-    assert_eq!(export::guess_content_type_from_path("photo.jpg"), "image/jpeg");
-    assert_eq!(export::guess_content_type_from_path("image.png"), "image/png");
+    assert_eq!(
+        export::guess_content_type_from_path("file.pdf"),
+        "application/pdf"
+    );
+    assert_eq!(
+        export::guess_content_type_from_path("photo.jpg"),
+        "image/jpeg"
+    );
+    assert_eq!(
+        export::guess_content_type_from_path("image.png"),
+        "image/png"
+    );
     assert_eq!(export::guess_content_type_from_path("data.csv"), "text/csv");
-    assert_eq!(export::guess_content_type_from_path("config.json"), "application/json");
+    assert_eq!(
+        export::guess_content_type_from_path("config.json"),
+        "application/json"
+    );
     assert_eq!(
         export::guess_content_type_from_path("doc.docx"),
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -270,8 +308,14 @@ fn req_rt_028_integration_guess_content_type() {
         export::guess_content_type_from_path("slides.pptx"),
         "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     );
-    assert_eq!(export::guess_content_type_from_path("file.xyz"), "application/octet-stream");
-    assert_eq!(export::guess_content_type_from_path("Makefile"), "application/octet-stream");
+    assert_eq!(
+        export::guess_content_type_from_path("file.xyz"),
+        "application/octet-stream"
+    );
+    assert_eq!(
+        export::guess_content_type_from_path("Makefile"),
+        "application/octet-stream"
+    );
 }
 
 // ===================================================================
@@ -350,23 +394,23 @@ fn req_rt_026_integration_resolve_download_path_out_flag() {
 #[test]
 fn req_rt_027_integration_resolve_download_path_export() {
     // Export: replace extension with format-specific extension
-    let path = files::resolve_download_path(
-        "My Document",
-        None,
-        Some("application/pdf"),
+    let path = files::resolve_download_path("My Document", None, Some("application/pdf"));
+    assert!(
+        path.ends_with(".pdf"),
+        "Expected .pdf extension, got: {}",
+        path
     );
-    assert!(path.ends_with(".pdf"), "Expected .pdf extension, got: {}", path);
 }
 
 #[test]
 fn req_rt_027_integration_resolve_download_path_export_replaces_extension() {
     // Export of a named file replaces existing extension
-    let path = files::resolve_download_path(
-        "spreadsheet.gsheet",
-        None,
-        Some("text/csv"),
+    let path = files::resolve_download_path("spreadsheet.gsheet", None, Some("text/csv"));
+    assert!(
+        path.ends_with(".csv"),
+        "Expected .csv extension, got: {}",
+        path
     );
-    assert!(path.ends_with(".csv"), "Expected .csv extension, got: {}", path);
 }
 
 // ===================================================================

@@ -57,14 +57,8 @@ pub fn build_format_request(
         serde_json::from_str(format_json).map_err(|e| format!("invalid format JSON: {}", e))?;
 
     // Convert A1 range to grid coordinates (0-based indices)
-    let start_row = range
-        .start_row
-        .map(|r| (r as i64) - 1)
-        .unwrap_or(0);
-    let end_row = range
-        .end_row
-        .map(|r| r as i64)
-        .unwrap_or(start_row + 1);
+    let start_row = range.start_row.map(|r| (r as i64) - 1).unwrap_or(0);
+    let end_row = range.end_row.map(|r| r as i64).unwrap_or(start_row + 1);
     let start_col = range
         .start_col
         .as_ref()
@@ -112,7 +106,8 @@ mod tests {
     #[test]
     fn req_sheets_006_repeat_cell_request() {
         let format = json!({"bold": true});
-        let req = build_repeat_cell_request(0, 0, 5, 0, 3, format, "userEnteredFormat.textFormat.bold");
+        let req =
+            build_repeat_cell_request(0, 0, 5, 0, 3, format, "userEnteredFormat.textFormat.bold");
 
         assert!(req.get("repeatCell").is_some());
         let repeat = &req["repeatCell"];

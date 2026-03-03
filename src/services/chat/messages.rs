@@ -19,16 +19,21 @@ pub fn build_messages_list_url(
         params.push(format!("pageSize={}", m));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()));
+        params.push(format!(
+            "pageToken={}",
+            url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()
+        ));
     }
     if let Some(ord) = order {
-        params.push(format!("orderBy={}", url::form_urlencoded::byte_serialize(ord.as_bytes()).collect::<String>()));
+        params.push(format!(
+            "orderBy={}",
+            url::form_urlencoded::byte_serialize(ord.as_bytes()).collect::<String>()
+        ));
     }
     if let Some(t) = thread {
-        let encoded_filter = url::form_urlencoded::byte_serialize(
-            format!("thread.name = \"{}\"", t).as_bytes(),
-        )
-        .collect::<String>();
+        let encoded_filter =
+            url::form_urlencoded::byte_serialize(format!("thread.name = \"{}\"", t).as_bytes())
+                .collect::<String>();
         params.push(format!("filter={}", encoded_filter));
     }
     if params.is_empty() {
@@ -113,7 +118,13 @@ mod tests {
     // Acceptance: Messages list URL with all parameters
     #[test]
     fn req_chat_004_messages_list_url_all_params() {
-        let url = build_messages_list_url("AAAA", Some(10), Some("p2"), Some("createTime"), Some("spaces/AAAA/threads/t1"));
+        let url = build_messages_list_url(
+            "AAAA",
+            Some(10),
+            Some("p2"),
+            Some("createTime"),
+            Some("spaces/AAAA/threads/t1"),
+        );
         assert!(url.contains("pageSize=10"));
         assert!(url.contains("pageToken=p2"));
         assert!(url.contains("orderBy=createTime"));

@@ -36,7 +36,12 @@ pub async fn api_get<T: DeserializeOwned>(
     let body = response.text().await?;
 
     if verbose {
-        eprintln!("< {} ({} bytes, {}ms)", status, body.len(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({} bytes, {}ms)",
+            status,
+            body.len(),
+            elapsed.as_millis()
+        );
     }
 
     check_response_status(status, &body)?;
@@ -84,7 +89,12 @@ pub async fn api_post<T: DeserializeOwned>(
     let resp_body = response.text().await?;
 
     if verbose {
-        eprintln!("< {} ({} bytes, {}ms)", status, resp_body.len(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({} bytes, {}ms)",
+            status,
+            resp_body.len(),
+            elapsed.as_millis()
+        );
     }
 
     check_response_status(status, &resp_body)?;
@@ -127,7 +137,12 @@ pub async fn api_post_empty(
     let resp_body = response.text().await?;
 
     if verbose {
-        eprintln!("< {} ({} bytes, {}ms)", status, resp_body.len(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({} bytes, {}ms)",
+            status,
+            resp_body.len(),
+            elapsed.as_millis()
+        );
     }
 
     check_response_status(status, &resp_body)?;
@@ -172,7 +187,12 @@ pub async fn api_patch<T: DeserializeOwned>(
     let resp_body = response.text().await?;
 
     if verbose {
-        eprintln!("< {} ({} bytes, {}ms)", status, resp_body.len(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({} bytes, {}ms)",
+            status,
+            resp_body.len(),
+            elapsed.as_millis()
+        );
     }
 
     check_response_status(status, &resp_body)?;
@@ -206,7 +226,12 @@ pub async fn api_delete(
     let resp_body = response.text().await?;
 
     if verbose {
-        eprintln!("< {} ({} bytes, {}ms)", status, resp_body.len(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({} bytes, {}ms)",
+            status,
+            resp_body.len(),
+            elapsed.as_millis()
+        );
     }
 
     check_response_status(status, &resp_body)?;
@@ -251,7 +276,12 @@ pub async fn api_put_bytes<T: DeserializeOwned>(
     let resp_body = response.text().await?;
 
     if verbose {
-        eprintln!("< {} ({} bytes, {}ms)", status, resp_body.len(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({} bytes, {}ms)",
+            status,
+            resp_body.len(),
+            elapsed.as_millis()
+        );
     }
 
     check_response_status(status, &resp_body)?;
@@ -297,7 +327,12 @@ pub async fn api_post_bytes<T: DeserializeOwned>(
     let resp_body = response.text().await?;
 
     if verbose {
-        eprintln!("< {} ({} bytes, {}ms)", status, resp_body.len(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({} bytes, {}ms)",
+            status,
+            resp_body.len(),
+            elapsed.as_millis()
+        );
     }
 
     check_response_status(status, &resp_body)?;
@@ -323,7 +358,11 @@ pub async fn api_get_raw(
     let elapsed = start.elapsed();
 
     if verbose {
-        eprintln!("< {} ({}ms)", response.status().as_u16(), elapsed.as_millis());
+        eprintln!(
+            "< {} ({}ms)",
+            response.status().as_u16(),
+            elapsed.as_millis()
+        );
     }
 
     let status = response.status().as_u16();
@@ -345,8 +384,8 @@ pub fn check_response_status(status: u16, body: &str) -> anyhow::Result<()> {
     if status < 400 {
         return Ok(());
     }
-    let message = crate::error::api_error::parse_google_error(body)
-        .unwrap_or_else(|| body.to_string());
+    let message =
+        crate::error::api_error::parse_google_error(body).unwrap_or_else(|| body.to_string());
     Err(crate::error::exit::OmegaError::ApiError { status, message }.into())
 }
 
@@ -370,8 +409,8 @@ pub fn redact_auth_header(header_value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use serde::Deserialize;
+    use std::sync::Arc;
 
     // Helper: create a default RetryConfig with no retries for fast tests.
     fn no_retry_config() -> RetryConfig {
@@ -433,7 +472,9 @@ mod tests {
         let config = no_retry_config();
         let url = format!("{}/test/resource", server.url());
 
-        let result: TestResponse = api_get(&client, &url, &breaker, &config, false).await.unwrap();
+        let result: TestResponse = api_get(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
 
         assert_eq!(result.id, "123");
         assert_eq!(result.name, "test item");
@@ -463,9 +504,15 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("404"), "Error should contain status code 404: {}", err_msg);
         assert!(
-            err_msg.contains("not found") || err_msg.contains("Not found") || err_msg.contains("was not found"),
+            err_msg.contains("404"),
+            "Error should contain status code 404: {}",
+            err_msg
+        );
+        assert!(
+            err_msg.contains("not found")
+                || err_msg.contains("Not found")
+                || err_msg.contains("was not found"),
             "Error should contain 'not found' message: {}",
             err_msg
         );
@@ -495,7 +542,11 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("401"), "Error should contain status code 401: {}", err_msg);
+        assert!(
+            err_msg.contains("401"),
+            "Error should contain status code 401: {}",
+            err_msg
+        );
         mock.assert_async().await;
     }
 
@@ -522,7 +573,11 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("403"), "Error should contain status code 403: {}", err_msg);
+        assert!(
+            err_msg.contains("403"),
+            "Error should contain status code 403: {}",
+            err_msg
+        );
         mock.assert_async().await;
     }
 
@@ -572,7 +627,10 @@ mod tests {
         let result: anyhow::Result<TestResponse> =
             api_get(&client, &url, &breaker, &config, false).await;
 
-        assert!(result.is_err(), "Should fail when JSON shape doesn't match T");
+        assert!(
+            result.is_err(),
+            "Should fail when JSON shape doesn't match T"
+        );
         mock.assert_async().await;
     }
 
@@ -590,8 +648,14 @@ mod tests {
         }
         assert!(breaker.is_open(), "Circuit breaker should be open");
 
-        let result: anyhow::Result<TestResponse> =
-            api_get(&client, "http://127.0.0.1:1/never-called", &breaker, &config, false).await;
+        let result: anyhow::Result<TestResponse> = api_get(
+            &client,
+            "http://127.0.0.1:1/never-called",
+            &breaker,
+            &config,
+            false,
+        )
+        .await;
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
@@ -624,7 +688,11 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("500"), "Error should contain 500: {}", err_msg);
+        assert!(
+            err_msg.contains("500"),
+            "Error should contain 500: {}",
+            err_msg
+        );
         mock.assert_async().await;
     }
 
@@ -671,7 +739,9 @@ mod tests {
         let url = format!("{}/test/extra-fields", server.url());
 
         // TestResponse has id and name; extra fields should be silently ignored
-        let result: TestResponse = api_get(&client, &url, &breaker, &config, false).await.unwrap();
+        let result: TestResponse = api_get(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
         assert_eq!(result.id, "123");
         assert_eq!(result.name, "test");
         mock.assert_async().await;
@@ -695,7 +765,9 @@ mod tests {
         let config = no_retry_config();
         let url = format!("{}/test/search?q=hello+world&maxResults=10", server.url());
 
-        let result: TestResponse = api_get(&client, &url, &breaker, &config, false).await.unwrap();
+        let result: TestResponse = api_get(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
         assert_eq!(result.id, "search");
         mock.assert_async().await;
     }
@@ -725,7 +797,9 @@ mod tests {
         let body = serde_json::json!({"name": "created"});
 
         let result: Option<TestResponse> =
-            api_post(&client, &url, &body, &breaker, &config, false, false).await.unwrap();
+            api_post(&client, &url, &body, &breaker, &config, false, false)
+                .await
+                .unwrap();
 
         let response = result.expect("non-dry-run POST should return Some");
         assert_eq!(response.id, "new-id");
@@ -756,7 +830,11 @@ mod tests {
 
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("400"), "Error should contain 400: {}", err_msg);
+        assert!(
+            err_msg.contains("400"),
+            "Error should contain 400: {}",
+            err_msg
+        );
         mock.assert_async().await;
     }
 
@@ -779,7 +857,10 @@ mod tests {
         let body = serde_json::json!({"action": "do"});
 
         let result = api_post_empty(&client, &url, &body, &breaker, &config, false, false).await;
-        assert!(result.is_ok(), "204 response should succeed for api_post_empty");
+        assert!(
+            result.is_ok(),
+            "204 response should succeed for api_post_empty"
+        );
         mock.assert_async().await;
     }
 
@@ -804,7 +885,9 @@ mod tests {
         let body = serde_json::json!({"name": "updated"});
 
         let result: Option<TestResponse> =
-            api_patch(&client, &url, &body, &breaker, &config, false, false).await.unwrap();
+            api_patch(&client, &url, &body, &breaker, &config, false, false)
+                .await
+                .unwrap();
 
         let response = result.expect("non-dry-run PATCH should return Some");
         assert_eq!(response.id, "123");
@@ -876,10 +959,18 @@ mod tests {
         let url = format!("{}/upload/file", server.url());
         let body = vec![0u8, 1, 2, 3, 4, 5];
 
-        let result: Option<TestResponse> =
-            api_put_bytes(&client, &url, "application/octet-stream", body, &breaker, &config, false, false)
-                .await
-                .unwrap();
+        let result: Option<TestResponse> = api_put_bytes(
+            &client,
+            &url,
+            "application/octet-stream",
+            body,
+            &breaker,
+            &config,
+            false,
+            false,
+        )
+        .await
+        .unwrap();
 
         let response = result.expect("non-dry-run PUT should return Some");
         assert_eq!(response.id, "file-1");
@@ -904,7 +995,9 @@ mod tests {
         let config = no_retry_config();
         let url = format!("{}/download/file", server.url());
 
-        let response = api_get_raw(&client, &url, &breaker, &config, false).await.unwrap();
+        let response = api_get_raw(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
         assert_eq!(response.status(), 200);
         let body = response.text().await.unwrap();
         assert_eq!(body, "binary file content here");
@@ -948,11 +1041,17 @@ mod tests {
         for _ in 0..5 {
             breaker.record_failure();
         }
-        assert!(breaker2.is_open(), "Arc-shared breaker should see open state");
+        assert!(
+            breaker2.is_open(),
+            "Arc-shared breaker should see open state"
+        );
 
         // Reset on one reference affects the other
         breaker2.record_success();
-        assert!(!breaker.is_open(), "Arc-shared breaker should see closed state after success");
+        assert!(
+            !breaker.is_open(),
+            "Arc-shared breaker should see closed state after success"
+        );
     }
 
     // Requirement: REQ-RT-021 (Must)
@@ -1041,10 +1140,8 @@ mod tests {
     // Acceptance: check_response_status returns error for 4xx
     #[test]
     fn req_rt_022_check_status_4xx_error() {
-        let result = check_response_status(
-            400,
-            r#"{"error":{"code":400,"message":"Bad request"}}"#,
-        );
+        let result =
+            check_response_status(400, r#"{"error":{"code":400,"message":"Bad request"}}"#);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("400"));
@@ -1091,7 +1188,7 @@ mod tests {
     // (This verifies that check_response_status errors can be mapped to exit codes)
     #[test]
     fn req_rt_022_api_error_maps_to_exit_code() {
-        use crate::error::exit::{OmegaError, exit_code_for, codes};
+        use crate::error::exit::{codes, exit_code_for, OmegaError};
         // 401 -> AUTH_REQUIRED
         let err = OmegaError::ApiError {
             status: 401,
@@ -1132,7 +1229,9 @@ mod tests {
         let url = format!("{}/test/verbose", server.url());
 
         // verbose=true should not change the return value
-        let result: TestResponse = api_get(&client, &url, &breaker, &config, true).await.unwrap();
+        let result: TestResponse = api_get(&client, &url, &breaker, &config, true)
+            .await
+            .unwrap();
         assert_eq!(result.id, "v");
         mock.assert_async().await;
     }
@@ -1157,7 +1256,9 @@ mod tests {
         let body = serde_json::json!({"key": "value"});
 
         let result: Option<TestResponse> =
-            api_post(&client, &url, &body, &breaker, &config, true, false).await.unwrap();
+            api_post(&client, &url, &body, &breaker, &config, true, false)
+                .await
+                .unwrap();
         assert_eq!(result.expect("non-dry-run should return Some").id, "vp");
         mock.assert_async().await;
     }
@@ -1237,8 +1338,14 @@ mod tests {
         let result: anyhow::Result<Option<TestResponse>> =
             api_post(&client, &url, &body, &breaker, &config, false, true).await;
 
-        assert!(result.is_ok(), "dry-run POST should return Ok (exit code 0)");
-        assert!(result.unwrap().is_none(), "dry-run POST should return None (no response body)");
+        assert!(
+            result.is_ok(),
+            "dry-run POST should return Ok (exit code 0)"
+        );
+        assert!(
+            result.unwrap().is_none(),
+            "dry-run POST should return None (no response body)"
+        );
         mock.assert_async().await; // Verifies 0 calls were made
     }
 
@@ -1262,8 +1369,14 @@ mod tests {
         let result: anyhow::Result<Option<TestResponse>> =
             api_patch(&client, &url, &body, &breaker, &config, false, true).await;
 
-        assert!(result.is_ok(), "dry-run PATCH should return Ok (exit code 0)");
-        assert!(result.unwrap().is_none(), "dry-run PATCH should return None");
+        assert!(
+            result.is_ok(),
+            "dry-run PATCH should return Ok (exit code 0)"
+        );
+        assert!(
+            result.unwrap().is_none(),
+            "dry-run PATCH should return None"
+        );
         mock.assert_async().await;
     }
 
@@ -1305,9 +1418,17 @@ mod tests {
         let url = format!("{}/upload/dry", server.url());
         let body = vec![0u8; 100];
 
-        let result: anyhow::Result<Option<TestResponse>> =
-            api_put_bytes(&client, &url, "application/octet-stream", body, &breaker, &config, false, true)
-                .await;
+        let result: anyhow::Result<Option<TestResponse>> = api_put_bytes(
+            &client,
+            &url,
+            "application/octet-stream",
+            body,
+            &breaker,
+            &config,
+            false,
+            true,
+        )
+        .await;
 
         assert!(result.is_ok(), "dry-run PUT should return Ok (exit code 0)");
         assert!(result.unwrap().is_none(), "dry-run PUT should return None");
@@ -1336,7 +1457,9 @@ mod tests {
         let url = format!("{}/test/read", server.url());
 
         // api_get does NOT have a dry_run parameter -- GET always executes
-        let result: TestResponse = api_get(&client, &url, &breaker, &config, false).await.unwrap();
+        let result: TestResponse = api_get(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
         assert_eq!(result.id, "r");
         mock.assert_async().await; // Verifies exactly 1 call
     }
@@ -1357,8 +1480,8 @@ mod tests {
             &body,
             &breaker,
             &config,
-            true,  // verbose
-            true,  // dry_run
+            true, // verbose
+            true, // dry_run
         )
         .await;
 
@@ -1411,7 +1534,9 @@ mod tests {
         let config = no_retry_config();
         let url = format!("{}/test/unicode", server.url());
 
-        let result: TestResponse = api_get(&client, &url, &breaker, &config, false).await.unwrap();
+        let result: TestResponse = api_get(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
         assert_eq!(result.id, "uni");
         mock.assert_async().await;
     }
@@ -1436,7 +1561,9 @@ mod tests {
         let body = serde_json::json!({});
 
         let result: Option<TestResponse> =
-            api_post(&client, &url, &body, &breaker, &config, false, false).await.unwrap();
+            api_post(&client, &url, &body, &breaker, &config, false, false)
+                .await
+                .unwrap();
         assert_eq!(result.expect("non-dry-run should return Some").id, "eb");
         mock.assert_async().await;
     }
@@ -1462,7 +1589,9 @@ mod tests {
         let config = no_retry_config();
         let url = format!("{}/test/large", server.url());
 
-        let result: TestResponse = api_get(&client, &url, &breaker, &config, false).await.unwrap();
+        let result: TestResponse = api_get(&client, &url, &breaker, &config, false)
+            .await
+            .unwrap();
         assert_eq!(result.id, "big");
         assert_eq!(result.name.len(), 10_000);
         mock.assert_async().await;
@@ -1498,7 +1627,10 @@ mod tests {
     #[test]
     fn req_rt_022_check_status_boundary_399_400() {
         assert!(check_response_status(399, "").is_ok(), "399 should be Ok");
-        assert!(check_response_status(400, "bad").is_err(), "400 should be Err");
+        assert!(
+            check_response_status(400, "bad").is_err(),
+            "400 should be Err"
+        );
     }
 
     // Requirement: REQ-RT-022 (Must)

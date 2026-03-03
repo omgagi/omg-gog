@@ -9,8 +9,7 @@ const PERSON_FIELDS: &str = "names,emailAddresses,photos,locales";
 pub fn build_people_me_url() -> String {
     format!(
         "{}/people/me?personFields={}",
-        PEOPLE_BASE_URL,
-        PERSON_FIELDS
+        PEOPLE_BASE_URL, PERSON_FIELDS
     )
 }
 
@@ -18,18 +17,12 @@ pub fn build_people_me_url() -> String {
 pub fn build_people_get_url(resource_name: &str) -> String {
     format!(
         "{}/{}?personFields={}",
-        PEOPLE_BASE_URL,
-        resource_name,
-        PERSON_FIELDS
+        PEOPLE_BASE_URL, resource_name, PERSON_FIELDS
     )
 }
 
 /// Build URL for searching people.
-pub fn build_people_search_url(
-    query: &str,
-    max: Option<u32>,
-    page_token: Option<&str>,
-) -> String {
+pub fn build_people_search_url(query: &str, max: Option<u32>, page_token: Option<&str>) -> String {
     let max_val = max.unwrap_or(10);
     let mut url = format!(
         "{}/people:searchContacts?query={}&readMask={}&pageSize={}",
@@ -52,8 +45,7 @@ pub fn build_people_relations_url(resource_name: Option<&str>) -> String {
     let rn = resource_name.unwrap_or("people/me");
     format!(
         "{}/{}/connections?personFields=names,emailAddresses,relations",
-        PEOPLE_BASE_URL,
-        rn
+        PEOPLE_BASE_URL, rn
     )
 }
 

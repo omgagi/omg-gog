@@ -44,10 +44,7 @@ pub fn build_invitation_get_url(invitation_id: &str) -> String {
     format!(
         "{}/invitations/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            invitation_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(invitation_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -74,10 +71,7 @@ pub fn build_invitation_accept_url(invitation_id: &str) -> String {
     format!(
         "{}/invitations/{}:accept",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            invitation_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(invitation_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -86,10 +80,7 @@ pub fn build_invitation_delete_url(invitation_id: &str) -> String {
     format!(
         "{}/invitations/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            invitation_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(invitation_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 

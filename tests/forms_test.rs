@@ -81,13 +81,22 @@ fn req_forms_001_integration_form_from_api() {
     assert_eq!(form.form_id, Some("1FAIpQLSf_abc123def456".to_string()));
     assert_eq!(form.revision_id, Some("00000042".to_string()));
     assert!(form.responder_uri.as_ref().unwrap().contains("viewform"));
-    assert_eq!(form.linked_sheet_id, Some("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms".to_string()));
+    assert_eq!(
+        form.linked_sheet_id,
+        Some("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms".to_string())
+    );
 
     // Verify form info
     let info = form.info.as_ref().unwrap();
     assert_eq!(info.title, Some("Customer Satisfaction Survey".to_string()));
-    assert_eq!(info.description, Some("Please take a moment to rate your experience with our service.".to_string()));
-    assert_eq!(info.document_title, Some("Customer Satisfaction Survey".to_string()));
+    assert_eq!(
+        info.description,
+        Some("Please take a moment to rate your experience with our service.".to_string())
+    );
+    assert_eq!(
+        info.document_title,
+        Some("Customer Satisfaction Survey".to_string())
+    );
 
     // Verify settings
     assert!(form.settings.is_some());
@@ -97,7 +106,10 @@ fn req_forms_001_integration_form_from_api() {
 
     // Scale question
     assert_eq!(form.items[0].item_id, Some("item_001".to_string()));
-    assert_eq!(form.items[0].title, Some("How would you rate our service?".to_string()));
+    assert_eq!(
+        form.items[0].title,
+        Some("How would you rate our service?".to_string())
+    );
     assert!(form.items[0].question_item.is_some());
 
     // Text question
@@ -235,7 +247,11 @@ fn req_forms_003_integration_response_list_from_api() {
 
     let a2 = r1.answers.get("q_002").unwrap();
     let ta2 = a2.text_answers.as_ref().unwrap();
-    assert!(ta2.answers[0].value.as_ref().unwrap().contains("Great service"));
+    assert!(ta2.answers[0]
+        .value
+        .as_ref()
+        .unwrap()
+        .contains("Great service"));
 
     // Second response: has score, skipped q_002
     let r2 = &list.responses[1];

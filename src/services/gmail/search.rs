@@ -10,9 +10,7 @@ pub fn build_thread_search_url(
 ) -> String {
     let base = format!("{}/users/me/threads", GMAIL_BASE_URL);
     let max = max_results.unwrap_or(20);
-    let mut params = vec![
-        format!("maxResults={}", max),
-    ];
+    let mut params = vec![format!("maxResults={}", max)];
     if !query.is_empty() {
         params.push(format!(
             "q={}",
@@ -38,9 +36,7 @@ pub fn build_message_search_url(
 ) -> String {
     let base = format!("{}/users/me/messages", GMAIL_BASE_URL);
     let max = max_results.unwrap_or(20);
-    let mut params = vec![
-        format!("maxResults={}", max),
-    ];
+    let mut params = vec![format!("maxResults={}", max)];
     if !query.is_empty() {
         params.push(format!(
             "q={}",

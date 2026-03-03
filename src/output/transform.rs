@@ -266,10 +266,13 @@ mod tests {
             {"id": "2", "name": "b", "extra": "y"}
         ]);
         let result = select_fields(input, &["id".to_string(), "name".to_string()]);
-        assert_eq!(result, json!([
-            {"id": "1", "name": "a"},
-            {"id": "2", "name": "b"}
-        ]));
+        assert_eq!(
+            result,
+            json!([
+                {"id": "1", "name": "a"},
+                {"id": "2", "name": "b"}
+            ])
+        );
     }
 
     // Requirement: REQ-OUTPUT-003 (Must)
@@ -325,7 +328,10 @@ mod tests {
     #[test]
     fn req_output_003_get_at_path_nested() {
         let input = json!({"file": {"metadata": {"name": "doc.txt"}}});
-        assert_eq!(get_at_path(&input, "file.metadata.name"), Some(json!("doc.txt")));
+        assert_eq!(
+            get_at_path(&input, "file.metadata.name"),
+            Some(json!("doc.txt"))
+        );
     }
 
     // Requirement: REQ-OUTPUT-003 (Must)

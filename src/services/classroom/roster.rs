@@ -15,10 +15,7 @@ pub fn build_students_list_url(
     let base = format!(
         "{}/courses/{}/students",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -42,18 +39,12 @@ pub fn build_student_add_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}/students",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
 /// Build request body for adding a student.
-pub fn build_student_add_body(
-    user_id: &str,
-    enrollment_code: Option<&str>,
-) -> serde_json::Value {
+pub fn build_student_add_body(user_id: &str, enrollment_code: Option<&str>) -> serde_json::Value {
     let mut body = serde_json::json!({
         "userId": user_id,
     });
@@ -73,14 +64,8 @@ pub fn build_student_remove_url(course_id: &str, user_id: &str) -> String {
     format!(
         "{}/courses/{}/students/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            user_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(user_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -97,10 +82,7 @@ pub fn build_teachers_list_url(
     let base = format!(
         "{}/courses/{}/teachers",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -124,10 +106,7 @@ pub fn build_teacher_add_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}/teachers",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -148,14 +127,8 @@ pub fn build_teacher_remove_url(course_id: &str, user_id: &str) -> String {
     format!(
         "{}/courses/{}/teachers/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            user_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(user_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 

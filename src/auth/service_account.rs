@@ -40,7 +40,10 @@ pub fn load_service_account_key(path: &std::path::Path) -> anyhow::Result<Servic
     let content = std::fs::read_to_string(path)?;
     let key: ServiceAccountKey = serde_json::from_str(&content)?;
     if key.key_type != "service_account" {
-        anyhow::bail!("expected key type 'service_account', got '{}'", key.key_type);
+        anyhow::bail!(
+            "expected key type 'service_account', got '{}'",
+            key.key_type
+        );
     }
     Ok(key)
 }
@@ -131,7 +134,8 @@ mod tests {
     #[tokio::test]
     async fn req_rt_006_exchange_jwt_posts_jwt_bearer_grant_type() {
         let mut server = mockito::Server::new_async().await;
-        let mock = server.mock("POST", "/token")
+        let mock = server
+            .mock("POST", "/token")
             .match_body(mockito::Matcher::AllOf(vec![
                 mockito::Matcher::UrlEncoded(
                     "grant_type".to_string(),
@@ -144,18 +148,24 @@ mod tests {
             ]))
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
                 "access_token": "ya29.sa_access_token",
                 "expires_in": 3600,
                 "token_type": "Bearer"
-            }"#)
+            }"#,
+            )
             .create_async()
             .await;
 
         let client = reqwest::Client::new();
         let token_url = format!("{}/token", server.url());
         let result = exchange_jwt_with_url(&client, &token_url, "test.jwt.assertion").await;
-        assert!(result.is_ok(), "Exchange should succeed with mock: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Exchange should succeed with mock: {:?}",
+            result.err()
+        );
         let response = result.unwrap();
         assert_eq!(response.access_token, "ya29.sa_access_token");
         assert_eq!(response.expires_in, 3600);
@@ -172,8 +182,8 @@ mod tests {
             "expires_in": 3600,
             "token_type": "Bearer"
         }"#;
-        let resp: ServiceAccountTokenResponse = serde_json::from_str(json)
-            .expect("Should deserialize service account token response");
+        let resp: ServiceAccountTokenResponse =
+            serde_json::from_str(json).expect("Should deserialize service account token response");
         assert_eq!(resp.access_token, "ya29.service_account_token");
         assert_eq!(resp.expires_in, 3600);
         assert_eq!(resp.token_type, "Bearer");
@@ -184,13 +194,16 @@ mod tests {
     #[tokio::test]
     async fn req_rt_006_exchange_jwt_failure_returns_error() {
         let mut server = mockito::Server::new_async().await;
-        let _mock = server.mock("POST", "/token")
+        let _mock = server
+            .mock("POST", "/token")
             .with_status(400)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
                 "error": "invalid_grant",
                 "error_description": "Invalid JWT Signature."
-            }"#)
+            }"#,
+            )
             .create_async()
             .await;
 
@@ -199,7 +212,11 @@ mod tests {
         let result = exchange_jwt_with_url(&client, &token_url, "invalid.jwt.assertion").await;
         assert!(result.is_err(), "Bad JWT should cause exchange error");
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("400") || err_msg.contains("invalid_grant") || err_msg.contains("JWT exchange failed"));
+        assert!(
+            err_msg.contains("400")
+                || err_msg.contains("invalid_grant")
+                || err_msg.contains("JWT exchange failed")
+        );
     }
 
     // Requirement: REQ-RT-006 (Must)
@@ -233,7 +250,10 @@ mod tests {
             sub: None,
         };
         let json = serde_json::to_string(&claims).expect("claims should serialize");
-        assert!(!json.contains("sub"), "sub field should be omitted when None");
+        assert!(
+            !json.contains("sub"),
+            "sub field should be omitted when None"
+        );
     }
 
     // Requirement: REQ-RT-006 (Must)
@@ -259,8 +279,8 @@ mod tests {
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token"
         }"#;
-        let key: ServiceAccountKey = serde_json::from_str(json)
-            .expect("Should deserialize service account key");
+        let key: ServiceAccountKey =
+            serde_json::from_str(json).expect("Should deserialize service account key");
         assert_eq!(key.key_type, "service_account");
         assert_eq!(key.project_id, "my-project");
         assert_eq!(key.client_email, "sa@my-project.iam.gserviceaccount.com");
@@ -272,7 +292,9 @@ mod tests {
     fn req_rt_006_edge_wrong_key_type() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("wrong-type.json");
-        std::fs::write(&path, r#"{
+        std::fs::write(
+            &path,
+            r#"{
             "type": "authorized_user",
             "project_id": "p",
             "private_key_id": "k",
@@ -281,11 +303,16 @@ mod tests {
             "client_id": "123",
             "auth_uri": "u",
             "token_uri": "u"
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
         let result = load_service_account_key(&path);
         assert!(result.is_err(), "Wrong key type should fail");
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("service_account"), "Error should mention expected type");
+        assert!(
+            err.contains("service_account"),
+            "Error should mention expected type"
+        );
     }
 
     // Requirement: REQ-RT-006 (Must)

@@ -1,9 +1,9 @@
 //! Docs service integration tests.
 
-use omega_google::services::docs::types::*;
 use omega_google::services::docs::content::*;
-use omega_google::services::docs::sedmat::*;
 use omega_google::services::docs::markdown::*;
+use omega_google::services::docs::sedmat::*;
+use omega_google::services::docs::types::*;
 
 // ---------------------------------------------------------------
 // REQ-DOCS-002 (Must): Document deserialization from realistic API response
@@ -463,7 +463,10 @@ fn req_docs_016_integration_markdown_conversion() {
     // Verify bold text conversion
     assert!(md.contains("**bold text**"), "Should contain bold text");
     // Verify normal text preserved
-    assert!(md.contains("Some normal text"), "Should contain normal text");
+    assert!(
+        md.contains("Some normal text"),
+        "Should contain normal text"
+    );
 }
 
 // Requirement: REQ-DOCS-016 (Should)
@@ -492,7 +495,11 @@ fn req_docs_016_integration_markdown_bold_italic() {
 
     let body: Body = serde_json::from_str(body_json).unwrap();
     let md = body_to_markdown(&body);
-    assert!(md.contains("***emphasis***"), "Should contain bold+italic (***) text, got: {}", md);
+    assert!(
+        md.contains("***emphasis***"),
+        "Should contain bold+italic (***) text, got: {}",
+        md
+    );
 }
 
 // ---------------------------------------------------------------
@@ -555,7 +562,10 @@ fn req_docs_002_integration_comments_from_api() {
     assert_eq!(comments[0].id, Some("c_1001".to_string()));
     assert_eq!(comments[0].resolved, Some(false));
     assert_eq!(comments[0].replies.len(), 2);
-    assert_eq!(comments[0].replies[0].content, Some("I've updated the intro. Please take another look.".to_string()));
+    assert_eq!(
+        comments[0].replies[0].content,
+        Some("I've updated the intro. Please take another look.".to_string())
+    );
 
     // Second comment resolved
     assert_eq!(comments[1].id, Some("c_1002".to_string()));

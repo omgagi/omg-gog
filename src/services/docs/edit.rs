@@ -40,7 +40,11 @@ pub fn build_delete_content_range_body(start_index: i64, end_index: i64) -> serd
 }
 
 /// Build a batchUpdate request body for replaceAllText.
-pub fn build_replace_all_text_body(find: &str, replace: &str, match_case: bool) -> serde_json::Value {
+pub fn build_replace_all_text_body(
+    find: &str,
+    replace: &str,
+    match_case: bool,
+) -> serde_json::Value {
     serde_json::json!({
         "requests": [
             {

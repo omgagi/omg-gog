@@ -236,9 +236,13 @@ pub fn guess_content_type(filename: &str) -> String {
         "json" => "application/json".to_string(),
         "xml" => "application/xml".to_string(),
         "zip" => "application/zip".to_string(),
-        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document".to_string(),
+        "docx" => {
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document".to_string()
+        }
         "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".to_string(),
-        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation".to_string(),
+        "pptx" => {
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation".to_string()
+        }
         "mp4" => "video/mp4".to_string(),
         "mp3" => "audio/mpeg".to_string(),
         _ => "application/octet-stream".to_string(),
@@ -495,8 +499,14 @@ mod tests {
     fn rfc2047_mixed_emoji_and_dash() {
         let subject = "\u{1F44B} Hello from OMEGA \u{2014} Sent autonomously via omg-gog";
         let encoded = encode_rfc2047(subject);
-        assert!(!encoded.contains('\u{1F44B}'), "raw emoji must not appear in header");
-        assert!(!encoded.contains('\u{2014}'), "raw em-dash must not appear in header");
+        assert!(
+            !encoded.contains('\u{1F44B}'),
+            "raw emoji must not appear in header"
+        );
+        assert!(
+            !encoded.contains('\u{2014}'),
+            "raw em-dash must not appear in header"
+        );
         let decoded = decode_rfc2047_words(&encoded);
         assert_eq!(decoded, subject);
     }
@@ -511,8 +521,14 @@ mod tests {
             ..Default::default()
         };
         let mime = build_mime_message(&params);
-        assert!(mime.contains("Subject: =?UTF-8?B?"), "subject must be RFC 2047 encoded");
-        assert!(!mime.contains("Subject: \u{1F44B}"), "raw emoji must not be in Subject header");
+        assert!(
+            mime.contains("Subject: =?UTF-8?B?"),
+            "subject must be RFC 2047 encoded"
+        );
+        assert!(
+            !mime.contains("Subject: \u{1F44B}"),
+            "raw emoji must not be in Subject header"
+        );
     }
 
     #[test]

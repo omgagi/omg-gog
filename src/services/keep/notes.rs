@@ -1,7 +1,7 @@
 //! Keep notes URL builders and helpers.
 
-use super::KEEP_BASE_URL;
 use super::types::Note;
+use super::KEEP_BASE_URL;
 
 /// Build URL for listing notes.
 /// REQ-KEEP-001
@@ -113,9 +113,9 @@ fn list_item_contains(item: &super::types::ListItem, query_lower: &str) -> bool 
 
 #[cfg(test)]
 mod tests {
+    use super::super::types::*;
     use super::*;
     use std::collections::HashMap;
-    use super::super::types::*;
 
     // ---------------------------------------------------------------
     // REQ-KEEP-001 (Must): Notes list URL

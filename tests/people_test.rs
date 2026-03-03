@@ -1,7 +1,7 @@
 //! People service integration tests.
 
-use omega_google::services::people::types::*;
 use omega_google::services::people::people::*;
+use omega_google::services::people::types::*;
 
 // ---------------------------------------------------------------
 // REQ-PEOPLE-001 (Must): PersonResponse deserialization
@@ -72,20 +72,36 @@ fn req_people_001_integration_person_response_from_api() {
     assert_eq!(person.names.len(), 1);
     assert_eq!(person.names[0].given_name, Some("Alice".to_string()));
     assert_eq!(person.names[0].family_name, Some("Wonderland".to_string()));
-    assert_eq!(person.names[0].display_name, Some("Alice Wonderland".to_string()));
+    assert_eq!(
+        person.names[0].display_name,
+        Some("Alice Wonderland".to_string())
+    );
     // Unknown subfields preserved
     assert!(person.names[0].extra.contains_key("displayNameLastFirst"));
 
     // Verify email addresses
     assert_eq!(person.email_addresses.len(), 2);
-    assert_eq!(person.email_addresses[0].value, Some("alice@company.com".to_string()));
+    assert_eq!(
+        person.email_addresses[0].value,
+        Some("alice@company.com".to_string())
+    );
     assert_eq!(person.email_addresses[0].type_, Some("work".to_string()));
-    assert_eq!(person.email_addresses[0].formatted_type, Some("Work".to_string()));
-    assert_eq!(person.email_addresses[1].value, Some("alice.wonder@gmail.com".to_string()));
+    assert_eq!(
+        person.email_addresses[0].formatted_type,
+        Some("Work".to_string())
+    );
+    assert_eq!(
+        person.email_addresses[1].value,
+        Some("alice.wonder@gmail.com".to_string())
+    );
 
     // Verify photos
     assert_eq!(person.photos.len(), 1);
-    assert!(person.photos[0].url.as_ref().unwrap().contains("googleusercontent.com"));
+    assert!(person.photos[0]
+        .url
+        .as_ref()
+        .unwrap()
+        .contains("googleusercontent.com"));
     assert!(person.photos[0].extra.contains_key("default"));
 
     // Verify locales
@@ -199,7 +215,10 @@ fn req_people_002_integration_search_response_from_api() {
     assert_eq!(p1.resource_name, Some("people/c001".to_string()));
     assert_eq!(p1.names[0].given_name, Some("Alice".to_string()));
     assert_eq!(p1.names[0].family_name, Some("Baker".to_string()));
-    assert_eq!(p1.email_addresses[0].value, Some("alice.baker@company.com".to_string()));
+    assert_eq!(
+        p1.email_addresses[0].value,
+        Some("alice.baker@company.com".to_string())
+    );
     assert_eq!(p1.photos.len(), 1);
 
     // Second result

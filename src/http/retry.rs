@@ -75,18 +75,36 @@ mod tests {
         let base = Duration::from_secs(1);
         // Attempt 0: base * 2^0 = 1s (+ jitter)
         let d0 = calculate_backoff(0, base, None);
-        assert!(d0 >= Duration::from_secs(1), "attempt 0 should be at least 1s");
-        assert!(d0 <= Duration::from_millis(1500), "attempt 0 should be at most 1.5s (with jitter)");
+        assert!(
+            d0 >= Duration::from_secs(1),
+            "attempt 0 should be at least 1s"
+        );
+        assert!(
+            d0 <= Duration::from_millis(1500),
+            "attempt 0 should be at most 1.5s (with jitter)"
+        );
 
         // Attempt 1: base * 2^1 = 2s (+ jitter)
         let d1 = calculate_backoff(1, base, None);
-        assert!(d1 >= Duration::from_secs(2), "attempt 1 should be at least 2s");
-        assert!(d1 <= Duration::from_secs(3), "attempt 1 should be at most 3s (with jitter)");
+        assert!(
+            d1 >= Duration::from_secs(2),
+            "attempt 1 should be at least 2s"
+        );
+        assert!(
+            d1 <= Duration::from_secs(3),
+            "attempt 1 should be at most 3s (with jitter)"
+        );
 
         // Attempt 2: base * 2^2 = 4s (+ jitter)
         let d2 = calculate_backoff(2, base, None);
-        assert!(d2 >= Duration::from_secs(4), "attempt 2 should be at least 4s");
-        assert!(d2 <= Duration::from_secs(6), "attempt 2 should be at most 6s (with jitter)");
+        assert!(
+            d2 >= Duration::from_secs(4),
+            "attempt 2 should be at least 4s"
+        );
+        assert!(
+            d2 <= Duration::from_secs(6),
+            "attempt 2 should be at most 6s (with jitter)"
+        );
     }
 
     // Requirement: REQ-HTTP-002 (Must)
@@ -113,7 +131,11 @@ mod tests {
     fn req_http_002_respects_retry_after_header() {
         let base = Duration::from_secs(1);
         let d = calculate_backoff(0, base, Some(5));
-        assert_eq!(d, Duration::from_secs(5), "should use Retry-After value directly");
+        assert_eq!(
+            d,
+            Duration::from_secs(5),
+            "should use Retry-After value directly"
+        );
     }
 
     // ---------------------------------------------------------------

@@ -44,7 +44,13 @@ pub fn format_error(msg: &str, use_color: bool) -> String {
 /// Format a warning message with optional color.
 pub fn format_warning(msg: &str, use_color: bool) -> String {
     if use_color {
-        format!("{}{}Warning:{} {}", ansi::BOLD, ansi::YELLOW, ansi::RESET, msg)
+        format!(
+            "{}{}Warning:{} {}",
+            ansi::BOLD,
+            ansi::YELLOW,
+            ansi::RESET,
+            msg
+        )
     } else {
         format!("Warning: {}", msg)
     }

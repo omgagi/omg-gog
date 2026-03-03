@@ -13,9 +13,7 @@ pub fn build_freebusy_request(
         time_max: time_max.to_string(),
         items: calendar_ids
             .iter()
-            .map(|id| FreeBusyCalendarId {
-                id: id.clone(),
-            })
+            .map(|id| FreeBusyCalendarId { id: id.clone() })
             .collect(),
         extra: std::collections::HashMap::new(),
     }
@@ -35,7 +33,10 @@ mod tests {
     #[test]
     fn req_cal_008_freebusy_request_builder() {
         let req = build_freebusy_request(
-            &["alice@example.com".to_string(), "bob@example.com".to_string()],
+            &[
+                "alice@example.com".to_string(),
+                "bob@example.com".to_string(),
+            ],
             "2024-01-15T00:00:00Z",
             "2024-01-16T00:00:00Z",
         );

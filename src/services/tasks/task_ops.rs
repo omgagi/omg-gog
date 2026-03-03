@@ -17,7 +17,10 @@ pub fn build_tasks_list_url(
         params.push(format!("maxResults={}", m));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()));
+        params.push(format!(
+            "pageToken={}",
+            url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()
+        ));
     }
     if params.is_empty() {
         base
@@ -32,7 +35,10 @@ pub fn build_task_get_url(tasklist_id: &str, task_id: &str) -> String {
     use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
     let encoded_list = utf8_percent_encode(tasklist_id, NON_ALPHANUMERIC).to_string();
     let encoded_task = utf8_percent_encode(task_id, NON_ALPHANUMERIC).to_string();
-    format!("{}/lists/{}/tasks/{}", TASKS_BASE_URL, encoded_list, encoded_task)
+    format!(
+        "{}/lists/{}/tasks/{}",
+        TASKS_BASE_URL, encoded_list, encoded_task
+    )
 }
 
 /// Build URL for creating a task.
@@ -76,7 +82,10 @@ pub fn build_task_update_url(tasklist_id: &str, task_id: &str) -> String {
     use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
     let encoded_list = utf8_percent_encode(tasklist_id, NON_ALPHANUMERIC).to_string();
     let encoded_task = utf8_percent_encode(task_id, NON_ALPHANUMERIC).to_string();
-    format!("{}/lists/{}/tasks/{}", TASKS_BASE_URL, encoded_list, encoded_task)
+    format!(
+        "{}/lists/{}/tasks/{}",
+        TASKS_BASE_URL, encoded_list, encoded_task
+    )
 }
 
 /// Build request body for updating a task.
@@ -109,7 +118,10 @@ pub fn build_task_delete_url(tasklist_id: &str, task_id: &str) -> String {
     use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
     let encoded_list = utf8_percent_encode(tasklist_id, NON_ALPHANUMERIC).to_string();
     let encoded_task = utf8_percent_encode(task_id, NON_ALPHANUMERIC).to_string();
-    format!("{}/lists/{}/tasks/{}", TASKS_BASE_URL, encoded_list, encoded_task)
+    format!(
+        "{}/lists/{}/tasks/{}",
+        TASKS_BASE_URL, encoded_list, encoded_task
+    )
 }
 
 /// Build URL for clearing completed tasks in a task list.

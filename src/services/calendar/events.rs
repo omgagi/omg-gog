@@ -158,22 +158,10 @@ pub fn find_conflicts(events: &[Event]) -> Vec<(String, String)> {
             let e1 = &events[i];
             let e2 = &events[j];
             // Get start/end datetimes as strings
-            let e1_start_str = e1
-                .start
-                .as_ref()
-                .and_then(|s| s.date_time.as_deref());
-            let e1_end_str = e1
-                .end
-                .as_ref()
-                .and_then(|e| e.date_time.as_deref());
-            let e2_start_str = e2
-                .start
-                .as_ref()
-                .and_then(|s| s.date_time.as_deref());
-            let e2_end_str = e2
-                .end
-                .as_ref()
-                .and_then(|e| e.date_time.as_deref());
+            let e1_start_str = e1.start.as_ref().and_then(|s| s.date_time.as_deref());
+            let e1_end_str = e1.end.as_ref().and_then(|e| e.date_time.as_deref());
+            let e2_start_str = e2.start.as_ref().and_then(|s| s.date_time.as_deref());
+            let e2_end_str = e2.end.as_ref().and_then(|e| e.date_time.as_deref());
 
             if let (Some(s1_str), Some(e1_e_str), Some(s2_str), Some(e2_e_str)) =
                 (e1_start_str, e1_end_str, e2_start_str, e2_end_str)
@@ -391,11 +379,23 @@ mod tests {
                     date: None,
                     time_zone: None,
                 }),
-                description: None, location: None, status: None, html_link: None,
-                created: None, updated: None, creator: None, organizer: None,
-                attendees: vec![], recurrence: vec![], recurring_event_id: None,
-                event_type: None, visibility: None, transparency: None,
-                conference_data: None, hangout_link: None, color_id: None,
+                description: None,
+                location: None,
+                status: None,
+                html_link: None,
+                created: None,
+                updated: None,
+                creator: None,
+                organizer: None,
+                attendees: vec![],
+                recurrence: vec![],
+                recurring_event_id: None,
+                event_type: None,
+                visibility: None,
+                transparency: None,
+                conference_data: None,
+                hangout_link: None,
+                color_id: None,
                 extra: HashMap::new(),
             },
             Event {
@@ -411,11 +411,23 @@ mod tests {
                     date: None,
                     time_zone: None,
                 }),
-                description: None, location: None, status: None, html_link: None,
-                created: None, updated: None, creator: None, organizer: None,
-                attendees: vec![], recurrence: vec![], recurring_event_id: None,
-                event_type: None, visibility: None, transparency: None,
-                conference_data: None, hangout_link: None, color_id: None,
+                description: None,
+                location: None,
+                status: None,
+                html_link: None,
+                created: None,
+                updated: None,
+                creator: None,
+                organizer: None,
+                attendees: vec![],
+                recurrence: vec![],
+                recurring_event_id: None,
+                event_type: None,
+                visibility: None,
+                transparency: None,
+                conference_data: None,
+                hangout_link: None,
+                color_id: None,
                 extra: HashMap::new(),
             },
         ];
@@ -442,11 +454,23 @@ mod tests {
                     date: None,
                     time_zone: None,
                 }),
-                description: None, location: None, status: None, html_link: None,
-                created: None, updated: None, creator: None, organizer: None,
-                attendees: vec![], recurrence: vec![], recurring_event_id: None,
-                event_type: None, visibility: None, transparency: None,
-                conference_data: None, hangout_link: None, color_id: None,
+                description: None,
+                location: None,
+                status: None,
+                html_link: None,
+                created: None,
+                updated: None,
+                creator: None,
+                organizer: None,
+                attendees: vec![],
+                recurrence: vec![],
+                recurring_event_id: None,
+                event_type: None,
+                visibility: None,
+                transparency: None,
+                conference_data: None,
+                hangout_link: None,
+                color_id: None,
                 extra: HashMap::new(),
             },
             Event {
@@ -462,11 +486,23 @@ mod tests {
                     date: None,
                     time_zone: None,
                 }),
-                description: None, location: None, status: None, html_link: None,
-                created: None, updated: None, creator: None, organizer: None,
-                attendees: vec![], recurrence: vec![], recurring_event_id: None,
-                event_type: None, visibility: None, transparency: None,
-                conference_data: None, hangout_link: None, color_id: None,
+                description: None,
+                location: None,
+                status: None,
+                html_link: None,
+                created: None,
+                updated: None,
+                creator: None,
+                organizer: None,
+                attendees: vec![],
+                recurrence: vec![],
+                recurring_event_id: None,
+                event_type: None,
+                visibility: None,
+                transparency: None,
+                conference_data: None,
+                hangout_link: None,
+                color_id: None,
                 extra: HashMap::new(),
             },
         ];

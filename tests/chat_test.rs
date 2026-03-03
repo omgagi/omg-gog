@@ -1,9 +1,9 @@
 //! Chat service integration tests.
 
-use omega_google::services::chat::types::*;
-use omega_google::services::chat::spaces::*;
-use omega_google::services::chat::messages::*;
 use omega_google::services::chat::dm::*;
+use omega_google::services::chat::messages::*;
+use omega_google::services::chat::spaces::*;
+use omega_google::services::chat::types::*;
 
 // ---------------------------------------------------------------
 // REQ-CHAT-001 (Must): Space deserialization from full JSON
@@ -34,7 +34,10 @@ fn req_chat_001_integration_full_space_from_api() {
     assert_eq!(space.space_type, Some("SPACE".to_string()));
     assert_eq!(space.single_user_bot_dm, Some(false));
     assert_eq!(space.threaded, Some(true));
-    assert_eq!(space.space_threading_state, Some("THREADED_MESSAGES".to_string()));
+    assert_eq!(
+        space.space_threading_state,
+        Some("THREADED_MESSAGES".to_string())
+    );
     assert_eq!(space.space_history_state, Some("HISTORY_ON".to_string()));
 
     // Unknown fields preserved via flatten
@@ -91,7 +94,10 @@ fn req_chat_001_integration_space_list_from_api() {
     assert_eq!(resp.spaces[1].threaded, Some(false));
 
     // Third space: DM
-    assert_eq!(resp.spaces[2].space_type, Some("DIRECT_MESSAGE".to_string()));
+    assert_eq!(
+        resp.spaces[2].space_type,
+        Some("DIRECT_MESSAGE".to_string())
+    );
     assert_eq!(resp.spaces[2].single_user_bot_dm, Some(true));
     assert!(resp.spaces[2].display_name.is_none());
 }
@@ -158,21 +164,33 @@ fn req_chat_004_integration_message_list_from_api() {
     // First message: human with thread
     let msg1 = &resp.messages[0];
     assert_eq!(msg1.name, Some("spaces/AAAA/messages/msg001".to_string()));
-    assert_eq!(msg1.text, Some("Good morning, team! Sprint planning at 10am.".to_string()));
-    assert_eq!(msg1.create_time, Some("2024-03-15T08:00:00.000Z".to_string()));
+    assert_eq!(
+        msg1.text,
+        Some("Good morning, team! Sprint planning at 10am.".to_string())
+    );
+    assert_eq!(
+        msg1.create_time,
+        Some("2024-03-15T08:00:00.000Z".to_string())
+    );
     let sender1 = msg1.sender.as_ref().unwrap();
     assert_eq!(sender1.display_name, Some("Alice Chen".to_string()));
     assert_eq!(sender1.type_, Some("HUMAN".to_string()));
     assert_eq!(sender1.domain_id, Some("company.com".to_string()));
     let thread1 = msg1.thread.as_ref().unwrap();
-    assert_eq!(thread1.name, Some("spaces/AAAA/threads/thread001".to_string()));
+    assert_eq!(
+        thread1.name,
+        Some("spaces/AAAA/threads/thread001".to_string())
+    );
     assert_eq!(thread1.thread_key, Some("sprint-planning-q1".to_string()));
 
     // Second message: same thread
     let msg2 = &resp.messages[1];
     assert!(msg2.text.as_ref().unwrap().contains("backlog review"));
     let thread2 = msg2.thread.as_ref().unwrap();
-    assert_eq!(thread2.name, Some("spaces/AAAA/threads/thread001".to_string()));
+    assert_eq!(
+        thread2.name,
+        Some("spaces/AAAA/threads/thread001".to_string())
+    );
 
     // Third message: bot, no thread
     let msg3 = &resp.messages[2];
@@ -269,7 +287,10 @@ fn req_chat_008_integration_dm_body_construction() {
 fn req_chat_007_integration_dm_space_url() {
     // REQ-CHAT-007
     let url = build_dm_space_url();
-    assert_eq!(url, "https://chat.googleapis.com/v1/spaces:findDirectMessage");
+    assert_eq!(
+        url,
+        "https://chat.googleapis.com/v1/spaces:findDirectMessage"
+    );
 
     let body = build_dm_space_body("user@company.com");
     assert_eq!(body["name"], "user@company.com");

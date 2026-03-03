@@ -22,7 +22,10 @@ mod tests {
     fn req_cal_010_cross_calendar_search() {
         let params = build_cross_calendar_search_params(
             "meeting",
-            &["primary".to_string(), "team@group.calendar.google.com".to_string()],
+            &[
+                "primary".to_string(),
+                "team@group.calendar.google.com".to_string(),
+            ],
         );
         assert_eq!(params.len(), 2);
     }

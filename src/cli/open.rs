@@ -167,9 +167,7 @@ fn extract_path_segment(raw_url: &str, expected_host: &str, path_prefix: &str) -
     let after_prefix = &path[path_prefix.len()..];
 
     // Extract the ID (everything up to the next '/' or end of string)
-    let id_end = after_prefix
-        .find('/')
-        .unwrap_or(after_prefix.len());
+    let id_end = after_prefix.find('/').unwrap_or(after_prefix.len());
 
     let id = &after_prefix[..id_end];
     if id.is_empty() {
@@ -266,31 +264,73 @@ mod tests {
     #[test]
     fn req_cli_019_resource_type_parsing() {
         assert_eq!("auto".parse::<ResourceType>().unwrap(), ResourceType::Auto);
-        assert_eq!("drive".parse::<ResourceType>().unwrap(), ResourceType::Drive);
+        assert_eq!(
+            "drive".parse::<ResourceType>().unwrap(),
+            ResourceType::Drive
+        );
         assert_eq!("file".parse::<ResourceType>().unwrap(), ResourceType::Drive);
-        assert_eq!("folder".parse::<ResourceType>().unwrap(), ResourceType::Folder);
+        assert_eq!(
+            "folder".parse::<ResourceType>().unwrap(),
+            ResourceType::Folder
+        );
         assert_eq!("dir".parse::<ResourceType>().unwrap(), ResourceType::Folder);
         assert_eq!("docs".parse::<ResourceType>().unwrap(), ResourceType::Docs);
         assert_eq!("doc".parse::<ResourceType>().unwrap(), ResourceType::Docs);
-        assert_eq!("document".parse::<ResourceType>().unwrap(), ResourceType::Docs);
-        assert_eq!("sheets".parse::<ResourceType>().unwrap(), ResourceType::Sheets);
-        assert_eq!("sheet".parse::<ResourceType>().unwrap(), ResourceType::Sheets);
-        assert_eq!("spreadsheet".parse::<ResourceType>().unwrap(), ResourceType::Sheets);
-        assert_eq!("slides".parse::<ResourceType>().unwrap(), ResourceType::Slides);
-        assert_eq!("slide".parse::<ResourceType>().unwrap(), ResourceType::Slides);
-        assert_eq!("presentation".parse::<ResourceType>().unwrap(), ResourceType::Slides);
-        assert_eq!("gmail-thread".parse::<ResourceType>().unwrap(), ResourceType::GmailThread);
-        assert_eq!("gmail".parse::<ResourceType>().unwrap(), ResourceType::GmailThread);
-        assert_eq!("thread".parse::<ResourceType>().unwrap(), ResourceType::GmailThread);
+        assert_eq!(
+            "document".parse::<ResourceType>().unwrap(),
+            ResourceType::Docs
+        );
+        assert_eq!(
+            "sheets".parse::<ResourceType>().unwrap(),
+            ResourceType::Sheets
+        );
+        assert_eq!(
+            "sheet".parse::<ResourceType>().unwrap(),
+            ResourceType::Sheets
+        );
+        assert_eq!(
+            "spreadsheet".parse::<ResourceType>().unwrap(),
+            ResourceType::Sheets
+        );
+        assert_eq!(
+            "slides".parse::<ResourceType>().unwrap(),
+            ResourceType::Slides
+        );
+        assert_eq!(
+            "slide".parse::<ResourceType>().unwrap(),
+            ResourceType::Slides
+        );
+        assert_eq!(
+            "presentation".parse::<ResourceType>().unwrap(),
+            ResourceType::Slides
+        );
+        assert_eq!(
+            "gmail-thread".parse::<ResourceType>().unwrap(),
+            ResourceType::GmailThread
+        );
+        assert_eq!(
+            "gmail".parse::<ResourceType>().unwrap(),
+            ResourceType::GmailThread
+        );
+        assert_eq!(
+            "thread".parse::<ResourceType>().unwrap(),
+            ResourceType::GmailThread
+        );
     }
 
     // Requirement: REQ-CLI-019 (Must)
     // Acceptance: Case insensitive parsing
     #[test]
     fn req_cli_019_resource_type_case_insensitive() {
-        assert_eq!("DRIVE".parse::<ResourceType>().unwrap(), ResourceType::Drive);
+        assert_eq!(
+            "DRIVE".parse::<ResourceType>().unwrap(),
+            ResourceType::Drive
+        );
         assert_eq!("Docs".parse::<ResourceType>().unwrap(), ResourceType::Docs);
-        assert_eq!("GMAIL-THREAD".parse::<ResourceType>().unwrap(), ResourceType::GmailThread);
+        assert_eq!(
+            "GMAIL-THREAD".parse::<ResourceType>().unwrap(),
+            ResourceType::GmailThread
+        );
     }
 
     // Requirement: REQ-CLI-019 (Must)
@@ -405,10 +445,7 @@ mod tests {
             "auto",
         )
         .unwrap();
-        assert_eq!(
-            url,
-            "https://docs.google.com/spreadsheets/d/sheet_id/edit"
-        );
+        assert_eq!(url, "https://docs.google.com/spreadsheets/d/sheet_id/edit");
     }
 
     // Requirement: REQ-CLI-019 (Must)

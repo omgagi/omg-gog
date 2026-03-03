@@ -5,10 +5,10 @@
 // native secret storage. The file-based fallback provides a working
 // implementation for environments without an OS keyring.
 
+use crate::auth::token::{deserialize_token, serialize_token};
+use crate::auth::{CredentialStore, TokenData};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use crate::auth::{CredentialStore, TokenData};
-use crate::auth::token::{serialize_token, deserialize_token};
 
 /// File-based credential store that uses JSON files in the config directory.
 pub struct FileCredentialStore {
@@ -154,17 +154,13 @@ impl KeyringCredentialStore {
             });
 
             match rx.recv_timeout(std::time::Duration::from_secs(5)) {
-                Ok(Ok(entry)) => {
-                    match entry.get_password() {
-                        Ok(_) | Err(keyring::Error::NoEntry) => {}
-                        Err(e) => anyhow::bail!("OS keyring not available: {}", e),
-                    }
-                }
+                Ok(Ok(entry)) => match entry.get_password() {
+                    Ok(_) | Err(keyring::Error::NoEntry) => {}
+                    Err(e) => anyhow::bail!("OS keyring not available: {}", e),
+                },
                 Ok(Err(e)) => anyhow::bail!("OS keyring not available: {}", e),
                 Err(_) => {
-                    eprintln!(
-                        "Keyring timed out after 5 seconds. Try GOG_KEYRING_BACKEND=file"
-                    );
+                    eprintln!("Keyring timed out after 5 seconds. Try GOG_KEYRING_BACKEND=file");
                     anyhow::bail!("Keyring timed out");
                 }
             }
@@ -266,7 +262,7 @@ const KDF_ROUNDS: u32 = 100_000;
 /// `KDF_ROUNDS` rounds. This provides cryptographic key stretching
 /// to resist brute-force attacks on the password.
 fn derive_key(password: &str, salt: &[u8; 16]) -> [u8; 32] {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
 
     // Initial hash: SHA-256(salt || password)
     let mut hasher = Sha256::new();
@@ -391,11 +387,9 @@ impl CredentialStore for EncryptedFileCredentialStore {
         match map.get(&key) {
             Some(encoded) => {
                 // Decode base64 -> decrypt -> deserialize
-                let cipher_bytes = base64::Engine::decode(
-                    &base64::engine::general_purpose::STANDARD,
-                    encoded,
-                )
-                .map_err(|e| anyhow::anyhow!("Base64 decode failed: {}", e))?;
+                let cipher_bytes =
+                    base64::Engine::decode(&base64::engine::general_purpose::STANDARD, encoded)
+                        .map_err(|e| anyhow::anyhow!("Base64 decode failed: {}", e))?;
                 let plain_bytes = decrypt(&self.key, &cipher_bytes)?;
                 let json_str = String::from_utf8(plain_bytes)
                     .map_err(|e| anyhow::anyhow!("UTF-8 decode failed: {}", e))?;
@@ -411,10 +405,8 @@ impl CredentialStore for EncryptedFileCredentialStore {
         let json_str = serialize_token(token)?;
         // Encrypt -> base64 encode -> store
         let cipher_bytes = encrypt(&self.key, json_str.as_bytes())?;
-        let encoded = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            &cipher_bytes,
-        );
+        let encoded =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &cipher_bytes);
         map.insert(key, encoded);
         self.inner.write_tokens_map(&map)
     }
@@ -428,10 +420,9 @@ impl CredentialStore for EncryptedFileCredentialStore {
         let map = self.inner.read_tokens_map()?;
         let mut tokens = Vec::new();
         for encoded in map.values() {
-            if let Ok(cipher_bytes) = base64::Engine::decode(
-                &base64::engine::general_purpose::STANDARD,
-                encoded,
-            ) {
+            if let Ok(cipher_bytes) =
+                base64::Engine::decode(&base64::engine::general_purpose::STANDARD, encoded)
+            {
                 if let Ok(plain_bytes) = decrypt(&self.key, &cipher_bytes) {
                     if let Ok(json_str) = String::from_utf8(plain_bytes) {
                         if let Ok(token) = deserialize_token(&json_str) {
@@ -482,12 +473,12 @@ pub fn credential_store_factory(
     let password = std::env::var("GOG_KEYRING_PASSWORD").ok();
 
     match backend.as_str() {
-        "keychain" | "keyring" => {
-            Ok(Box::new(KeyringCredentialStore::new()?))
-        }
+        "keychain" | "keyring" => Ok(Box::new(KeyringCredentialStore::new()?)),
         "file" => {
             if let Some(pw) = password {
-                Ok(Box::new(EncryptedFileCredentialStore::new(config_dir, &pw)?))
+                Ok(Box::new(EncryptedFileCredentialStore::new(
+                    config_dir, &pw,
+                )?))
             } else {
                 Ok(Box::new(FileCredentialStore::new(config_dir)?))
             }
@@ -500,7 +491,9 @@ pub fn credential_store_factory(
                     eprintln!("Warning: OS keyring not available, falling back to file-based credential storage.");
                     eprintln!("Set GOG_KEYRING_PASSWORD to encrypt stored credentials.");
                     if let Some(pw) = password {
-                        Ok(Box::new(EncryptedFileCredentialStore::new(config_dir, &pw)?))
+                        Ok(Box::new(EncryptedFileCredentialStore::new(
+                            config_dir, &pw,
+                        )?))
                     } else {
                         Ok(Box::new(FileCredentialStore::new(config_dir)?))
                     }
@@ -583,7 +576,10 @@ mod tests {
         let result = std::panic::catch_unwind(|| {
             let _ = KeyringCredentialStore::new();
         });
-        assert!(result.is_ok(), "KeyringCredentialStore::new() must not panic");
+        assert!(
+            result.is_ok(),
+            "KeyringCredentialStore::new() must not panic"
+        );
     }
 
     // Requirement: REQ-RT-013 (Must)
@@ -599,12 +595,14 @@ mod tests {
     #[test]
     #[ignore]
     fn req_rt_013_keyring_set_get_roundtrip() {
-        let store = KeyringCredentialStore::new()
-            .expect("OS keyring should be available for this test");
+        let store =
+            KeyringCredentialStore::new().expect("OS keyring should be available for this test");
         let token = make_test_token("default", "test@example.com");
-        store.set_token("default", "test@example.com", &token)
+        store
+            .set_token("default", "test@example.com", &token)
             .expect("set_token should succeed");
-        let loaded = store.get_token("default", "test@example.com")
+        let loaded = store
+            .get_token("default", "test@example.com")
             .expect("get_token should succeed");
         assert_eq!(loaded.email, "test@example.com");
         // Clean up
@@ -616,11 +614,14 @@ mod tests {
     #[test]
     #[ignore]
     fn req_rt_013_keyring_delete() {
-        let store = KeyringCredentialStore::new()
-            .expect("OS keyring should be available");
+        let store = KeyringCredentialStore::new().expect("OS keyring should be available");
         let token = make_test_token("default", "delete-test@example.com");
-        store.set_token("default", "delete-test@example.com", &token).unwrap();
-        store.delete_token("default", "delete-test@example.com").unwrap();
+        store
+            .set_token("default", "delete-test@example.com", &token)
+            .unwrap();
+        store
+            .delete_token("default", "delete-test@example.com")
+            .unwrap();
         let result = store.get_token("default", "delete-test@example.com");
         assert!(result.is_err(), "Deleted token should not be found");
     }
@@ -630,10 +631,11 @@ mod tests {
     #[test]
     #[ignore]
     fn req_rt_013_keyring_list_tokens() {
-        let store = KeyringCredentialStore::new()
-            .expect("OS keyring should be available");
+        let store = KeyringCredentialStore::new().expect("OS keyring should be available");
         let token = make_test_token("default", "list-test@example.com");
-        store.set_token("default", "list-test@example.com", &token).unwrap();
+        store
+            .set_token("default", "list-test@example.com", &token)
+            .unwrap();
         let tokens = store.list_tokens().expect("list_tokens should succeed");
         // keyring list returns empty vec (doesn't support enumeration)
         let _ = tokens;
@@ -646,9 +648,10 @@ mod tests {
     #[test]
     #[ignore]
     fn req_rt_013_keyring_default_account() {
-        let store = KeyringCredentialStore::new()
-            .expect("OS keyring should be available");
-        store.set_default_account("default", "default-test@example.com").unwrap();
+        let store = KeyringCredentialStore::new().expect("OS keyring should be available");
+        store
+            .set_default_account("default", "default-test@example.com")
+            .unwrap();
         let default = store.get_default_account("default").unwrap();
         assert_eq!(default.as_deref(), Some("default-test@example.com"));
     }
@@ -677,7 +680,11 @@ mod tests {
         };
         let result = credential_store_factory(&config);
         // File backend should succeed
-        assert!(result.is_ok(), "File backend should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "File backend should succeed: {:?}",
+            result.err()
+        );
     }
 
     // Requirement: REQ-RT-015 (Must)
@@ -715,7 +722,11 @@ mod tests {
         };
         let result = credential_store_factory(&config);
         // auto should always succeed (falls back to file)
-        assert!(result.is_ok(), "auto backend should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "auto backend should succeed: {:?}",
+            result.err()
+        );
     }
 
     // Requirement: REQ-RT-015 (Must)
@@ -728,14 +739,21 @@ mod tests {
         };
         let result = credential_store_factory(&config);
         // None = auto = should always succeed
-        assert!(result.is_ok(), "None (auto) backend should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "None (auto) backend should succeed: {:?}",
+            result.err()
+        );
     }
 
     // Requirement: REQ-RT-015 (Must)
     // Acceptance: Returns Box<dyn CredentialStore>
     #[test]
     fn req_rt_015_factory_returns_boxed_trait() {
-        fn assert_returns_box(_f: fn(&crate::config::ConfigFile) -> anyhow::Result<Box<dyn CredentialStore>>) {}
+        fn assert_returns_box(
+            _f: fn(&crate::config::ConfigFile) -> anyhow::Result<Box<dyn CredentialStore>>,
+        ) {
+        }
         assert_returns_box(credential_store_factory);
     }
 
@@ -774,7 +792,11 @@ mod tests {
         };
         let result = credential_store_factory(&config);
         // Empty string should be treated as "auto"
-        assert!(result.is_ok(), "Empty string (auto) backend should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Empty string (auto) backend should succeed: {:?}",
+            result.err()
+        );
     }
 
     // =================================================================
@@ -789,11 +811,15 @@ mod tests {
         let store = FileCredentialStore::new(dir.path().to_path_buf())
             .expect("FileCredentialStore::new should succeed");
         let token = make_test_token("default", "file-test@example.com");
-        store.set_token("default", "file-test@example.com", &token).unwrap();
+        store
+            .set_token("default", "file-test@example.com", &token)
+            .unwrap();
         let loaded = store.get_token("default", "file-test@example.com").unwrap();
         assert_eq!(loaded.email, "file-test@example.com");
         assert_eq!(loaded.client, "default");
-        store.delete_token("default", "file-test@example.com").unwrap();
+        store
+            .delete_token("default", "file-test@example.com")
+            .unwrap();
         let result = store.get_token("default", "file-test@example.com");
         assert!(result.is_err(), "Deleted token should not be found");
     }
@@ -832,7 +858,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = FileCredentialStore::new(dir.path().to_path_buf()).unwrap();
         assert!(store.get_default_account("default").unwrap().is_none());
-        store.set_default_account("default", "primary@example.com").unwrap();
+        store
+            .set_default_account("default", "primary@example.com")
+            .unwrap();
         assert_eq!(
             store.get_default_account("default").unwrap().as_deref(),
             Some("primary@example.com")
@@ -865,9 +893,17 @@ mod tests {
         assert_eq!(keys.len(), 2);
         // Verify separate defaults per client
         store.set_default_account("work", "user@work.com").unwrap();
-        store.set_default_account("personal", "user@gmail.com").unwrap();
-        assert_eq!(store.get_default_account("work").unwrap().as_deref(), Some("user@work.com"));
-        assert_eq!(store.get_default_account("personal").unwrap().as_deref(), Some("user@gmail.com"));
+        store
+            .set_default_account("personal", "user@gmail.com")
+            .unwrap();
+        assert_eq!(
+            store.get_default_account("work").unwrap().as_deref(),
+            Some("user@work.com")
+        );
+        assert_eq!(
+            store.get_default_account("personal").unwrap().as_deref(),
+            Some("user@gmail.com")
+        );
     }
 
     // Requirement: REQ-RT-015 (Must)
@@ -897,7 +933,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = FileCredentialStore::new(dir.path().to_path_buf()).unwrap();
         let token = make_test_token("default", "perm-test@example.com");
-        store.set_token("default", "perm-test@example.com", &token).unwrap();
+        store
+            .set_token("default", "perm-test@example.com", &token)
+            .unwrap();
         let tokens_path = dir.path().join("tokens.json");
         let perms = std::fs::metadata(&tokens_path).unwrap().permissions();
         assert_eq!(
@@ -940,7 +978,10 @@ mod tests {
         std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o444)).unwrap();
         let token = make_test_token("default", "perm@example.com");
         let result = store.set_token("default", "perm@example.com", &token);
-        assert!(result.is_err(), "Writing to read-only directory should fail");
+        assert!(
+            result.is_err(),
+            "Writing to read-only directory should fail"
+        );
         // Restore permissions for cleanup
         std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
     }
@@ -973,11 +1014,8 @@ mod tests {
     #[test]
     fn req_rt_014_encrypted_store_set_get_delete() {
         let dir = tempfile::tempdir().unwrap();
-        let store = EncryptedFileCredentialStore::new(
-            dir.path().to_path_buf(),
-            "test-password",
-        )
-        .expect("EncryptedFileCredentialStore::new should succeed");
+        let store = EncryptedFileCredentialStore::new(dir.path().to_path_buf(), "test-password")
+            .expect("EncryptedFileCredentialStore::new should succeed");
 
         let token = make_test_token("default", "enc-test@example.com");
         store
@@ -1003,11 +1041,9 @@ mod tests {
     #[test]
     fn req_rt_014_wrong_password_fails_decrypt() {
         let dir = tempfile::tempdir().unwrap();
-        let store_write = EncryptedFileCredentialStore::new(
-            dir.path().to_path_buf(),
-            "correct-password",
-        )
-        .unwrap();
+        let store_write =
+            EncryptedFileCredentialStore::new(dir.path().to_path_buf(), "correct-password")
+                .unwrap();
 
         let token = make_test_token("default", "wrong-pw@example.com");
         store_write
@@ -1015,11 +1051,8 @@ mod tests {
             .unwrap();
 
         // Try reading with wrong password
-        let store_read = EncryptedFileCredentialStore::new(
-            dir.path().to_path_buf(),
-            "wrong-password",
-        )
-        .unwrap();
+        let store_read =
+            EncryptedFileCredentialStore::new(dir.path().to_path_buf(), "wrong-password").unwrap();
         let result = store_read.get_token("default", "wrong-pw@example.com");
         assert!(
             result.is_err(),
@@ -1036,7 +1069,9 @@ mod tests {
         // FileCredentialStore (no encryption) should work normally
         let store = FileCredentialStore::new(dir.path().to_path_buf()).unwrap();
         let token = make_test_token("default", "plain@example.com");
-        store.set_token("default", "plain@example.com", &token).unwrap();
+        store
+            .set_token("default", "plain@example.com", &token)
+            .unwrap();
         let loaded = store.get_token("default", "plain@example.com").unwrap();
         assert_eq!(loaded.email, "plain@example.com");
         // The stored file should be readable as plain JSON
@@ -1052,11 +1087,7 @@ mod tests {
     #[test]
     fn req_rt_014_encrypted_store_list_tokens() {
         let dir = tempfile::tempdir().unwrap();
-        let store = EncryptedFileCredentialStore::new(
-            dir.path().to_path_buf(),
-            "list-pw",
-        )
-        .unwrap();
+        let store = EncryptedFileCredentialStore::new(dir.path().to_path_buf(), "list-pw").unwrap();
         let t1 = make_test_token("default", "a@example.com");
         let t2 = make_test_token("default", "b@example.com");
         store.set_token("default", "a@example.com", &t1).unwrap();
@@ -1088,7 +1119,10 @@ mod tests {
     fn req_rt_014_derive_key_different_passwords() {
         let key1 = derive_key("password-one", &TEST_SALT);
         let key2 = derive_key("password-two", &TEST_SALT);
-        assert_ne!(key1, key2, "Different passwords should produce different keys");
+        assert_ne!(
+            key1, key2,
+            "Different passwords should produce different keys"
+        );
     }
 
     // Requirement: REQ-RT-014 (Should)
@@ -1109,7 +1143,10 @@ mod tests {
         let plaintext = b"same plaintext";
         let enc1 = encrypt(&key, plaintext).unwrap();
         let enc2 = encrypt(&key, plaintext).unwrap();
-        assert_ne!(enc1, enc2, "Different nonces should produce different ciphertext");
+        assert_ne!(
+            enc1, enc2,
+            "Different nonces should produce different ciphertext"
+        );
         // But both should decrypt to the same plaintext
         let dec1 = decrypt(&key, &enc1).unwrap();
         let dec2 = decrypt(&key, &enc2).unwrap();
@@ -1130,13 +1167,12 @@ mod tests {
     #[test]
     fn req_rt_014_encrypted_data_not_plain_json() {
         let dir = tempfile::tempdir().unwrap();
-        let store = EncryptedFileCredentialStore::new(
-            dir.path().to_path_buf(),
-            "enc-password",
-        )
-        .unwrap();
+        let store =
+            EncryptedFileCredentialStore::new(dir.path().to_path_buf(), "enc-password").unwrap();
         let token = make_test_token("default", "opaque@example.com");
-        store.set_token("default", "opaque@example.com", &token).unwrap();
+        store
+            .set_token("default", "opaque@example.com", &token)
+            .unwrap();
 
         // Read the raw tokens file
         let tokens_path = dir.path().join("tokens.json");

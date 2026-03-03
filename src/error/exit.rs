@@ -175,7 +175,9 @@ mod tests {
     // Acceptance: AuthRequired maps to exit 4
     #[test]
     fn req_cli_007_auth_required_maps_to_4() {
-        let err = OmegaError::AuthRequired { message: "test".to_string() };
+        let err = OmegaError::AuthRequired {
+            message: "test".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::AUTH_REQUIRED);
     }
 
@@ -183,7 +185,9 @@ mod tests {
     // Acceptance: NotFound maps to exit 5
     #[test]
     fn req_cli_007_not_found_maps_to_5() {
-        let err = OmegaError::NotFound { resource: "file".to_string() };
+        let err = OmegaError::NotFound {
+            resource: "file".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::NOT_FOUND);
     }
 
@@ -191,7 +195,9 @@ mod tests {
     // Acceptance: PermissionDenied maps to exit 6
     #[test]
     fn req_cli_007_permission_denied_maps_to_6() {
-        let err = OmegaError::PermissionDenied { message: "no access".to_string() };
+        let err = OmegaError::PermissionDenied {
+            message: "no access".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::PERMISSION_DENIED);
     }
 
@@ -215,7 +221,9 @@ mod tests {
     // Acceptance: ConfigError maps to exit 10
     #[test]
     fn req_cli_007_config_error_maps_to_10() {
-        let err = OmegaError::ConfigError { message: "bad config".to_string() };
+        let err = OmegaError::ConfigError {
+            message: "bad config".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::CONFIG_ERROR);
     }
 
@@ -231,7 +239,9 @@ mod tests {
     // Acceptance: UsageError maps to exit 2
     #[test]
     fn req_cli_007_usage_error_maps_to_2() {
-        let err = OmegaError::UsageError { message: "bad input".to_string() };
+        let err = OmegaError::UsageError {
+            message: "bad input".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::USAGE_ERROR);
     }
 
@@ -247,7 +257,10 @@ mod tests {
     // Acceptance: API error with 403 maps to permission denied
     #[test]
     fn req_cli_007_api_403_maps_to_6() {
-        let err = OmegaError::ApiError { status: 403, message: "forbidden".to_string() };
+        let err = OmegaError::ApiError {
+            status: 403,
+            message: "forbidden".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::PERMISSION_DENIED);
     }
 
@@ -255,7 +268,10 @@ mod tests {
     // Acceptance: API error with 404 maps to not found
     #[test]
     fn req_cli_007_api_404_maps_to_5() {
-        let err = OmegaError::ApiError { status: 404, message: "not found".to_string() };
+        let err = OmegaError::ApiError {
+            status: 404,
+            message: "not found".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::NOT_FOUND);
     }
 
@@ -263,7 +279,10 @@ mod tests {
     // Acceptance: API error with 401 maps to auth required
     #[test]
     fn req_cli_007_api_401_maps_to_4() {
-        let err = OmegaError::ApiError { status: 401, message: "unauthorized".to_string() };
+        let err = OmegaError::ApiError {
+            status: 401,
+            message: "unauthorized".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::AUTH_REQUIRED);
     }
 
@@ -271,7 +290,10 @@ mod tests {
     // Acceptance: API error with 429 maps to rate limited
     #[test]
     fn req_cli_007_api_429_maps_to_7() {
-        let err = OmegaError::ApiError { status: 429, message: "too many requests".to_string() };
+        let err = OmegaError::ApiError {
+            status: 429,
+            message: "too many requests".to_string(),
+        };
         assert_eq!(exit_code_for(&err), codes::RATE_LIMITED);
     }
 }

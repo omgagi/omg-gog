@@ -11,7 +11,10 @@ pub fn build_spaces_list_url(max: Option<u32>, page_token: Option<&str>) -> Stri
         params.push(format!("pageSize={}", m));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()));
+        params.push(format!(
+            "pageToken={}",
+            url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()
+        ));
     }
     if params.is_empty() {
         base

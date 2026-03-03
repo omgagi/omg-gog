@@ -27,8 +27,7 @@ pub fn build_groups_list_url(max: Option<u32>, page_token: Option<&str>) -> Stri
 /// REQ-GROUPS-001
 pub fn build_group_lookup_url(email: &str) -> String {
     let base = format!("{}/groups:lookup", GROUPS_BASE_URL);
-    let encoded_email =
-        url::form_urlencoded::byte_serialize(email.as_bytes()).collect::<String>();
+    let encoded_email = url::form_urlencoded::byte_serialize(email.as_bytes()).collect::<String>();
     format!("{}?groupKey.id={}", base, encoded_email)
 }
 
@@ -82,7 +81,10 @@ mod tests {
     fn req_groups_001_groups_list_url_default() {
         // REQ-GROUPS-001
         let url = build_groups_list_url(None, None);
-        assert_eq!(url, "https://cloudidentity.googleapis.com/v1/groups:search?view=FULL");
+        assert_eq!(
+            url,
+            "https://cloudidentity.googleapis.com/v1/groups:search?view=FULL"
+        );
     }
 
     // Requirement: REQ-GROUPS-001 (Must)
@@ -91,7 +93,10 @@ mod tests {
     fn req_groups_001_groups_list_url_max() {
         // REQ-GROUPS-001
         let url = build_groups_list_url(Some(20), None);
-        assert_eq!(url, "https://cloudidentity.googleapis.com/v1/groups:search?view=FULL&pageSize=20");
+        assert_eq!(
+            url,
+            "https://cloudidentity.googleapis.com/v1/groups:search?view=FULL&pageSize=20"
+        );
     }
 
     // Requirement: REQ-GROUPS-001 (Must)
@@ -100,7 +105,10 @@ mod tests {
     fn req_groups_001_groups_list_url_page_token() {
         // REQ-GROUPS-001
         let url = build_groups_list_url(None, Some("abc123"));
-        assert_eq!(url, "https://cloudidentity.googleapis.com/v1/groups:search?view=FULL&pageToken=abc123");
+        assert_eq!(
+            url,
+            "https://cloudidentity.googleapis.com/v1/groups:search?view=FULL&pageToken=abc123"
+        );
     }
 
     // Requirement: REQ-GROUPS-001 (Must)
@@ -146,7 +154,10 @@ mod tests {
     fn req_groups_002_members_list_url_default() {
         // REQ-GROUPS-002
         let url = build_members_list_url("groups/abc123", None, None);
-        assert_eq!(url, "https://cloudidentity.googleapis.com/v1/groups/abc123/memberships");
+        assert_eq!(
+            url,
+            "https://cloudidentity.googleapis.com/v1/groups/abc123/memberships"
+        );
     }
 
     // Requirement: REQ-GROUPS-002 (Must)
@@ -155,7 +166,10 @@ mod tests {
     fn req_groups_002_members_list_url_max() {
         // REQ-GROUPS-002
         let url = build_members_list_url("groups/abc123", Some(50), None);
-        assert_eq!(url, "https://cloudidentity.googleapis.com/v1/groups/abc123/memberships?pageSize=50");
+        assert_eq!(
+            url,
+            "https://cloudidentity.googleapis.com/v1/groups/abc123/memberships?pageSize=50"
+        );
     }
 
     // Requirement: REQ-GROUPS-002 (Must)

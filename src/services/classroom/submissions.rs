@@ -12,14 +12,8 @@ pub fn build_submissions_list_url(
     let base = format!(
         "{}/courses/{}/courseWork/{}/studentSubmissions",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -47,18 +41,9 @@ pub fn build_submission_get_url(
     format!(
         "{}/courses/{}/courseWork/{}/studentSubmissions/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            submission_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(submission_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -71,18 +56,9 @@ pub fn build_submission_turn_in_url(
     format!(
         "{}/courses/{}/courseWork/{}/studentSubmissions/{}:turnIn",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            submission_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(submission_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -95,18 +71,9 @@ pub fn build_submission_reclaim_url(
     format!(
         "{}/courses/{}/courseWork/{}/studentSubmissions/{}:reclaim",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            submission_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(submission_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -119,18 +86,9 @@ pub fn build_submission_return_url(
     format!(
         "{}/courses/{}/courseWork/{}/studentSubmissions/{}:return",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            submission_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(submission_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -197,7 +155,10 @@ mod tests {
     #[test]
     fn req_class_007_submission_turn_in_url() {
         let url = build_submission_turn_in_url("course1", "cw1", "sub1");
-        assert!(url.contains("/studentSubmissions/sub1%3AturnIn") || url.contains("/studentSubmissions/sub1:turnIn"));
+        assert!(
+            url.contains("/studentSubmissions/sub1%3AturnIn")
+                || url.contains("/studentSubmissions/sub1:turnIn")
+        );
     }
 
     // Requirement: REQ-CLASS-007 (Must)
@@ -205,7 +166,10 @@ mod tests {
     #[test]
     fn req_class_007_submission_reclaim_url() {
         let url = build_submission_reclaim_url("course1", "cw1", "sub1");
-        assert!(url.contains("/studentSubmissions/sub1%3Areclaim") || url.contains("/studentSubmissions/sub1:reclaim"));
+        assert!(
+            url.contains("/studentSubmissions/sub1%3Areclaim")
+                || url.contains("/studentSubmissions/sub1:reclaim")
+        );
     }
 
     // Requirement: REQ-CLASS-007 (Must)
@@ -213,7 +177,10 @@ mod tests {
     #[test]
     fn req_class_007_submission_return_url() {
         let url = build_submission_return_url("course1", "cw1", "sub1");
-        assert!(url.contains("/studentSubmissions/sub1%3Areturn") || url.contains("/studentSubmissions/sub1:return"));
+        assert!(
+            url.contains("/studentSubmissions/sub1%3Areturn")
+                || url.contains("/studentSubmissions/sub1:return")
+        );
     }
 
     // Requirement: REQ-CLASS-007 (Must)

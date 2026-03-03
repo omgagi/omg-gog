@@ -128,8 +128,14 @@ mod tests {
         assert_eq!(project.script_id, Some("abc123def456".to_string()));
         assert_eq!(project.title, Some("My Script".to_string()));
         assert_eq!(project.parent_id, Some("doc_parent_id".to_string()));
-        assert_eq!(project.create_time, Some("2024-01-15T10:30:00Z".to_string()));
-        assert_eq!(project.update_time, Some("2024-03-20T14:00:00Z".to_string()));
+        assert_eq!(
+            project.create_time,
+            Some("2024-01-15T10:30:00Z".to_string())
+        );
+        assert_eq!(
+            project.update_time,
+            Some("2024-03-20T14:00:00Z".to_string())
+        );
     }
 
     // Requirement: REQ-SCRIPT-001 (Must)
@@ -270,7 +276,10 @@ mod tests {
             "errorType": "ScriptError"
         }"#;
         let err: ExecutionError = serde_json::from_str(json_str).unwrap();
-        assert_eq!(err.error_message, Some("ReferenceError: x is not defined".to_string()));
+        assert_eq!(
+            err.error_message,
+            Some("ReferenceError: x is not defined".to_string())
+        );
         assert_eq!(err.error_type, Some("ScriptError".to_string()));
         assert_eq!(err.script_stack_trace_elements.len(), 1);
     }
@@ -309,6 +318,9 @@ mod tests {
         let op: Operation = serde_json::from_str(json_str).unwrap();
         assert_eq!(op.done, Some(true));
         assert!(op.error.is_some());
-        assert_eq!(op.error.unwrap().error_message, Some("Script error".to_string()));
+        assert_eq!(
+            op.error.unwrap().error_message,
+            Some("Script error".to_string())
+        );
     }
 }

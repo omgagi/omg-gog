@@ -3,9 +3,9 @@
 // This module provides OAuth2 authorization flow support.
 // URL generation, code exchange, and token response structures.
 
-use crate::config::ClientCredentials;
 use crate::auth::scopes;
 use crate::auth::Service;
+use crate::config::ClientCredentials;
 
 /// Google OAuth2 endpoints.
 pub const AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -125,23 +125,41 @@ mod tests {
     #[tokio::test]
     async fn req_rt_001_exchange_code_posts_authorization_code() {
         let mut server = mockito::Server::new_async().await;
-        let mock = server.mock("POST", "/token")
+        let mock = server
+            .mock("POST", "/token")
             .match_body(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("grant_type".to_string(), "authorization_code".to_string()),
-                mockito::Matcher::UrlEncoded("code".to_string(), "4/0AX4XfWh_test_auth_code".to_string()),
-                mockito::Matcher::UrlEncoded("client_id".to_string(), "test_id.apps.googleusercontent.com".to_string()),
-                mockito::Matcher::UrlEncoded("client_secret".to_string(), "GOCSPX-secret".to_string()),
-                mockito::Matcher::UrlEncoded("redirect_uri".to_string(), "http://127.0.0.1:9999".to_string()),
+                mockito::Matcher::UrlEncoded(
+                    "grant_type".to_string(),
+                    "authorization_code".to_string(),
+                ),
+                mockito::Matcher::UrlEncoded(
+                    "code".to_string(),
+                    "4/0AX4XfWh_test_auth_code".to_string(),
+                ),
+                mockito::Matcher::UrlEncoded(
+                    "client_id".to_string(),
+                    "test_id.apps.googleusercontent.com".to_string(),
+                ),
+                mockito::Matcher::UrlEncoded(
+                    "client_secret".to_string(),
+                    "GOCSPX-secret".to_string(),
+                ),
+                mockito::Matcher::UrlEncoded(
+                    "redirect_uri".to_string(),
+                    "http://127.0.0.1:9999".to_string(),
+                ),
             ]))
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
                 "access_token": "ya29.a0AfH6SMC-test",
                 "expires_in": 3599,
                 "refresh_token": "1//0dNgQw-test",
                 "scope": "openid email https://www.googleapis.com/auth/gmail.modify",
                 "token_type": "Bearer"
-            }"#)
+            }"#,
+            )
             .create_async()
             .await;
 
@@ -157,8 +175,13 @@ mod tests {
             &creds,
             "4/0AX4XfWh_test_auth_code",
             "http://127.0.0.1:9999",
-        ).await;
-        assert!(result.is_ok(), "Exchange should succeed with mock: {:?}", result.err());
+        )
+        .await;
+        assert!(
+            result.is_ok(),
+            "Exchange should succeed with mock: {:?}",
+            result.err()
+        );
         let response = result.unwrap();
         assert_eq!(response.access_token, "ya29.a0AfH6SMC-test");
         assert_eq!(response.refresh_token.as_deref(), Some("1//0dNgQw-test"));
@@ -177,8 +200,8 @@ mod tests {
             "scope": "openid email https://www.googleapis.com/auth/gmail.modify",
             "token_type": "Bearer"
         }"#;
-        let resp: TokenResponse = serde_json::from_str(json)
-            .expect("Should deserialize valid token response");
+        let resp: TokenResponse =
+            serde_json::from_str(json).expect("Should deserialize valid token response");
         assert_eq!(resp.access_token, "ya29.a0AfH6SMA_long_token_string");
         assert_eq!(resp.token_type, "Bearer");
         assert_eq!(resp.expires_in, Some(3599));
@@ -197,8 +220,8 @@ mod tests {
             "access_token": "ya29.minimal",
             "token_type": "Bearer"
         }"#;
-        let resp: TokenResponse = serde_json::from_str(json)
-            .expect("Should deserialize minimal token response");
+        let resp: TokenResponse =
+            serde_json::from_str(json).expect("Should deserialize minimal token response");
         assert_eq!(resp.access_token, "ya29.minimal");
         assert!(resp.refresh_token.is_none());
         assert!(resp.expires_in.is_none());
@@ -210,13 +233,16 @@ mod tests {
     #[tokio::test]
     async fn req_rt_001_exchange_code_400_invalid_grant() {
         let mut server = mockito::Server::new_async().await;
-        let _mock = server.mock("POST", "/token")
+        let _mock = server
+            .mock("POST", "/token")
             .with_status(400)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
                 "error": "invalid_grant",
                 "error_description": "Malformed auth code."
-            }"#)
+            }"#,
+            )
             .create_async()
             .await;
 
@@ -226,10 +252,16 @@ mod tests {
             client_secret: "secret".to_string(),
         };
         let token_url = format!("{}/token", server.url());
-        let result = exchange_code_with_url(&client, &token_url, &creds, "bad_code", "http://localhost").await;
+        let result =
+            exchange_code_with_url(&client, &token_url, &creds, "bad_code", "http://localhost")
+                .await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("invalid_grant") || err_msg.contains("Malformed") || err_msg.contains("400"));
+        assert!(
+            err_msg.contains("invalid_grant")
+                || err_msg.contains("Malformed")
+                || err_msg.contains("400")
+        );
     }
 
     // Requirement: REQ-RT-001 (Must)
@@ -237,13 +269,16 @@ mod tests {
     #[tokio::test]
     async fn req_rt_001_exchange_code_401_invalid_client() {
         let mut server = mockito::Server::new_async().await;
-        let _mock = server.mock("POST", "/token")
+        let _mock = server
+            .mock("POST", "/token")
             .with_status(401)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
                 "error": "invalid_client",
                 "error_description": "The OAuth client was not found."
-            }"#)
+            }"#,
+            )
             .create_async()
             .await;
 
@@ -253,7 +288,8 @@ mod tests {
             client_secret: "wrong_secret".to_string(),
         };
         let token_url = format!("{}/token", server.url());
-        let result = exchange_code_with_url(&client, &token_url, &creds, "code", "http://localhost").await;
+        let result =
+            exchange_code_with_url(&client, &token_url, &creds, "code", "http://localhost").await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("invalid_client") || err_msg.contains("401"));
@@ -265,7 +301,10 @@ mod tests {
     fn req_rt_001_uses_reqwest_not_oauth2_crate() {
         // The exchange_code function signature takes reqwest::Client,
         // confirming we use reqwest directly, not the oauth2 crate.
-        assert!(true, "exchange_code must use reqwest::Client, not oauth2 crate");
+        assert!(
+            true,
+            "exchange_code must use reqwest::Client, not oauth2 crate"
+        );
     }
 
     // Requirement: REQ-RT-001 (Must)
@@ -291,7 +330,13 @@ mod tests {
             client_secret: "secret".to_string(),
         };
         // Authorization codes can contain URL-unsafe characters
-        let result = exchange_code(&client, &creds, "4/0AX4XfWh_test+special&chars=more", "http://localhost").await;
+        let result = exchange_code(
+            &client,
+            &creds,
+            "4/0AX4XfWh_test+special&chars=more",
+            "http://localhost",
+        )
+        .await;
         // Should fail (hits real Google endpoint with bad code), but should not panic
         assert!(result.is_err());
     }
@@ -308,7 +353,10 @@ mod tests {
         }"#;
         // TokenResponse should ignore unknown fields (serde default behavior)
         let result: Result<TokenResponse, _> = serde_json::from_str(json);
-        assert!(result.is_ok(), "Extra unknown fields should be ignored by default");
+        assert!(
+            result.is_ok(),
+            "Extra unknown fields should be ignored by default"
+        );
     }
 
     // Requirement: REQ-RT-001 (Must)
@@ -320,7 +368,10 @@ mod tests {
             "expires_in": 3600
         }"#;
         let result: Result<TokenResponse, _> = serde_json::from_str(json);
-        assert!(result.is_err(), "Missing access_token should fail deserialization");
+        assert!(
+            result.is_err(),
+            "Missing access_token should fail deserialization"
+        );
     }
 
     // Requirement: REQ-RT-001 (Must)
@@ -331,7 +382,10 @@ mod tests {
             "access_token": "ya29.test"
         }"#;
         let result: Result<TokenResponse, _> = serde_json::from_str(json);
-        assert!(result.is_err(), "Missing token_type should fail deserialization");
+        assert!(
+            result.is_err(),
+            "Missing token_type should fail deserialization"
+        );
     }
 
     // Requirement: REQ-RT-001 (Must)
@@ -339,7 +393,10 @@ mod tests {
     #[test]
     fn req_rt_001_security_token_url_is_google() {
         assert_eq!(TOKEN_URL, "https://oauth2.googleapis.com/token");
-        assert!(TOKEN_URL.starts_with("https://"), "Token URL must use HTTPS");
+        assert!(
+            TOKEN_URL.starts_with("https://"),
+            "Token URL must use HTTPS"
+        );
     }
 
     // Requirement: REQ-RT-001 (Must)
@@ -355,6 +412,9 @@ mod tests {
     #[test]
     fn req_rt_001_form_urlencoded_not_json_body() {
         // Verified by the mockito Matcher::UrlEncoded above.
-        assert!(true, "Request body must be application/x-www-form-urlencoded");
+        assert!(
+            true,
+            "Request body must be application/x-www-form-urlencoded"
+        );
     }
 }

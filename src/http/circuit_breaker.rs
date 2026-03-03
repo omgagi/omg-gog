@@ -167,7 +167,10 @@ mod tests {
         for _ in 0..4 {
             cb.record_failure();
         }
-        assert!(!cb.is_open(), "should still be closed after 4 more failures");
+        assert!(
+            !cb.is_open(),
+            "should still be closed after 4 more failures"
+        );
     }
 
     // Requirement: REQ-HTTP-004 (Must)
@@ -197,7 +200,10 @@ mod tests {
         for _ in 0..3 {
             cb.record_failure();
         }
-        assert!(!cb.is_open(), "non-consecutive failures should not open circuit");
+        assert!(
+            !cb.is_open(),
+            "non-consecutive failures should not open circuit"
+        );
     }
 
     // Requirement: REQ-HTTP-004 (Must)

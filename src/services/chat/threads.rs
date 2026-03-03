@@ -4,11 +4,7 @@ use super::CHAT_BASE_URL;
 
 /// Build URL for listing threads in a space.
 /// REQ-CHAT-006
-pub fn build_threads_list_url(
-    space: &str,
-    max: Option<u32>,
-    page_token: Option<&str>,
-) -> String {
+pub fn build_threads_list_url(space: &str, max: Option<u32>, page_token: Option<&str>) -> String {
     use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
     let encoded_space = utf8_percent_encode(space, NON_ALPHANUMERIC).to_string();
     let base = format!("{}/spaces/{}/messages", CHAT_BASE_URL, encoded_space);
@@ -19,7 +15,10 @@ pub fn build_threads_list_url(
         params.push(format!("pageSize={}", m));
     }
     if let Some(token) = page_token {
-        params.push(format!("pageToken={}", url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()));
+        params.push(format!(
+            "pageToken={}",
+            url::form_urlencoded::byte_serialize(token.as_bytes()).collect::<String>()
+        ));
     }
     if params.is_empty() {
         base

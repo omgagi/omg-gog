@@ -68,7 +68,10 @@ fn req_config_001_atomic_write_no_corruption() {
 
     // No .tmp file should remain
     let tmp_path = config_path.with_extension("json.tmp");
-    assert!(!tmp_path.exists(), "Temp file should be cleaned up after atomic write");
+    assert!(
+        !tmp_path.exists(),
+        "Temp file should be cleaned up after atomic write"
+    );
 
     // Final file should have updated content
     let final_cfg = omega_google::config::read_config_from(&config_path).unwrap();
@@ -87,7 +90,11 @@ fn req_config_001_file_permissions_0600() {
 
     let metadata = std::fs::metadata(&config_path).unwrap();
     let mode = metadata.permissions().mode() & 0o777;
-    assert_eq!(mode, 0o600, "Config file should have 0600 permissions, got {:o}", mode);
+    assert_eq!(
+        mode, 0o600,
+        "Config file should have 0600 permissions, got {:o}",
+        mode
+    );
 }
 
 // Requirement: REQ-CONFIG-001 (Must)
@@ -127,7 +134,10 @@ fn req_config_002_forward_compatibility_roundtrip() {
     // Re-read and verify unknown fields survived
     let raw: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(&config_path).unwrap()).unwrap();
-    assert_eq!(raw.get("future_feature").unwrap(), &serde_json::Value::Bool(true));
+    assert_eq!(
+        raw.get("future_feature").unwrap(),
+        &serde_json::Value::Bool(true)
+    );
     assert!(raw.get("new_setting").unwrap().is_object());
 }
 

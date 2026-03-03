@@ -1,29 +1,29 @@
-pub mod common;
-pub mod pagination;
-pub mod export;
-pub mod gmail;
+pub mod appscript;
 pub mod calendar;
-pub mod drive;
-pub mod docs;
-pub mod slides;
-pub mod sheets;
-pub mod forms;
 pub mod chat;
-pub mod tasks;
 pub mod classroom;
+pub mod common;
 pub mod contacts;
-pub mod people;
+pub mod docs;
+pub mod drive;
+pub mod export;
+pub mod forms;
+pub mod gmail;
 pub mod groups;
 pub mod keep;
-pub mod appscript;
+pub mod pagination;
+pub mod people;
+pub mod sheets;
+pub mod slides;
+pub mod tasks;
 
 use std::sync::Arc;
 
+use crate::cli::root::RootFlags;
 use crate::http::circuit_breaker::CircuitBreaker;
 use crate::http::RetryConfig;
-use crate::output::{OutputMode, JsonTransform};
+use crate::output::{JsonTransform, OutputMode};
 use crate::ui::Ui;
-use crate::cli::root::RootFlags;
 
 /// Shared context passed to all service handlers.
 pub struct ServiceContext {
@@ -42,10 +42,7 @@ pub struct ServiceContext {
 
 impl ServiceContext {
     /// Write output in the appropriate format.
-    pub fn write_output<T: serde::Serialize>(
-        &self,
-        value: &T,
-    ) -> anyhow::Result<()> {
+    pub fn write_output<T: serde::Serialize>(&self, value: &T) -> anyhow::Result<()> {
         match self.output_mode {
             OutputMode::Json => {
                 crate::output::write_json(&mut std::io::stdout(), value, &self.json_transform)
@@ -110,9 +107,7 @@ impl ServiceContext {
 /// 5. Check if refresh needed, refresh if so
 /// 6. Build authenticated reqwest::Client
 /// 7. Build ServiceContext
-pub async fn bootstrap_service_context(
-    flags: &RootFlags,
-) -> anyhow::Result<ServiceContext> {
+pub async fn bootstrap_service_context(flags: &RootFlags) -> anyhow::Result<ServiceContext> {
     // 1. Load config
     let cfg = crate::config::read_config()?;
 
@@ -126,12 +121,8 @@ pub async fn bootstrap_service_context(
         .unwrap_or(crate::config::DEFAULT_CLIENT_NAME);
 
     // 4. Resolve account
-    let email = crate::auth::resolve_account(
-        flags.account.as_deref(),
-        &cfg,
-        store.as_ref(),
-        client_name,
-    )?;
+    let email =
+        crate::auth::resolve_account(flags.account.as_deref(), &cfg, store.as_ref(), client_name)?;
 
     // 5. Load token from store
     let mut token = store.get_token(client_name, &email)?;
@@ -140,24 +131,26 @@ pub async fn bootstrap_service_context(
     if crate::auth::token::needs_refresh(&token) {
         let creds = crate::config::read_client_credentials(client_name)?;
         let bare_http = crate::http::client::build_client()?;
-        let resp = crate::auth::token::refresh_access_token(&bare_http, &creds, &token.refresh_token).await?;
+        let resp =
+            crate::auth::token::refresh_access_token(&bare_http, &creds, &token.refresh_token)
+                .await?;
 
         token.access_token = Some(resp.access_token.clone());
         if let Some(expires_in) = resp.expires_in {
-            token.expires_at = Some(chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64));
+            token.expires_at =
+                Some(chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64));
         }
         // Persist the refreshed token
         store.set_token(client_name, &email, &token)?;
     }
 
     // 7. Build authenticated HTTP client
-    let access_token = token
-        .access_token
-        .as_deref()
-        .ok_or_else(|| anyhow::anyhow!(
+    let access_token = token.access_token.as_deref().ok_or_else(|| {
+        anyhow::anyhow!(
             "No access token available for {}. Re-authenticate with: omega-google auth add",
             email
-        ))?;
+        )
+    })?;
     let client = crate::http::client::build_authenticated_client(access_token)?;
 
     // 8. Resolve output mode
@@ -175,7 +168,8 @@ pub async fn bootstrap_service_context(
     };
 
     // 10. Build UI
-    let color_mode: crate::ui::ColorMode = flags.color.parse().unwrap_or(crate::ui::ColorMode::Auto);
+    let color_mode: crate::ui::ColorMode =
+        flags.color.parse().unwrap_or(crate::ui::ColorMode::Auto);
     let ui = Ui::new(crate::ui::UiOptions { color: color_mode })?;
 
     Ok(ServiceContext {
@@ -193,7 +187,7 @@ pub async fn bootstrap_service_context(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::{Ui, UiOptions, ColorMode};
+    use crate::ui::{ColorMode, Ui, UiOptions};
 
     // Helper: construct a minimal ServiceContext for testing.
     fn test_context() -> ServiceContext {
@@ -203,7 +197,10 @@ mod tests {
             force: false,
             ..Default::default()
         };
-        let ui = Ui::new(UiOptions { color: ColorMode::Never }).unwrap();
+        let ui = Ui::new(UiOptions {
+            color: ColorMode::Never,
+        })
+        .unwrap();
         ServiceContext {
             client: reqwest::Client::new(),
             output_mode: OutputMode::Json,
@@ -223,7 +220,10 @@ mod tests {
             force,
             ..Default::default()
         };
-        let ui = Ui::new(UiOptions { color: ColorMode::Never }).unwrap();
+        let ui = Ui::new(UiOptions {
+            color: ColorMode::Never,
+        })
+        .unwrap();
         ServiceContext {
             client: reqwest::Client::new(),
             output_mode: OutputMode::Json,
@@ -321,7 +321,10 @@ mod tests {
             account: Some("user@gmail.com".to_string()),
             ..Default::default()
         };
-        let ui = Ui::new(UiOptions { color: ColorMode::Never }).unwrap();
+        let ui = Ui::new(UiOptions {
+            color: ColorMode::Never,
+        })
+        .unwrap();
         let ctx = ServiceContext {
             client: reqwest::Client::new(),
             output_mode: OutputMode::Json,
@@ -351,7 +354,10 @@ mod tests {
         let result = bootstrap_service_context(&flags).await;
         std::env::remove_var("GOG_KEYRING_BACKEND");
         std::env::remove_var("OMEGA_GOOGLE_CONFIG_DIR");
-        assert!(result.is_err(), "Should return error without configured account");
+        assert!(
+            result.is_err(),
+            "Should return error without configured account"
+        );
     }
 
     // Requirement: REQ-RT-017 (Must)
@@ -435,9 +441,17 @@ mod tests {
     // Acceptance: ServiceContext with different output modes
     #[test]
     fn req_rt_018_service_context_output_modes() {
-        let modes = [OutputMode::Json, OutputMode::Plain, OutputMode::Text, OutputMode::Csv];
+        let modes = [
+            OutputMode::Json,
+            OutputMode::Plain,
+            OutputMode::Text,
+            OutputMode::Csv,
+        ];
         for mode in &modes {
-            let ui = Ui::new(UiOptions { color: ColorMode::Never }).unwrap();
+            let ui = Ui::new(UiOptions {
+                color: ColorMode::Never,
+            })
+            .unwrap();
             let ctx = ServiceContext {
                 client: reqwest::Client::new(),
                 output_mode: *mode,
@@ -531,7 +545,10 @@ mod tests {
             ..Default::default()
         };
 
-        let ui = Ui::new(UiOptions { color: ColorMode::Never }).unwrap();
+        let ui = Ui::new(UiOptions {
+            color: ColorMode::Never,
+        })
+        .unwrap();
         let ctx = ServiceContext {
             client: reqwest::Client::new(),
             output_mode: OutputMode::Json,

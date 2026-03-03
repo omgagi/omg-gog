@@ -11,10 +11,7 @@ use super::types::Page;
 ///
 /// The `notes_object_id` is the object ID of the speaker notes shape
 /// (from `NotesProperties.speaker_notes_object_id`).
-pub fn build_update_notes_request(
-    notes_object_id: &str,
-    text: &str,
-) -> Vec<serde_json::Value> {
+pub fn build_update_notes_request(notes_object_id: &str, text: &str) -> Vec<serde_json::Value> {
     vec![
         // First, delete all existing text
         serde_json::json!({
@@ -67,8 +64,8 @@ pub fn find_notes_object_id(page: &Page) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::types::*;
+    use super::*;
     use std::collections::HashMap;
 
     // ---------------------------------------------------------------
@@ -142,10 +139,7 @@ mod tests {
             notes_page: None,
             extra: HashMap::new(),
         };
-        assert_eq!(
-            find_notes_object_id(&page),
-            Some("notesShape1".to_string())
-        );
+        assert_eq!(find_notes_object_id(&page), Some("notesShape1".to_string()));
     }
 
     // Requirement: REQ-SLIDES-010 (Must)
@@ -170,10 +164,7 @@ mod tests {
             })),
             extra: HashMap::new(),
         };
-        assert_eq!(
-            find_notes_object_id(&page),
-            Some("notesShape2".to_string())
-        );
+        assert_eq!(find_notes_object_id(&page), Some("notesShape2".to_string()));
     }
 
     // Edge case: No notes page at all

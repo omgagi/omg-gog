@@ -87,7 +87,10 @@ fn req_gmail_006_integration_nested_mime_message() {
 
     // Check nested alternative part
     let alt_part = &payload.parts[0];
-    assert_eq!(alt_part.mime_type, Some("multipart/alternative".to_string()));
+    assert_eq!(
+        alt_part.mime_type,
+        Some("multipart/alternative".to_string())
+    );
     assert_eq!(alt_part.parts.len(), 2);
 
     // Check attachment part

@@ -1,7 +1,7 @@
 //! Presentations API URL builders and body constructors.
 
-use super::SLIDES_BASE_URL;
 use super::super::drive::types::DRIVE_BASE_URL;
+use super::SLIDES_BASE_URL;
 
 /// Build URL for getting a presentation via the Slides API.
 pub fn build_presentation_get_url(presentation_id: &str) -> String {

@@ -30,10 +30,7 @@ pub fn build_authenticated_client(token: &str) -> anyhow::Result<reqwest::Client
 
     let mut headers = HeaderMap::new();
     let auth_value = format!("Bearer {}", token);
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&auth_value)?,
-    );
+    headers.insert(AUTHORIZATION, HeaderValue::from_str(&auth_value)?);
 
     let client = reqwest::Client::builder()
         .user_agent(USER_AGENT)

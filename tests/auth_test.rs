@@ -42,7 +42,10 @@ fn req_auth_013_legacy_token_key() {
 #[test]
 fn req_auth_013_parse_modern_key() {
     let result = parse_token_key("token:default:user@example.com");
-    assert_eq!(result, Some(("default".to_string(), "user@example.com".to_string())));
+    assert_eq!(
+        result,
+        Some(("default".to_string(), "user@example.com".to_string()))
+    );
 }
 
 // Requirement: REQ-AUTH-013 (Must)
@@ -51,7 +54,10 @@ fn req_auth_013_parse_modern_key() {
 fn req_auth_013_parse_legacy_key() {
     let result = parse_token_key("token:user@example.com");
     // Legacy key has no client, so it should default to "default"
-    assert_eq!(result, Some(("default".to_string(), "user@example.com".to_string())));
+    assert_eq!(
+        result,
+        Some(("default".to_string(), "user@example.com".to_string()))
+    );
 }
 
 // Requirement: REQ-AUTH-013 (Must)

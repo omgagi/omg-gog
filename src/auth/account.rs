@@ -7,7 +7,7 @@
 //
 // This module re-exports those functions for architectural clarity.
 
-pub use super::resolve_account;
-pub use super::parse_token_key;
-pub use super::token_key;
 pub use super::legacy_token_key;
+pub use super::parse_token_key;
+pub use super::resolve_account;
+pub use super::token_key;

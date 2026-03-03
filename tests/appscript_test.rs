@@ -1,7 +1,7 @@
 //! Apps Script service integration tests.
 
-use omega_google::services::appscript::types::*;
 use omega_google::services::appscript::scripts::*;
+use omega_google::services::appscript::types::*;
 
 // ---------------------------------------------------------------
 // REQ-SCRIPT-001 (Must): Project deserialization from full JSON
@@ -24,11 +24,20 @@ fn req_script_001_integration_full_project_from_api() {
 
     let project: Project = serde_json::from_str(api_response).unwrap();
 
-    assert_eq!(project.script_id, Some("1BxaNKVcfmBxQHLqm8MCl8RK6qlPnxzqHGCQ7aE3K-MUfvjJCYkXvJDn".to_string()));
+    assert_eq!(
+        project.script_id,
+        Some("1BxaNKVcfmBxQHLqm8MCl8RK6qlPnxzqHGCQ7aE3K-MUfvjJCYkXvJDn".to_string())
+    );
     assert_eq!(project.title, Some("My Automation Script".to_string()));
     assert_eq!(project.parent_id, Some("1abc123def456".to_string()));
-    assert_eq!(project.create_time, Some("2024-01-15T10:30:00Z".to_string()));
-    assert_eq!(project.update_time, Some("2024-06-01T14:00:00Z".to_string()));
+    assert_eq!(
+        project.create_time,
+        Some("2024-01-15T10:30:00Z".to_string())
+    );
+    assert_eq!(
+        project.update_time,
+        Some("2024-06-01T14:00:00Z".to_string())
+    );
 
     // Unknown fields preserved via flatten
     assert!(project.extra.contains_key("creator"));
@@ -178,7 +187,10 @@ fn req_script_003_integration_operation_error() {
 fn req_script_001_integration_url_builder_project_get() {
     // REQ-SCRIPT-001
     let url = build_project_get_url("abc123def456");
-    assert_eq!(url, "https://script.googleapis.com/v1/projects/abc123def456");
+    assert_eq!(
+        url,
+        "https://script.googleapis.com/v1/projects/abc123def456"
+    );
 }
 
 // ---------------------------------------------------------------
@@ -191,7 +203,10 @@ fn req_script_001_integration_url_builder_project_get() {
 fn req_script_002_integration_url_builder_content_get() {
     // REQ-SCRIPT-002
     let url = build_content_get_url("abc123def456");
-    assert_eq!(url, "https://script.googleapis.com/v1/projects/abc123def456/content");
+    assert_eq!(
+        url,
+        "https://script.googleapis.com/v1/projects/abc123def456/content"
+    );
 }
 
 // ---------------------------------------------------------------
@@ -204,7 +219,10 @@ fn req_script_002_integration_url_builder_content_get() {
 fn req_script_003_integration_url_builder_run() {
     // REQ-SCRIPT-003
     let url = build_run_url("abc123def456");
-    assert_eq!(url, "https://script.googleapis.com/v1/scripts/abc123def456:run");
+    assert_eq!(
+        url,
+        "https://script.googleapis.com/v1/scripts/abc123def456:run"
+    );
 }
 
 // Requirement: REQ-SCRIPT-003 (Must)
@@ -218,7 +236,12 @@ fn req_script_003_integration_run_body_construction() {
     assert_eq!(body["devMode"], false);
 
     // With array params in dev mode
-    let body = build_run_body("sendEmail", Some(r#"["user@example.com", "Subject", "Body"]"#), true).unwrap();
+    let body = build_run_body(
+        "sendEmail",
+        Some(r#"["user@example.com", "Subject", "Body"]"#),
+        true,
+    )
+    .unwrap();
     assert_eq!(body["function"], "sendEmail");
     assert_eq!(body["devMode"], true);
     let params = body["parameters"].as_array().unwrap();

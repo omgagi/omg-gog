@@ -6,8 +6,8 @@
 //   - Body replay for retried requests
 //   - Cancellation support via tokio CancellationToken
 
-use crate::http::retry;
 use crate::http::circuit_breaker::CircuitBreaker;
+use crate::http::retry;
 use crate::http::RetryConfig;
 
 /// A request that can be retried, including the cloned body.

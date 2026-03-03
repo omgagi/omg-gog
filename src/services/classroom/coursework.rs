@@ -11,10 +11,7 @@ pub fn build_coursework_list_url(
     let base = format!(
         "{}/courses/{}/courseWork",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -38,14 +35,8 @@ pub fn build_coursework_get_url(course_id: &str, coursework_id: &str) -> String 
     format!(
         "{}/courses/{}/courseWork/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -54,10 +45,7 @@ pub fn build_coursework_create_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}/courseWork",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -90,14 +78,8 @@ pub fn build_coursework_update_url(course_id: &str, coursework_id: &str) -> Stri
     format!(
         "{}/courses/{}/courseWork/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -106,14 +88,8 @@ pub fn build_coursework_delete_url(course_id: &str, coursework_id: &str) -> Stri
     format!(
         "{}/courses/{}/courseWork/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            coursework_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(coursework_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -181,7 +157,8 @@ mod tests {
     // Acceptance: CourseWork create body minimal
     #[test]
     fn req_class_005_coursework_create_body_minimal() {
-        let body = build_coursework_create_body("Quiz 1", "SHORT_ANSWER_QUESTION", None, None, None);
+        let body =
+            build_coursework_create_body("Quiz 1", "SHORT_ANSWER_QUESTION", None, None, None);
         assert_eq!(body["title"], "Quiz 1");
         assert_eq!(body["workType"], "SHORT_ANSWER_QUESTION");
         assert!(body.get("description").is_none());

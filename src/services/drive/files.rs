@@ -1,6 +1,6 @@
 //! Drive file get/download/upload/copy operations.
 
-use super::types::{DRIVE_BASE_URL, extension_for_mime};
+use super::types::{extension_for_mime, DRIVE_BASE_URL};
 
 /// Build URL for getting file metadata.
 pub fn build_file_get_url(file_id: &str) -> String {

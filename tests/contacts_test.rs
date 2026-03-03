@@ -1,8 +1,8 @@
 //! Contacts service integration tests.
 
-use omega_google::services::contacts::types::*;
 use omega_google::services::contacts::contacts::*;
 use omega_google::services::contacts::directory::*;
+use omega_google::services::contacts::types::*;
 
 // ---------------------------------------------------------------
 // REQ-CONTACTS-001 (Must): Person deserialization with names, emails, phones
@@ -87,23 +87,41 @@ fn req_contacts_001_integration_person_full_from_api() {
     assert_eq!(person.names.len(), 1);
     assert_eq!(person.names[0].given_name, Some("Sarah".to_string()));
     assert_eq!(person.names[0].family_name, Some("O'Connor".to_string()));
-    assert_eq!(person.names[0].display_name, Some("Sarah O'Connor".to_string()));
+    assert_eq!(
+        person.names[0].display_name,
+        Some("Sarah O'Connor".to_string())
+    );
     // Unknown subfields preserved in name
     assert!(person.names[0].extra.contains_key("displayNameLastFirst"));
 
     // Verify email addresses
     assert_eq!(person.email_addresses.len(), 2);
-    assert_eq!(person.email_addresses[0].value, Some("sarah.oconnor@company.com".to_string()));
+    assert_eq!(
+        person.email_addresses[0].value,
+        Some("sarah.oconnor@company.com".to_string())
+    );
     assert_eq!(person.email_addresses[0].type_, Some("work".to_string()));
-    assert_eq!(person.email_addresses[0].formatted_type, Some("Work".to_string()));
-    assert_eq!(person.email_addresses[1].value, Some("sarah.personal@gmail.com".to_string()));
+    assert_eq!(
+        person.email_addresses[0].formatted_type,
+        Some("Work".to_string())
+    );
+    assert_eq!(
+        person.email_addresses[1].value,
+        Some("sarah.personal@gmail.com".to_string())
+    );
     assert_eq!(person.email_addresses[1].type_, Some("home".to_string()));
 
     // Verify phone numbers
     assert_eq!(person.phone_numbers.len(), 2);
-    assert_eq!(person.phone_numbers[0].value, Some("+1 (555) 123-4567".to_string()));
+    assert_eq!(
+        person.phone_numbers[0].value,
+        Some("+1 (555) 123-4567".to_string())
+    );
     assert_eq!(person.phone_numbers[0].type_, Some("mobile".to_string()));
-    assert_eq!(person.phone_numbers[1].value, Some("+1 (555) 987-6543".to_string()));
+    assert_eq!(
+        person.phone_numbers[1].value,
+        Some("+1 (555) 987-6543".to_string())
+    );
     assert_eq!(person.phone_numbers[1].type_, Some("work".to_string()));
 
     // Verify birthday
@@ -117,11 +135,19 @@ fn req_contacts_001_integration_person_full_from_api() {
 
     // Verify biography
     assert_eq!(person.biographies.len(), 1);
-    assert!(person.biographies[0].value.as_ref().unwrap().contains("VP of Engineering"));
+    assert!(person.biographies[0]
+        .value
+        .as_ref()
+        .unwrap()
+        .contains("VP of Engineering"));
 
     // Verify photo
     assert_eq!(person.photos.len(), 1);
-    assert!(person.photos[0].url.as_ref().unwrap().contains("googleusercontent.com"));
+    assert!(person.photos[0]
+        .url
+        .as_ref()
+        .unwrap()
+        .contains("googleusercontent.com"));
 
     // Unknown top-level fields preserved
     assert!(person.extra.contains_key("organizations"));
@@ -181,7 +207,10 @@ fn req_contacts_002_integration_person_list_from_api() {
     let resp: PersonListResponse = serde_json::from_str(api_response).unwrap();
 
     assert_eq!(resp.connections.len(), 3);
-    assert_eq!(resp.next_page_token, Some("contacts_page2_token".to_string()));
+    assert_eq!(
+        resp.next_page_token,
+        Some("contacts_page2_token".to_string())
+    );
     assert_eq!(resp.total_people, Some(250));
     assert_eq!(resp.total_items, Some(3));
 
@@ -195,8 +224,14 @@ fn req_contacts_002_integration_person_list_from_api() {
     // Second contact: multiple emails
     let c2 = &resp.connections[1];
     assert_eq!(c2.email_addresses.len(), 2);
-    assert_eq!(c2.email_addresses[0].value, Some("bob@example.com".to_string()));
-    assert_eq!(c2.email_addresses[1].value, Some("bob.carter@gmail.com".to_string()));
+    assert_eq!(
+        c2.email_addresses[0].value,
+        Some("bob@example.com".to_string())
+    );
+    assert_eq!(
+        c2.email_addresses[1].value,
+        Some("bob.carter@gmail.com".to_string())
+    );
 
     // Third contact: display name only, no email
     let c3 = &resp.connections[2];
@@ -382,7 +417,10 @@ fn req_contacts_007_integration_directory_list_from_api() {
     assert_eq!(resp.next_sync_token, Some("sync_token_abc123".to_string()));
 
     assert_eq!(resp.people[0].names[0].given_name, Some("Eve".to_string()));
-    assert_eq!(resp.people[1].names[0].display_name, Some("Frank Garcia".to_string()));
+    assert_eq!(
+        resp.people[1].names[0].display_name,
+        Some("Frank Garcia".to_string())
+    );
 }
 
 // ---------------------------------------------------------------
@@ -401,16 +439,23 @@ fn req_contacts_005_integration_update_body() {
         Some("+1-555-0300"),
         Some("1985-07-22"),
         Some("Updated VP of Engineering title"),
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_eq!(body["names"][0]["givenName"], "Sarah");
     assert_eq!(body["names"][0]["familyName"], "Connor");
-    assert_eq!(body["emailAddresses"][0]["value"], "sarah.connor@newcompany.com");
+    assert_eq!(
+        body["emailAddresses"][0]["value"],
+        "sarah.connor@newcompany.com"
+    );
     assert_eq!(body["phoneNumbers"][0]["value"], "+1-555-0300");
     assert_eq!(body["birthdays"][0]["date"]["year"], 1985);
     assert_eq!(body["birthdays"][0]["date"]["month"], 7);
     assert_eq!(body["birthdays"][0]["date"]["day"], 22);
-    assert_eq!(body["biographies"][0]["value"], "Updated VP of Engineering title");
+    assert_eq!(
+        body["biographies"][0]["value"],
+        "Updated VP of Engineering title"
+    );
 
     // Update URL verification
     let url = build_contact_update_url("people/c8472659103");

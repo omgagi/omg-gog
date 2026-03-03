@@ -1,7 +1,7 @@
 //! Sheets service integration tests.
 
-use omega_google::services::sheets::types::*;
 use omega_google::services::sheets::a1::*;
+use omega_google::services::sheets::types::*;
 
 // ---------------------------------------------------------------
 // REQ-SHEETS-001 (Must): ValueRange from realistic API response
@@ -144,7 +144,10 @@ fn req_sheets_008_integration_full_spreadsheet_metadata() {
     let ss: Spreadsheet = serde_json::from_str(api_response).unwrap();
 
     // Verify spreadsheet metadata
-    assert_eq!(ss.spreadsheet_id, Some("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms".to_string()));
+    assert_eq!(
+        ss.spreadsheet_id,
+        Some("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms".to_string())
+    );
     let props = ss.properties.as_ref().unwrap();
     assert_eq!(props.title, Some("Company Budget 2024".to_string()));
     assert_eq!(props.locale, Some("en_US".to_string()));
@@ -240,7 +243,12 @@ fn req_sheets_012_integration_column_conversion() {
     // Round-trip for all columns up to ZZ
     for i in 1..=702 {
         let col = index_to_column(i);
-        assert_eq!(column_to_index(&col), i, "failed round-trip for column index {}", i);
+        assert_eq!(
+            column_to_index(&col),
+            i,
+            "failed round-trip for column index {}",
+            i
+        );
     }
 }
 
@@ -293,7 +301,10 @@ fn req_sheets_001_integration_cell_data_with_notes() {
 
     let cell: CellData = serde_json::from_str(api_response).unwrap();
     assert_eq!(cell.formatted_value, Some("Revenue Total".to_string()));
-    assert_eq!(cell.note, Some("This includes all product lines for Q1-Q4.".to_string()));
+    assert_eq!(
+        cell.note,
+        Some("This includes all product lines for Q1-Q4.".to_string())
+    );
 
     let uev = cell.user_entered_value.unwrap();
     assert_eq!(uev.formula_value, Some("=SUM(B2:B100)".to_string()));

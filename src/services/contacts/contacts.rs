@@ -23,9 +23,7 @@ pub fn build_contacts_list_url(max: Option<u32>, page_token: Option<&str>) -> St
     let max_val = max.unwrap_or(100);
     let mut url = format!(
         "{}/people/me/connections?personFields={}&pageSize={}",
-        PEOPLE_API_BASE_URL,
-        PERSON_FIELDS,
-        max_val
+        PEOPLE_API_BASE_URL, PERSON_FIELDS, max_val
     );
     if let Some(token) = page_token {
         url.push_str(&format!(
@@ -40,9 +38,7 @@ pub fn build_contacts_list_url(max: Option<u32>, page_token: Option<&str>) -> St
 pub fn build_contact_get_url(resource_name: &str) -> String {
     format!(
         "{}/{}?personFields={}",
-        PEOPLE_API_BASE_URL,
-        resource_name,
-        PERSON_FIELDS
+        PEOPLE_API_BASE_URL, resource_name, PERSON_FIELDS
     )
 }
 
@@ -128,11 +124,20 @@ pub fn build_contact_update_body(
         // Parse "YYYY-MM-DD" format
         let parts: Vec<&str> = b.split('-').collect();
         if parts.len() != 3 {
-            return Err(format!("invalid birthday format (expected YYYY-MM-DD): {}", b));
+            return Err(format!(
+                "invalid birthday format (expected YYYY-MM-DD): {}",
+                b
+            ));
         }
-        let year: i32 = parts[0].parse().map_err(|_| format!("invalid birthday year: {}", parts[0]))?;
-        let month: i32 = parts[1].parse().map_err(|_| format!("invalid birthday month: {}", parts[1]))?;
-        let day: i32 = parts[2].parse().map_err(|_| format!("invalid birthday day: {}", parts[2]))?;
+        let year: i32 = parts[0]
+            .parse()
+            .map_err(|_| format!("invalid birthday year: {}", parts[0]))?;
+        let month: i32 = parts[1]
+            .parse()
+            .map_err(|_| format!("invalid birthday month: {}", parts[1]))?;
+        let day: i32 = parts[2]
+            .parse()
+            .map_err(|_| format!("invalid birthday day: {}", parts[2]))?;
         if year <= 0 {
             return Err(format!("invalid birthday year (must be > 0): {}", year));
         }
@@ -160,11 +165,7 @@ pub fn build_contact_update_body(
 
 /// Build URL for deleting a contact.
 pub fn build_contact_delete_url(resource_name: &str) -> String {
-    format!(
-        "{}/{}:deleteContact",
-        PEOPLE_API_BASE_URL,
-        resource_name
-    )
+    format!("{}/{}:deleteContact", PEOPLE_API_BASE_URL, resource_name)
 }
 
 #[cfg(test)]
@@ -309,7 +310,8 @@ mod tests {
             Some("+9876543210"),
             Some("1990-06-15"),
             Some("Updated notes"),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(body["names"][0]["givenName"], "John");
         assert_eq!(body["names"][0]["familyName"], "Smith");
         assert_eq!(body["emailAddresses"][0]["value"], "john.smith@example.com");
@@ -324,7 +326,8 @@ mod tests {
     // Acceptance: Update body with partial fields
     #[test]
     fn req_contacts_005_update_body_partial() {
-        let body = build_contact_update_body(None, None, Some("new@example.com"), None, None, None).unwrap();
+        let body = build_contact_update_body(None, None, Some("new@example.com"), None, None, None)
+            .unwrap();
         assert!(body.get("names").is_none());
         assert_eq!(body["emailAddresses"][0]["value"], "new@example.com");
     }

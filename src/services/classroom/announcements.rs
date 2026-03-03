@@ -11,10 +11,7 @@ pub fn build_announcements_list_url(
     let base = format!(
         "{}/courses/{}/announcements",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     );
     let mut params = Vec::new();
     if let Some(m) = max {
@@ -38,14 +35,8 @@ pub fn build_announcement_get_url(course_id: &str, announcement_id: &str) -> Str
     format!(
         "{}/courses/{}/announcements/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            announcement_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(announcement_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -54,18 +45,12 @@ pub fn build_announcement_create_url(course_id: &str) -> String {
     format!(
         "{}/courses/{}/announcements",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
 /// Build request body for creating an announcement.
-pub fn build_announcement_create_body(
-    text: &str,
-    state: Option<&str>,
-) -> serde_json::Value {
+pub fn build_announcement_create_body(text: &str, state: Option<&str>) -> serde_json::Value {
     let mut body = serde_json::json!({
         "text": text,
     });
@@ -80,14 +65,8 @@ pub fn build_announcement_update_url(course_id: &str, announcement_id: &str) -> 
     format!(
         "{}/courses/{}/announcements/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            announcement_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(announcement_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 
@@ -96,14 +75,8 @@ pub fn build_announcement_delete_url(course_id: &str, announcement_id: &str) -> 
     format!(
         "{}/courses/{}/announcements/{}",
         CLASSROOM_BASE_URL,
-        percent_encoding::utf8_percent_encode(
-            course_id,
-            percent_encoding::NON_ALPHANUMERIC
-        ),
-        percent_encoding::utf8_percent_encode(
-            announcement_id,
-            percent_encoding::NON_ALPHANUMERIC
-        )
+        percent_encoding::utf8_percent_encode(course_id, percent_encoding::NON_ALPHANUMERIC),
+        percent_encoding::utf8_percent_encode(announcement_id, percent_encoding::NON_ALPHANUMERIC)
     )
 }
 

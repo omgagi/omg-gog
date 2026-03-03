@@ -154,7 +154,10 @@ mod tests {
         assert_eq!(space.space_type, Some("SPACE".to_string()));
         assert_eq!(space.single_user_bot_dm, Some(false));
         assert_eq!(space.threaded, Some(true));
-        assert_eq!(space.space_threading_state, Some("THREADED_MESSAGES".to_string()));
+        assert_eq!(
+            space.space_threading_state,
+            Some("THREADED_MESSAGES".to_string())
+        );
         assert_eq!(space.space_history_state, Some("HISTORY_ON".to_string()));
     }
 
@@ -253,7 +256,10 @@ mod tests {
         assert_eq!(sender.type_, Some("HUMAN".to_string()));
 
         let thread = msg.thread.unwrap();
-        assert_eq!(thread.name, Some("spaces/AAA/threads/thread456".to_string()));
+        assert_eq!(
+            thread.name,
+            Some("spaces/AAA/threads/thread456".to_string())
+        );
         assert_eq!(thread.thread_key, Some("key123".to_string()));
     }
 
@@ -321,7 +327,10 @@ mod tests {
             "threadKey": "mykey"
         }"#;
         let thread: Thread = serde_json::from_str(json_str).unwrap();
-        assert_eq!(thread.name, Some("spaces/AAA/threads/thread789".to_string()));
+        assert_eq!(
+            thread.name,
+            Some("spaces/AAA/threads/thread789".to_string())
+        );
         assert_eq!(thread.thread_key, Some("mykey".to_string()));
     }
 
@@ -338,7 +347,10 @@ mod tests {
         }"#;
         let resp: ThreadListResponse = serde_json::from_str(json_str).unwrap();
         assert_eq!(resp.threads.len(), 2);
-        assert_eq!(resp.threads[0].name, Some("spaces/AAA/threads/t1".to_string()));
+        assert_eq!(
+            resp.threads[0].name,
+            Some("spaces/AAA/threads/t1".to_string())
+        );
         assert_eq!(resp.next_page_token, Some("next_t".to_string()));
     }
 

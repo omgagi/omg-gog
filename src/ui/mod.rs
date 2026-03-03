@@ -18,7 +18,10 @@ impl std::str::FromStr for ColorMode {
             "auto" => Ok(ColorMode::Auto),
             "always" => Ok(ColorMode::Always),
             "never" => Ok(ColorMode::Never),
-            _ => Err(anyhow::anyhow!("invalid color mode: {} (expected auto|always|never)", s)),
+            _ => Err(anyhow::anyhow!(
+                "invalid color mode: {} (expected auto|always|never)",
+                s
+            )),
         }
     }
 }
@@ -133,7 +136,10 @@ mod tests {
         let result = Ui::resolve_color(ColorMode::Auto, true);
         // This will depend on NO_COLOR env var state in test runner
         // In a clean env, this should be true
-        assert!(result, "auto mode with TTY should enable color (assuming NO_COLOR not set)");
+        assert!(
+            result,
+            "auto mode with TTY should enable color (assuming NO_COLOR not set)"
+        );
     }
 
     // Requirement: REQ-UI-001 (Must)

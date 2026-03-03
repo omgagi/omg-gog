@@ -485,8 +485,14 @@ mod tests {
         }"#;
         let elem: PageElement = serde_json::from_str(json_str).unwrap();
         let image = elem.image.unwrap();
-        assert_eq!(image.content_url, Some("https://example.com/image.png".to_string()));
-        assert_eq!(image.source_url, Some("https://source.example.com/original.png".to_string()));
+        assert_eq!(
+            image.content_url,
+            Some("https://example.com/image.png".to_string())
+        );
+        assert_eq!(
+            image.source_url,
+            Some("https://source.example.com/original.png".to_string())
+        );
     }
 
     // Requirement: REQ-SLIDES-009 (Must)

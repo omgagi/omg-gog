@@ -1,8 +1,8 @@
 pub mod api;
-pub mod client;
-pub mod retry;
 pub mod circuit_breaker;
+pub mod client;
 pub mod middleware;
+pub mod retry;
 
 use std::time::Duration;
 

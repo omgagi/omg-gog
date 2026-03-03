@@ -81,7 +81,10 @@ mod tests {
     // Acceptance: Export URL with docx MIME type
     #[test]
     fn req_docs_001_export_url_docx() {
-        let url = build_doc_export_url("doc123", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        let url = build_doc_export_url(
+            "doc123",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        );
         assert!(url.contains("files/doc123/export"));
         assert!(url.contains("mimeType="));
     }
@@ -137,7 +140,10 @@ mod tests {
     // Acceptance: resolve_export_mime maps odt
     #[test]
     fn req_docs_001_resolve_mime_odt() {
-        assert_eq!(resolve_export_mime("odt"), "application/vnd.oasis.opendocument.text");
+        assert_eq!(
+            resolve_export_mime("odt"),
+            "application/vnd.oasis.opendocument.text"
+        );
     }
 
     // Requirement: REQ-DOCS-001 (Must)
@@ -166,7 +172,10 @@ mod tests {
     #[test]
     fn req_docs_001_resolve_mime_case_insensitive() {
         assert_eq!(resolve_export_mime("PDF"), "application/pdf");
-        assert_eq!(resolve_export_mime("Docx"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        assert_eq!(
+            resolve_export_mime("Docx"),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
     }
 
     // ---------------------------------------------------------------
