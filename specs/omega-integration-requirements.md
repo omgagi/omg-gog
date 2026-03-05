@@ -283,10 +283,10 @@
 | REQ-OI-017 | Must | services/drive/watch, cli/mod | req_oi_017_* (16 tests) | Module 5: drive watch -- watch_start | watch_start @ src/services/drive/watch.rs, CLI dispatch @ src/cli/mod.rs, CLI args @ src/cli/drive.rs | OI-M3 |
 | REQ-OI-018 | Must | services/drive/watch, cli/mod | req_oi_018_* (10 tests) | Module 5: drive watch -- watch_stop | watch_stop @ src/services/drive/watch.rs, CLI dispatch @ src/cli/mod.rs | OI-M3 |
 | REQ-OI-019 | Must | services/drive/watch, cli/mod | req_oi_019_* (5 tests) | Module 5: drive watch -- watch_status | watch_status @ src/services/drive/watch.rs, CLI dispatch @ src/cli/mod.rs | OI-M3 |
-| REQ-OI-020 | Must | webhook/mod, cli/mod | TBD | Module 6: webhook -- serve | OI-M4 |
-| REQ-OI-021 | Should | webhook/mod | TBD | Module 6: webhook -- startup banner | OI-M4 |
-| REQ-OI-022 | Should | webhook/mod | TBD | Module 6: webhook -- method filtering | OI-M4 |
+| REQ-OI-020 | Must | webhook/mod, cli/mod | req_oi_020_* (7 tests: routes, header extraction, integration) | Module 6: webhook -- serve | serve @ src/webhook/mod.rs, handle_webhook @ src/cli/mod.rs | OI-M4 |
+| REQ-OI-021 | Should | webhook/mod | req_oi_021_* (3 tests: banner address, routes, custom) | Module 6: webhook -- startup banner | format_banner @ src/webhook/mod.rs | OI-M4 |
+| REQ-OI-022 | Should | webhook/mod | req_oi_022_* (2 tests: 405, 200 response construction) | Module 6: webhook -- method filtering | handle_request @ src/webhook/mod.rs | OI-M4 |
 | REQ-OI-023 | Must | Cargo.toml | req_oi_023_* (2 tests: calendar + drive UUID v4 validation) | External Dependencies -- uuid crate | OI-M3 |
-| REQ-OI-024 | Must | Cargo.toml | TBD | External Dependencies -- hyper crate | OI-M4 |
+| REQ-OI-024 | Must | Cargo.toml | req_oi_024_* (1 test: hyper types available) | External Dependencies -- hyper crate | hyper+hyper-util+http-body-util @ Cargo.toml | OI-M4 |
 | REQ-OI-025 | Must | cli/* | req_oi_025_* (5 tests: URL consistency with base URLs) | Module 7: CLI wiring -- CLI structure | OI-M2/M3/M4 |
 | REQ-OI-026 | Must | services/*/watch | req_oi_026_* (3 Gmail + 20 common: WatchChannelRequest, WatchChannelResponse, ChannelStopRequest, StartPageTokenResponse) | Modules 3/4/5 + Shared Types -- response serde types | OI-M2/M3 |

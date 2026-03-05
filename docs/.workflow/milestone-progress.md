@@ -17,5 +17,5 @@
 | RT-M7 | Polish (remote OAuth, encrypted file backend, resumable upload) | COMPLETE | 1828 | 2026-03-02 |
 | OI-M1 | OMEGA Store Credentials (OmegaStoreCredentialStore, factory patch, bootstrap patch) | COMPLETE | 1467 | 2026-03-05 |
 | OI-M2 | Gmail Watch Commands (watch start/stop/status handlers, CLI dispatch) | COMPLETE | 1508 | 2026-03-05 |
-| OI-M3 | Calendar + Drive Watch (watch handlers, shared types, uuid dep, CLI structure) | PLANNED | - | - |
-| OI-M4 | Webhook Serve (hyper HTTP server, CLI webhook command) | PLANNED | - | - |
+| OI-M3 | Calendar + Drive Watch (watch handlers, shared types, uuid dep, CLI structure) | COMPLETE | 1593 | 2026-03-05 |
+| OI-M4 | Webhook Serve (hyper HTTP server, CLI webhook command) | COMPLETE | 1613 | 2026-03-05 |
