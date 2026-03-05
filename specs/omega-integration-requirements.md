@@ -273,20 +273,20 @@
 | REQ-OI-005 | Must | auth/omega_store | req_oi_005_* (6 tests) | Module 1: auth/omega_store -- atomic write | atomic_write @ src/auth/omega_store.rs | OI-M1 |
 | REQ-OI-006 | Must | cli/mod (auth) | req_oi_006_* (3 tests) | Module 7: CLI wiring -- auth status handler | is_omega_store_active @ src/auth/omega_store.rs | OI-M1 |
 | REQ-OI-007 | Should | auth/omega_store | req_oi_007_* (3 tests) | Module 1: auth/omega_store -- error messages | OmegaStoreCredentialStore::new @ src/auth/omega_store.rs | OI-M1 |
-| REQ-OI-010 | Must | services/gmail/watch, cli/mod | TBD | Module 3: gmail watch -- watch_start | OI-M2 |
-| REQ-OI-011 | Must | services/gmail/watch, cli/mod | TBD | Module 3: gmail watch -- watch_stop | OI-M2 |
-| REQ-OI-012 | Must | services/gmail/watch, cli/mod | TBD | Module 3: gmail watch -- watch_status | OI-M2 |
-| REQ-OI-013 | Should | cli/mod | TBD | Module 3: gmail watch -- Pub/Sub hints | OI-M2 |
-| REQ-OI-014 | Must | services/calendar/watch, cli/mod | TBD | Module 4: calendar watch -- watch_start | OI-M3 |
-| REQ-OI-015 | Must | services/calendar/watch, cli/mod | TBD | Module 4: calendar watch -- watch_stop | OI-M3 |
-| REQ-OI-016 | Must | cli/mod | TBD | Module 4: calendar watch -- watch_status | OI-M3 |
-| REQ-OI-017 | Must | services/drive/watch, cli/mod | TBD | Module 5: drive watch -- watch_start | OI-M3 |
-| REQ-OI-018 | Must | services/drive/watch, cli/mod | TBD | Module 5: drive watch -- watch_stop | OI-M3 |
-| REQ-OI-019 | Must | services/drive/watch, cli/mod | TBD | Module 5: drive watch -- watch_status | OI-M3 |
+| REQ-OI-010 | Must | services/gmail/watch, cli/mod | req_oi_010_* (19 tests) | Module 3: gmail watch -- watch_start | OI-M2 |
+| REQ-OI-011 | Must | services/gmail/watch, cli/mod | req_oi_011_* (6 tests) | Module 3: gmail watch -- watch_stop | OI-M2 |
+| REQ-OI-012 | Must | services/gmail/watch, cli/mod | req_oi_012_* (12 tests) | Module 3: gmail watch -- watch_status | OI-M2 |
+| REQ-OI-013 | Should | cli/mod | req_oi_013_* (1 test) | Module 3: gmail watch -- Pub/Sub hints | OI-M2 |
+| REQ-OI-014 | Must | services/calendar/watch, cli/mod | req_oi_014_* (17 tests) | Module 4: calendar watch -- watch_start | watch_start @ src/services/calendar/watch.rs, CLI dispatch @ src/cli/mod.rs, CLI args @ src/cli/calendar.rs | OI-M3 |
+| REQ-OI-015 | Must | services/calendar/watch, cli/mod | req_oi_015_* (10 tests) | Module 4: calendar watch -- watch_stop | watch_stop @ src/services/calendar/watch.rs, CLI dispatch @ src/cli/mod.rs | OI-M3 |
+| REQ-OI-016 | Must | cli/mod | req_oi_016_* (2 tests) | Module 4: calendar watch -- watch_status | watch_status @ src/services/calendar/watch.rs, CLI dispatch @ src/cli/mod.rs | OI-M3 |
+| REQ-OI-017 | Must | services/drive/watch, cli/mod | req_oi_017_* (16 tests) | Module 5: drive watch -- watch_start | watch_start @ src/services/drive/watch.rs, CLI dispatch @ src/cli/mod.rs, CLI args @ src/cli/drive.rs | OI-M3 |
+| REQ-OI-018 | Must | services/drive/watch, cli/mod | req_oi_018_* (10 tests) | Module 5: drive watch -- watch_stop | watch_stop @ src/services/drive/watch.rs, CLI dispatch @ src/cli/mod.rs | OI-M3 |
+| REQ-OI-019 | Must | services/drive/watch, cli/mod | req_oi_019_* (5 tests) | Module 5: drive watch -- watch_status | watch_status @ src/services/drive/watch.rs, CLI dispatch @ src/cli/mod.rs | OI-M3 |
 | REQ-OI-020 | Must | webhook/mod, cli/mod | TBD | Module 6: webhook -- serve | OI-M4 |
 | REQ-OI-021 | Should | webhook/mod | TBD | Module 6: webhook -- startup banner | OI-M4 |
 | REQ-OI-022 | Should | webhook/mod | TBD | Module 6: webhook -- method filtering | OI-M4 |
-| REQ-OI-023 | Must | Cargo.toml | TBD | External Dependencies -- uuid crate | OI-M3 |
+| REQ-OI-023 | Must | Cargo.toml | req_oi_023_* (2 tests: calendar + drive UUID v4 validation) | External Dependencies -- uuid crate | OI-M3 |
 | REQ-OI-024 | Must | Cargo.toml | TBD | External Dependencies -- hyper crate | OI-M4 |
-| REQ-OI-025 | Must | cli/* | TBD | Module 7: CLI wiring -- CLI structure | OI-M2/M3/M4 |
-| REQ-OI-026 | Must | services/*/watch | TBD | Modules 3/4/5 + Shared Types -- response serde types | OI-M2/M3 |
+| REQ-OI-025 | Must | cli/* | req_oi_025_* (5 tests: URL consistency with base URLs) | Module 7: CLI wiring -- CLI structure | OI-M2/M3/M4 |
+| REQ-OI-026 | Must | services/*/watch | req_oi_026_* (3 Gmail + 20 common: WatchChannelRequest, WatchChannelResponse, ChannelStopRequest, StartPageTokenResponse) | Modules 3/4/5 + Shared Types -- response serde types | OI-M2/M3 |

@@ -1156,7 +1156,10 @@ async fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
                     )
                     .await
                     {
-                        Ok(Some(_)) => codes::SUCCESS,
+                        Ok(Some(_)) => {
+                            eprintln!("Note: Ensure gmail-api-push@system.gserviceaccount.com has Pub/Sub Publisher role on the topic.");
+                            codes::SUCCESS
+                        }
                         Ok(None) => {
                             eprintln!("[dry-run] would start watch");
                             codes::SUCCESS
@@ -1758,6 +1761,63 @@ async fn handle_calendar(args: calendar::CalendarArgs, flags: &root::RootFlags) 
             handle_calendar_calendars_list(&ctx, cal_args).await
         }
         CalendarCommand::Freebusy(ref fb_args) => handle_calendar_freebusy(&ctx, fb_args).await,
+        CalendarCommand::Watch(ref watch_args) => {
+            use crate::cli::calendar::CalendarWatchCommand;
+            const CAL_API_ROOT: &str = "https://www.googleapis.com";
+            match &watch_args.command {
+                CalendarWatchCommand::Start(start_args) => {
+                    match crate::services::calendar::watch::watch_start(
+                        &ctx,
+                        CAL_API_ROOT,
+                        &start_args.callback_url,
+                        &start_args.calendar,
+                    )
+                    .await
+                    {
+                        Ok(Some(_)) => codes::SUCCESS,
+                        Ok(None) => {
+                            eprintln!("[dry-run] would start calendar watch");
+                            codes::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+                CalendarWatchCommand::Stop(stop_args) => {
+                    match crate::services::calendar::watch::watch_stop(
+                        &ctx,
+                        CAL_API_ROOT,
+                        &stop_args.channel_id,
+                        &stop_args.resource_id,
+                    )
+                    .await
+                    {
+                        Ok(()) => {
+                            eprintln!("Calendar watch stopped.");
+                            codes::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+                CalendarWatchCommand::Status => {
+                    match crate::services::calendar::watch::watch_status(&ctx).await {
+                        Ok(()) => {
+                            eprintln!("Note: There is no API to query active calendar watches.");
+                            codes::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+            }
+        }
         _ => {
             eprintln!("Command not yet implemented");
             codes::GENERIC_ERROR
@@ -2234,6 +2294,59 @@ async fn handle_drive(args: drive::DriveArgs, flags: &root::RootFlags) -> i32 {
             handle_drive_permissions_list(&ctx, perm_args).await
         }
         DriveCommand::Copy(ref copy_args) => handle_drive_copy(&ctx, copy_args).await,
+        DriveCommand::Watch(ref watch_args) => {
+            use crate::cli::drive::DriveWatchCommand;
+            const DRIVE_API_ROOT: &str = "https://www.googleapis.com";
+            match &watch_args.command {
+                DriveWatchCommand::Start(start_args) => {
+                    match crate::services::drive::watch::watch_start(
+                        &ctx,
+                        DRIVE_API_ROOT,
+                        &start_args.callback_url,
+                    )
+                    .await
+                    {
+                        Ok(Some(_)) => codes::SUCCESS,
+                        Ok(None) => {
+                            eprintln!("[dry-run] would start drive watch");
+                            codes::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+                DriveWatchCommand::Stop(stop_args) => {
+                    match crate::services::drive::watch::watch_stop(
+                        &ctx,
+                        DRIVE_API_ROOT,
+                        &stop_args.channel_id,
+                        &stop_args.resource_id,
+                    )
+                    .await
+                    {
+                        Ok(()) => {
+                            eprintln!("Drive watch stopped.");
+                            codes::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+                DriveWatchCommand::Status => {
+                    match crate::services::drive::watch::watch_status(&ctx, DRIVE_API_ROOT).await {
+                        Ok(()) => codes::SUCCESS,
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+            }
+        }
         _ => {
             eprintln!("Command not yet implemented");
             codes::GENERIC_ERROR

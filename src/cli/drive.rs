@@ -44,6 +44,8 @@ pub enum DriveCommand {
     Comments(DriveCommentsArgs),
     /// List shared drives
     Drives(DriveDrivesArgs),
+    /// Manage push notification watches
+    Watch(DriveWatchArgs),
 }
 
 #[derive(Args, Debug)]
@@ -266,4 +268,37 @@ pub struct DriveDrivesArgs {
     /// Query filter
     #[arg(long, short = 'q')]
     pub query: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct DriveWatchArgs {
+    #[command(subcommand)]
+    pub command: DriveWatchCommand,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum DriveWatchCommand {
+    /// Start watching drive changes
+    Start(DriveWatchStartArgs),
+    /// Stop watching
+    Stop(DriveWatchStopArgs),
+    /// Show watch status (current start page token)
+    Status,
+}
+
+#[derive(Args, Debug)]
+pub struct DriveWatchStartArgs {
+    /// HTTPS callback URL for push notifications
+    #[arg(long)]
+    pub callback_url: String,
+}
+
+#[derive(Args, Debug)]
+pub struct DriveWatchStopArgs {
+    /// Channel ID (from watch start)
+    #[arg(long)]
+    pub channel_id: String,
+    /// Resource ID (from watch start)
+    #[arg(long)]
+    pub resource_id: String,
 }

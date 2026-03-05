@@ -55,6 +55,8 @@ pub enum CalendarCommand {
     /// Generate propose-time URL
     #[command(name = "propose-time")]
     ProposeTime(CalendarProposeTimeArgs),
+    /// Manage push notification watches
+    Watch(CalendarWatchArgs),
 }
 
 #[derive(Args, Debug)]
@@ -288,4 +290,40 @@ pub struct CalendarProposeTimeArgs {
     pub calendar_id: String,
     /// Event ID
     pub event_id: String,
+}
+
+#[derive(Args, Debug)]
+pub struct CalendarWatchArgs {
+    #[command(subcommand)]
+    pub command: CalendarWatchCommand,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum CalendarWatchCommand {
+    /// Start watching calendar events
+    Start(CalendarWatchStartArgs),
+    /// Stop watching
+    Stop(CalendarWatchStopArgs),
+    /// Show watch status
+    Status,
+}
+
+#[derive(Args, Debug)]
+pub struct CalendarWatchStartArgs {
+    /// HTTPS callback URL for push notifications
+    #[arg(long)]
+    pub callback_url: String,
+    /// Calendar ID (default: primary)
+    #[arg(long, default_value = "primary")]
+    pub calendar: String,
+}
+
+#[derive(Args, Debug)]
+pub struct CalendarWatchStopArgs {
+    /// Channel ID (from watch start)
+    #[arg(long)]
+    pub channel_id: String,
+    /// Resource ID (from watch start)
+    #[arg(long)]
+    pub resource_id: String,
 }

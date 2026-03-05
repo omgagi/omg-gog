@@ -15,7 +15,7 @@
 | RT-M5 | File I/O (download, upload, attachments, export) | COMPLETE | 1662 | 2026-03-01 |
 | RT-M6 | Extended Service Handlers (12 remaining services) | COMPLETE | 1804 | 2026-03-01 |
 | RT-M7 | Polish (remote OAuth, encrypted file backend, resumable upload) | COMPLETE | 1828 | 2026-03-02 |
-| OI-M1 | OMEGA Store Credentials (OmegaStoreCredentialStore, factory patch, bootstrap patch) | PLANNED | - | - |
-| OI-M2 | Gmail Watch Commands (watch start/stop/status handlers, CLI dispatch) | PLANNED | - | - |
+| OI-M1 | OMEGA Store Credentials (OmegaStoreCredentialStore, factory patch, bootstrap patch) | COMPLETE | 1467 | 2026-03-05 |
+| OI-M2 | Gmail Watch Commands (watch start/stop/status handlers, CLI dispatch) | COMPLETE | 1508 | 2026-03-05 |
 | OI-M3 | Calendar + Drive Watch (watch handlers, shared types, uuid dep, CLI structure) | PLANNED | - | - |
 | OI-M4 | Webhook Serve (hyper HTTP server, CLI webhook command) | PLANNED | - | - |

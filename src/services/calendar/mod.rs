@@ -6,3 +6,4 @@ pub mod respond;
 pub mod search;
 pub mod special;
 pub mod types;
+pub mod watch;
