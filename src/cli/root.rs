@@ -195,6 +195,33 @@ pub enum Command {
 
     /// Agent-oriented commands (exit-codes, schema)
     Agent(AgentArgs),
+
+    /// Webhook server for testing push notifications
+    Webhook(WebhookArgs),
+}
+
+// --- Webhook subcommands ---
+
+#[derive(Args, Debug)]
+pub struct WebhookArgs {
+    #[command(subcommand)]
+    pub command: WebhookCommand,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum WebhookCommand {
+    /// Start webhook receiver server
+    Serve(WebhookServeArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct WebhookServeArgs {
+    /// Port to listen on
+    #[arg(long, default_value = "8765")]
+    pub port: u16,
+    /// Address to bind to
+    #[arg(long, default_value = "0.0.0.0")]
+    pub bind: String,
 }
 
 // --- Auth subcommands ---

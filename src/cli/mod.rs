@@ -118,6 +118,7 @@ fn command_name(cmd: &root::Command) -> &str {
         root::Command::ExitCodes => "exit-codes",
         root::Command::Schema(_) => "schema",
         root::Command::Agent(_) => "agent",
+        root::Command::Webhook(_) => "webhook",
     }
 }
 
@@ -157,6 +158,7 @@ async fn dispatch_command(cmd: root::Command, flags: &root::RootFlags) -> i32 {
         root::Command::ExitCodes => handle_exit_codes(flags),
         root::Command::Schema(args) => handle_schema(args, flags),
         root::Command::Agent(args) => handle_agent(args, flags),
+        root::Command::Webhook(args) => handle_webhook(args).await,
     }
 }
 
@@ -10339,6 +10341,21 @@ fn handle_agent(args: agent::AgentArgs, flags: &root::RootFlags) -> i32 {
     match args.command {
         agent::AgentCommand::ExitCodes => handle_exit_codes(flags),
         agent::AgentCommand::Schema(schema_args) => handle_schema(schema_args, flags),
+    }
+}
+
+/// Handle the `webhook` command.
+async fn handle_webhook(args: root::WebhookArgs) -> i32 {
+    match args.command {
+        root::WebhookCommand::Serve(serve_args) => {
+            match crate::webhook::serve(&serve_args.bind, serve_args.port).await {
+                Ok(()) => codes::SUCCESS,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    codes::GENERIC_ERROR
+                }
+            }
+        }
     }
 }
 
