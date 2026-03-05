@@ -1139,6 +1139,71 @@ async fn handle_gmail(args: gmail::GmailArgs, flags: &root::RootFlags) -> i32 {
         GmailCommand::Send(ref send_args) => handle_gmail_send(&ctx, send_args).await,
         GmailCommand::Labels(ref labels_args) => handle_gmail_labels(&ctx, labels_args).await,
         GmailCommand::Attachment(ref att_args) => handle_gmail_attachment(&ctx, att_args).await,
+        GmailCommand::Watch(ref watch_args) => {
+            use crate::cli::gmail::GmailWatchCommand;
+            match &watch_args.command {
+                GmailWatchCommand::Start(start_args) => {
+                    let label_ids = if start_args.label.is_empty() {
+                        vec!["INBOX".to_string()]
+                    } else {
+                        start_args.label.clone()
+                    };
+                    match crate::services::gmail::watch::watch_start(
+                        &ctx,
+                        crate::services::gmail::types::GMAIL_BASE_URL,
+                        &start_args.topic,
+                        &label_ids,
+                    )
+                    .await
+                    {
+                        Ok(Some(_)) => codes::SUCCESS,
+                        Ok(None) => {
+                            eprintln!("[dry-run] would start watch");
+                            codes::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+                GmailWatchCommand::Stop => {
+                    match crate::services::gmail::watch::watch_stop(
+                        &ctx,
+                        crate::services::gmail::types::GMAIL_BASE_URL,
+                    )
+                    .await
+                    {
+                        Ok(()) => {
+                            eprintln!("Watch stopped.");
+                            codes::SUCCESS
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+                GmailWatchCommand::Status => {
+                    match crate::services::gmail::watch::watch_status(
+                        &ctx,
+                        crate::services::gmail::types::GMAIL_BASE_URL,
+                    )
+                    .await
+                    {
+                        Ok(()) => codes::SUCCESS,
+                        Err(e) => {
+                            eprintln!("Error: {}", e);
+                            map_error_to_exit_code(&e)
+                        }
+                    }
+                }
+                GmailWatchCommand::Renew => {
+                    eprintln!("Hint: use `omg-gog gmail watch start --topic <TOPIC>` to renew the watch.");
+                    codes::SUCCESS
+                }
+            }
+        }
         _ => {
             eprintln!("Command not yet implemented");
             codes::GENERIC_ERROR
