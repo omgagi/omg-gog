@@ -1,7 +1,7 @@
 # Functionalities: Auth
 
 ## Overview
-Authentication and account management — OAuth 2.0 flows (desktop/manual/remote/web), token storage with 3 credential backends (file, OS keyring, encrypted file), service account JWT, multi-account management, and account aliasing.
+Authentication and account management — OAuth 2.0 flows (desktop/manual/remote/web), token storage with 4 credential backends (file, OS keyring, encrypted file, OMEGA store), service account JWT, multi-account management, and account aliasing.
 
 ## CLI Commands
 
@@ -29,6 +29,8 @@ Authentication and account management — OAuth 2.0 flows (desktop/manual/remote
 | 4 | FileCredentialStore | Struct | src/auth/keyring.rs | File-based token storage |
 | 5 | KeyringCredentialStore | Struct | src/auth/keyring.rs | OS keyring token storage (macOS Keychain, Linux secret-service) |
 | 6 | EncryptedFileCredentialStore | Struct | src/auth/keyring.rs | AES-GCM encrypted file storage |
+| 7 | OmegaStoreCredentialStore | Struct | src/auth/omega_store.rs | OMEGA unified credential store (`$OMEGA_STORES_DIR/google.json`) |
+| 8 | OmegaStoreData | Struct | src/auth/omega_store.rs | Schema for `google.json` (version, client_id, client_secret, refresh_token, email) |
 | 7 | FlowMode | Enum | src/auth/oauth.rs | Desktop, Manual, Remote, Web |
 | 8 | TokenResponse | Struct | src/auth/oauth.rs | OAuth token exchange response |
 | 9 | OAuthFlowResult | Struct | src/auth/oauth_flow.rs | Result of OAuth flow (email, token_data) |
@@ -53,7 +55,7 @@ Authentication and account management — OAuth 2.0 flows (desktop/manual/remote
 | 9 | refresh_access_token | src/auth/token.rs | Refresh expired access token |
 | 10 | serialize_token | src/auth/token.rs | Serialize token to JSON |
 | 11 | deserialize_token | src/auth/token.rs | Deserialize token from JSON |
-| 12 | credential_store_factory | src/auth/keyring.rs | Create credential store based on config (file/keyring/encrypted) |
+| 12 | credential_store_factory | src/auth/keyring.rs | Create credential store based on config — checks `OMEGA_STORES_DIR` first (highest priority), then file/keyring/encrypted |
 | 13 | load_service_account_key | src/auth/service_account.rs | Load service account key from JSON file |
 | 14 | build_jwt_assertion | src/auth/service_account.rs | Build signed JWT for service account auth |
 | 15 | exchange_jwt | src/auth/service_account.rs | Exchange JWT assertion for access token |
@@ -65,3 +67,24 @@ Authentication and account management — OAuth 2.0 flows (desktop/manual/remote
 
 - **Depends on**: `config` (read config for keyring backend, credentials), `http` (token exchange HTTP calls)
 - **Depended on by**: `services::bootstrap_service_context()` (all service handlers use auth)
+
+## OMEGA Store Integration (OI-M1)
+
+When `$OMEGA_STORES_DIR` is set (non-empty), `credential_store_factory` returns `OmegaStoreCredentialStore` — bypassing all other backends. This reads/writes `$OMEGA_STORES_DIR/google.json`:
+
+```json
+{
+  "version": 1,
+  "client_id": "...",
+  "client_secret": "...",
+  "refresh_token": "...",
+  "email": "user@example.com"
+}
+```
+
+Key behaviors:
+- Eagerly validates on construction (fail-fast if file missing or invalid)
+- Synthesizes `TokenData` from the single refresh token for all services
+- `set_token` writes back the full file (preserving unknown fields via `#[serde(flatten)]`)
+- `delete_token` is a no-op (single-account store)
+- `list_tokens` returns the single account email

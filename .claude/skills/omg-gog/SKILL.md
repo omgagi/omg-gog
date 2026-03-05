@@ -56,13 +56,13 @@ omg-gog --help
 | Metric | Count |
 |--------|-------|
 | Google API Services | 15 |
-| Top-Level CLI Commands | 24 |
-| CLI Handler Functions | ~214 |
-| Service Functions (URL/body builders) | ~308 |
-| Serde Types (structs/enums) | ~211 |
-| Infrastructure Modules | 8 |
-| Total Tests | ~1,774 |
-| Total Source Files | ~95 |
+| Top-Level CLI Commands | 25 |
+| CLI Handler Functions | ~220 |
+| Service Functions (URL/body builders) | ~316 |
+| Serde Types (structs/enums) | ~218 |
+| Infrastructure Modules | 9 |
+| Total Tests | ~1,964 |
+| Total Source Files | ~98 |
 
 ---
 
@@ -72,9 +72,9 @@ omg-gog --help
 |---------|---------|-------|---------|
 | Auth | `omg-gog auth` | — | OAuth 2.0 flows (desktop/manual/remote/web), token storage, multi-account, aliasing |
 | Config | `omg-gog config` | — | JSON5 config file management |
-| Gmail | `omg-gog gmail` | — | Threads, messages, labels, drafts, settings, watch, batch |
-| Calendar | `omg-gog calendar` | `cal` | Events, calendars, freebusy, RSVP, conflicts, special events |
-| Drive | `omg-gog drive` | — | Files, upload/download, permissions, comments, shared drives |
+| Gmail | `omg-gog gmail` | — | Threads, messages, labels, drafts, settings, watch (Pub/Sub push), batch |
+| Calendar | `omg-gog calendar` | `cal` | Events, calendars, freebusy, RSVP, conflicts, special events, watch (push notifications) |
+| Drive | `omg-gog drive` | — | Files, upload/download, permissions, comments, shared drives, watch (change notifications) |
 | Docs | `omg-gog docs` | `doc` | Content, export, editing, sed-like regex, markdown, comments |
 | Sheets | `omg-gog sheets` | `sheet` | Cell read/write, append, insert, format, notes, export |
 | Slides | `omg-gog slides` | `slide` | Presentations, slides, notes, export, markdown-to-slides |
@@ -87,6 +87,7 @@ omg-gog --help
 | Groups | `omg-gog groups` | `group` | Group listing, membership |
 | Keep | `omg-gog keep` | — | Notes listing, search, attachments |
 | Apps Script | `omg-gog appscript` | `script`, `apps-script` | Project metadata, source files, function execution |
+| Webhook | `omg-gog webhook` | — | HTTP server for testing Google push notification webhooks |
 
 ---
 
