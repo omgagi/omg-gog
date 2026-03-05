@@ -463,6 +463,15 @@ impl CredentialStore for EncryptedFileCredentialStore {
 pub fn credential_store_factory(
     config: &crate::config::ConfigFile,
 ) -> anyhow::Result<Box<dyn CredentialStore>> {
+    // OMEGA store takes priority over all other backends
+    if let Ok(stores_dir) = std::env::var("OMEGA_STORES_DIR") {
+        if !stores_dir.is_empty() {
+            return Ok(Box::new(
+                crate::auth::omega_store::OmegaStoreCredentialStore::new(&stores_dir)?,
+            ));
+        }
+    }
+
     // Determine backend: env overrides config
     let backend = std::env::var("GOG_KEYRING_BACKEND")
         .ok()

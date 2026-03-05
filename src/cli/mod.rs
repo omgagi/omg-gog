@@ -767,16 +767,22 @@ fn handle_auth_list(flags: &root::RootFlags) -> i32 {
 
 /// Handle `auth status`: show config path, keyring backend, current account, credential file status.
 fn handle_auth_status(flags: &root::RootFlags) -> i32 {
+    // Check for OMEGA store mode first
+    let omega_store_active = crate::auth::omega_store::is_omega_store_active();
+
     let config_path = crate::config::config_path()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| "unknown".to_string());
 
     let cfg = crate::config::read_config().unwrap_or_default();
 
-    let keyring_backend = cfg
-        .keyring_backend
-        .clone()
-        .unwrap_or_else(|| "auto".to_string());
+    let keyring_backend = if omega_store_active {
+        "omega-store".to_string()
+    } else {
+        cfg.keyring_backend
+            .clone()
+            .unwrap_or_else(|| "auto".to_string())
+    };
 
     let client_name = flags
         .client
@@ -785,11 +791,19 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
     let client_name = crate::config::normalize_client_name(client_name);
 
     // Check if credential file exists
-    let cred_filename = crate::config::credential_filename(&client_name);
-    let cred_path = crate::config::config_dir()
-        .map(|d| d.join(&cred_filename))
-        .unwrap_or_default();
-    let cred_exists = cred_path.exists();
+    let (cred_path_str, cred_exists) = if omega_store_active {
+        let omega_dir = std::env::var("OMEGA_STORES_DIR").unwrap_or_default();
+        let path = std::path::PathBuf::from(&omega_dir).join("google.json");
+        let exists = path.exists();
+        (path.to_string_lossy().to_string(), exists)
+    } else {
+        let cred_filename = crate::config::credential_filename(&client_name);
+        let cred_path = crate::config::config_dir()
+            .map(|d| d.join(&cred_filename))
+            .unwrap_or_default();
+        let exists = cred_path.exists();
+        (cred_path.to_string_lossy().to_string(), exists)
+    };
 
     // Try to get the current account
     let store = crate::auth::keyring::credential_store_factory(&cfg).ok();
@@ -813,9 +827,10 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
             "config_path": config_path,
             "keyring_backend": keyring_backend,
             "client": client_name,
-            "credentials_file": cred_path.to_string_lossy(),
+            "credentials_file": cred_path_str,
             "credentials_found": cred_exists,
             "current_account": current_account,
+            "omega_store": omega_store_active,
         });
         if let Some(ref td) = token_details {
             json_val["services"] = serde_json::to_value(&td.services).unwrap_or_default();
@@ -825,10 +840,16 @@ fn handle_auth_status(flags: &root::RootFlags) -> i32 {
         }
         println!("{}", to_json_pretty(&json_val));
     } else {
+        if omega_store_active {
+            println!(
+                "Source:            OMEGA store ({})",
+                cred_path_str
+            );
+        }
         println!("Config path:       {}", config_path);
         println!("Keyring backend:   {}", keyring_backend);
         println!("Client:            {}", client_name);
-        println!("Credentials file:  {}", cred_path.display());
+        println!("Credentials file:  {}", cred_path_str);
         println!(
             "Credentials found: {}",
             if cred_exists { "yes" } else { "no" }

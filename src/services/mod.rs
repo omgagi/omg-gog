@@ -129,7 +129,15 @@ pub async fn bootstrap_service_context(flags: &RootFlags) -> anyhow::Result<Serv
 
     // 6. Refresh if needed
     if crate::auth::token::needs_refresh(&token) {
-        let creds = crate::config::read_client_credentials(client_name)?;
+        let creds = if crate::auth::omega_store::is_omega_store_active() {
+            let omega_store = crate::auth::omega_store::OmegaStoreCredentialStore::new(
+                &std::env::var("OMEGA_STORES_DIR")
+                    .map_err(|_| anyhow::anyhow!("OMEGA_STORES_DIR was set but became unavailable"))?,
+            )?;
+            omega_store.client_credentials()?
+        } else {
+            crate::config::read_client_credentials(client_name)?
+        };
         let bare_http = crate::http::client::build_client()?;
         let resp =
             crate::auth::token::refresh_access_token(&bare_http, &creds, &token.refresh_token)

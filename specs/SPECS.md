@@ -10,6 +10,8 @@
 | [omega-google-architecture.md](omega-google-architecture.md) | Complete system architecture: module structure, interfaces, data flow, failure modes, security model, performance budgets, Nix build, traceability | Active |
 | [runtime-requirements.md](runtime-requirements.md) | Runtime layer requirements: OAuth flows, token refresh, keyring storage, service execution infrastructure, pagination, file I/O, core service handlers (82 requirements) | Active |
 | [runtime-architecture.md](runtime-architecture.md) | Runtime layer architecture: module design, interfaces, failure modes, security model, performance budgets, milestones (RT-M1 through RT-M7), traceability for all 82 runtime requirements | Active |
+| [omega-integration-requirements.md](omega-integration-requirements.md) | OMEGA Integration: OMEGA_STORES_DIR credential unification, Gmail/Calendar/Drive watch commands, webhook serve (24 requirements) | Active |
+| [omega-integration-architecture.md](omega-integration-architecture.md) | OMEGA Integration architecture: module design, interfaces, failure modes, security model, milestones (OI-M1 through OI-M4), traceability for all 24 OMEGA integration requirements | Active |
 
 ## Project Overview
 
@@ -33,3 +35,7 @@ omega-google is a Rust reimplementation of gogcli: a CLI for 15 Google Workspace
 | RT-M5 | File I/O: streaming download, simple upload, attachment download, export | Planned |
 | RT-M6 | Extended Service Handlers: remaining 12 services | Planned |
 | RT-M7 | Polish: remote OAuth, encrypted file backend, resumable upload | Planned |
+| OI-M1 | OMEGA Store Credentials: OmegaStoreCredentialStore, factory patch, bootstrap patch | Planned |
+| OI-M2 | Gmail Watch Commands: watch start/stop/status handlers, CLI dispatch | Planned |
+| OI-M3 | Calendar + Drive Watch: watch handlers, shared types, uuid dep, CLI structure | Planned |
+| OI-M4 | Webhook Serve: hyper HTTP server, CLI webhook command | Planned |

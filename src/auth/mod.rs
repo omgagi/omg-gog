@@ -2,6 +2,7 @@ pub mod account;
 pub mod keyring;
 pub mod oauth;
 pub mod oauth_flow;
+pub mod omega_store;
 pub mod scopes;
 pub mod service_account;
 pub mod token;
